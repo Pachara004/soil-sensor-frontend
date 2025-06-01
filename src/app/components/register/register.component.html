@@ -1,0 +1,44 @@
+<div class="container">
+    <div class="card">
+      <div class="back" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i>
+      </div>
+  
+      <div class="logo">
+        <img src="https://cdn-icons-png.freepik.com/512/1345/1345362.png" alt="App Logo">
+      </div>
+  
+      <form (ngSubmit)="onRegister()" #registerForm="ngForm" novalidate>
+        <div class="form-group" *ngFor="let field of fields; trackBy: trackByFieldName">
+          <div class="input-label">{{ field.label }}</div>
+          <input
+            [type]="field.type"
+            class="form-control"
+            [name]="field.name"
+            [(ngModel)]="formData[field.name]"
+            [required]="true"
+            #fieldRef="ngModel"
+            [placeholder]="'Enter your ' + field.label.toLowerCase()"
+          />
+          <div class="field-error" *ngIf="fieldRef.invalid && fieldRef.touched">
+            {{ field.label }} is required
+          </div>
+        </div>
+  
+        <div class="error" *ngIf="passwordMismatch">
+          รหัสผ่านไม่ตรงกัน
+        </div>
+  
+        <button 
+          class="register-btn" 
+          type="submit" 
+          [disabled]="registerForm.invalid || isSubmitting"
+        >
+          <span *ngIf="!isSubmitting">Register</span>
+          <span *ngIf="isSubmitting">
+            <i class="fas fa-spinner fa-spin"></i> Registering...
+          </span>
+        </button>
+      </form>
+    </div>
+  </div>
