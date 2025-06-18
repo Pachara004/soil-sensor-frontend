@@ -1,0 +1,138 @@
+/* พื้นหลัง */
+.container {
+  background-color: #013220;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* ปุ่มออกจากระบบที่มุมซ้ายบน */
+.logout-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background-color: #ff4d4d;
+  color: white;
+  padding: 10px 15px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  z-index: 10;
+  transition: background-color 0.3s;
+}
+
+.logout-btn:hover {
+  background-color: #cc0000;
+}
+/* กรอบหลัก */
+.card {
+  width: 750px;
+  height: 550px;
+  background: white;
+  border-radius: 20px;
+  border: 4px solid #00aaff;
+  padding: 20px;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* ไอคอนบนสุด */
+.chip-icon {
+  width: 40px;
+  position: absolute;
+  top: 10px;
+  left: calc(50% - 20px);
+}
+
+/* ช่องผู้ใช้ */
+.user-box {
+  background: #e6e6e6;
+  padding: 10px 15px;
+  border-radius: 10px;
+  width: fit-content;
+  margin-top: 40px;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+/* ชื่ออุปกรณ์ */
+.device-box {
+  background: #e6e6e6;
+  padding: 10px 15px;
+  border-radius: 10px;
+  width: fit-content;
+  margin-top: 15px;
+  font-size: 18px;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.label-orange {
+  color: orange;
+  font-weight: bold;
+}
+
+.label {
+  font-weight: bold;
+}
+
+/* ไอคอนผู้ใช้ */
+.user-icon {
+  position: absolute;
+  right: 30px;
+  top: 40px;
+  text-align: center;
+  font-size: 14px;
+  color: #000;
+}
+
+.user-icon img {
+  width: 30px;
+  height: 30px;
+}
+
+/* ปุ่มวัดค่า */
+.btn-main {
+  background: #4cd964;
+  border-radius: 50%;
+  width: 140px;
+  height: 140px;
+  border: none;
+  font-size: 24px;
+  font-weight: bold;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+}
+
+/* ปุ่มประวัติ */
+.btn-history {
+  background: #b2f0b2;
+  color: black;
+  border: none;
+  border-radius: 20px;
+  padding: 5px 15px;
+  font-size: 14px;
+  position: absolute;
+  right: 30px;
+  top: 120px;
+  cursor: pointer;
+}
+
+/* ติดต่อ Admin */
+.admin {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.admin img {
+  width: 30px;
+  height: 30px;
+}
