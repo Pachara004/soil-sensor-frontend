@@ -1,0 +1,45 @@
+<div class="profile-container">
+  <div class="profile-card">
+    <div class="back" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i>
+      </div>
+
+    <div class="user-id">User : ADD12</div>
+    <h2 class="title">ข้อมูลผู้ใช้</h2>
+
+    <div class="info-row">
+    <div class="label">Username</div>
+    <input type="text" class="value" [(ngModel)]="username" />
+    </div>
+
+    <div class="info-row">
+    <div class="label">Email</div>
+    <input type="email" class="value" [(ngModel)]="email" />
+    </div>
+
+    <div class="info-row">
+    <div class="label">Phone</div>
+    <input type="tel" class="value" [(ngModel)]="phone" />
+    </div>
+
+    <div class="info-row">
+    <div class="label">Password</div>
+    <input type="password" class="value" [(ngModel)]="password" />
+    </div>
+
+    <div class="info-row">
+    <div class="label">Confirm Password</div>
+    <input type="password" class="value" [(ngModel)]="confirmPassword" />
+    </div>
+ 
+
+    <div class="button-group">
+      <button class="edit-button">บันทึก</button>
+    </div>
+
+    <div class="admin">
+      <img src="https://cdn-icons-png.flaticon.com/512/9703/9703596.png" alt="admin" />
+      <div>ติดต่อ Admin</div>
+    </div>
+  </div>
+</div>

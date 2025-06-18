@@ -1,38 +1,33 @@
 <div class="profile-container">
   <div class="profile-card">
-    <!-- ปุ่มย้อนกลับ -->
     <div class="back" (click)="goBack()">
         <i class="fas fa-arrow-left"></i>
-    </div>
+      </div>
 
-    <!-- ไอคอน -->
-    <!-- <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png" class="chip-icon" /> -->
-
-    <!-- User ID -->
     <div class="user-id">User : ADD12</div>
-
-    <!-- หัวข้อ -->
     <h2 class="title">ข้อมูลผู้ใช้</h2>
 
-    <!-- กล่องข้อมูล -->
-    <div class="info-box">
-        <div class="user-id">User : {{ userID }}</div>
-        <!-- ข้อมูล -->
+    <div class="info-row">
         <div class="label">Username</div>
-        <div class="field">{{ username }}</div>
-
-        <div class="label">Email</div>
-        <div class="field">{{ email }}</div>
-
-        <div class="label">Phone</div>
-        <div class="field">{{ phone }}</div>
+        <div class="value"></div>
     </div>
 
-    <!-- ปุ่มแก้ไข -->
-    <button class="btn-edit">แก้ไขข้อมูล</button>
+    <div class="info-row">
+        <div class="label">Email</div>
+        <div class="value"></div>
+    </div>
 
-    <!-- ติดต่อแอดมิน -->
-    <div class="admin-section">
+    <div class="info-row">
+        <div class="label">Phone</div>
+        <div class="value"></div>
+    </div>
+
+
+    <div class="button-group">
+        <button class="edit-button" (click)="goToEditProfile()">แก้ไขข้อมูล</button>
+    </div>
+
+    <div class="admin">
       <img src="https://cdn-icons-png.flaticon.com/512/9703/9703596.png" alt="admin" />
       <div>ติดต่อ Admin</div>
     </div>

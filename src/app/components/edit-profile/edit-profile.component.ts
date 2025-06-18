@@ -1,18 +1,22 @@
 import { Component, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
 @Component({
-  selector: 'app-profile',
+  selector: 'app-edit-profile',
   standalone: true,
-  imports: [],
-  templateUrl: './profile.component.html',
-  styleUrl: './profile.component.scss'
+  imports: [FormsModule],
+  templateUrl: './edit-profile.component.html',
+  styleUrl: './edit-profile.component.scss'
 })
-export class ProfileComponent implements OnInit {
+export class EditProfileComponent implements OnInit {
   userID: string | null = null;
   username: string = '';
   email: string = '';
   phone: string = '';
+  password: string = '';
+  confirmPassword: string = '';
+
 
   constructor(private router: Router) {}
 
@@ -31,9 +35,6 @@ export class ProfileComponent implements OnInit {
     }
   }
   goBack() {
-    this.router.navigate(['/main']);
-  }
-  goToEditProfile(){
-    this.router.navigate(['/edit-profile']);
+    this.router.navigate(['/profile']); 
   }
 }
