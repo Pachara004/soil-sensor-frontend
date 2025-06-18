@@ -23,4 +23,7 @@ export class MainComponent {
   goToProfile() {
     this.router.navigate(['/profile']);
   }
+  goToMeasure() {
+    this.router.navigate(['/measure']);
+  }
 }

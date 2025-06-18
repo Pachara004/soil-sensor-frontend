@@ -1,0 +1,70 @@
+<div class="measure-container">
+  <div class="card">
+    <div class="back" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i>
+      </div>
+    
+    <div class="header">
+      <div class="user-id">User : ADD12</div>
+      <div class="user-icon" (click)="goToProfile()" style="cursor: pointer;">
+        <img src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png" alt="user" />
+        <div class="text">ข้อมูลผู้ใช้</div>
+    </div>
+    </div>
+
+    <div class="section">
+      <p class="subtitle">Customize your own NPK</p>
+      <div class="device-id">
+        <span class="label-orange">ชื่ออุปกรณ์ :</span> <strong>NPK0001</strong>
+      </div>
+    </div>
+
+    <h2 class="title">วัดและบันทึกค่า</h2>
+
+    <div class="grid">
+      <div class="sensor-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/3534/3534501.png" />
+        <div class="unit">°C</div>
+        <div class="label">Temperature</div>
+      </div>
+      <div class="sensor-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/6393/6393411.png" />
+        <div class="unit">%</div>
+        <div class="label">Moisture</div>
+      </div>
+      <div class="sensor-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/6678/6678672.png" />
+        <div class="unit">mg/kg</div>
+        <div class="label">Nitrogen</div>
+      </div>
+      <div class="sensor-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/6678/6678656.png" />
+        <div class="unit">mg/kg</div>
+        <div class="label">Phosphorus</div>
+      </div>
+      <div class="sensor-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/6678/6678660.png" />
+        <div class="unit">mg/kg</div>
+        <div class="label">Potassium</div>
+      </div>
+      <div class="sensor-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/9162/9162345.png" />
+        <div class="unit">%</div>
+        <div class="label">Potential of Hydrogen (PH)</div>
+      </div>
+    </div>
+
+    <div class="location-box">
+      <label>รายละเอียด/ตำแหน่งที่ตั้ง</label>
+      <textarea></textarea>
+      <img src="https://cdn-icons-png.flaticon.com/512/1865/1865269.png" />
+    </div>
+
+    <button class="save-btn">บันทึกค่า</button>
+
+    <div class="admin">
+      <img src="https://cdn-icons-png.flaticon.com/512/9703/9703596.png" alt="admin" />
+      <div>ติดต่อ Admin</div>
+    </div>
+  </div>
+</div>
