@@ -8,6 +8,8 @@ import { MeasureComponent } from './components/users/measure/measure.component';
 import { ForgotpassComponent } from './components/users/forgotpass/forgotpass.component';
 import { ReportsComponent } from './components/users/reports/reports.component';
 import { HistoryComponent } from './components/users/history/history.component';
+import { AdmainComponent } from './components/admin/admain/admain.component';
+import { AdprofileComponent } from './components/admin/adprofile/adprofile.component';
 
 export const routes: Routes = [
     { path: '', component: LoginComponent },
@@ -19,5 +21,7 @@ export const routes: Routes = [
     { path: 'measure', component: MeasureComponent},
     { path: 'forgotpass', component: ForgotpassComponent},
     { path: 'reports', component: ReportsComponent},
-    { path: 'history', component: HistoryComponent } 
+    { path: 'history', component: HistoryComponent },
+    { path: 'admain', component: AdmainComponent},
+    { path: 'adprofile', component: AdprofileComponent}
 ];

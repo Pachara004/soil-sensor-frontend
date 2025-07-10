@@ -66,7 +66,18 @@ export class LoginComponent {
 
     localStorage.setItem('user', JSON.stringify(mockUser));
     this.router.navigate(['main'], navigationExtras);
-  } else {
+  } else if( username === 'admin' && password === 'admin') {  
+    const mockAdmin = {
+      userID: 'A0001',
+      username: 'admin',
+      email: 'admin',
+      type: 'admin'
+    };  
+
+    localStorage.setItem('admin', JSON.stringify(mockAdmin));
+    this.router.navigate(['adminmain']); // สมมุติว่า route admin มีอยู่แล้ว
+  }
+  else {
     alert('Login failed. Invalid credentials.');
   }
 }
