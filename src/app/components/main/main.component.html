@@ -22,13 +22,13 @@
     </div>
 
     <!-- ปุ่มประวัติการวัดค่า -->
-    <button class="btn-history">ประวัติการวัดค่า</button>
+    <button class="btn-history" (click)="goToHistory()">ประวัติการวัดค่า</button>
 
     <!-- ปุ่มวัดค่า -->
     <button class="btn-main" (click)="goToMeasure()">วัดค่า</button>
 
     <!-- ปุ่มติดต่อแอดมิน -->
-    <div class="admin">
+    <div class="admin" (click)="goToContactAdmin()" >
       <img src="https://cdn-icons-png.flaticon.com/512/9703/9703596.png" alt="admin" />
       <div>ติดต่อ Admin</div>
     </div>

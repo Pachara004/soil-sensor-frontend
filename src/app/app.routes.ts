@@ -6,6 +6,8 @@ import { ProfileComponent } from './components/profile/profile.component';
 import { EditProfileComponent } from './components/edit-profile/edit-profile.component';
 import { MeasureComponent } from './components/measure/measure.component';
 import { ForgotpassComponent } from './components/forgotpass/forgotpass.component';
+import { ReportsComponent } from './components/reports/reports.component';
+import { HistoryComponent } from './components/history/history.component';
 
 export const routes: Routes = [
     { path: '', component: LoginComponent },
@@ -16,4 +18,6 @@ export const routes: Routes = [
     { path: 'edit-profile', component: EditProfileComponent},
     { path: 'measure', component: MeasureComponent},
     { path: 'forgotpass', component: ForgotpassComponent},
+    { path: 'reports', component: ReportsComponent},
+    { path: 'history', component: HistoryComponent } 
 ];

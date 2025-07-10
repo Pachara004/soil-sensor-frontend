@@ -41,4 +41,7 @@ export class ProfileComponent implements OnInit {
   goToEditProfile() {
     this.router.navigate(['/edit-profile']);
   }
+  goToContactAdmin() {
+    this.router.navigate(['/reports']); 
+  }
 }

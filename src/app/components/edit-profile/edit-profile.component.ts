@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-edit-profile',
@@ -18,7 +19,10 @@ export class EditProfileComponent implements OnInit {
   confirmPassword: string = '';
 
 
-  constructor(private router: Router) {}
+constructor(
+    private router: Router,
+    private location: Location,
+  ) {}
 
   ngOnInit(): void {
     // รับข้อมูลจาก localStorage
@@ -35,6 +39,9 @@ export class EditProfileComponent implements OnInit {
     }
   }
   goBack() {
-    this.router.navigate(['/profile']); 
+    this.location.back(); 
+  }
+  goToContactAdmin() {
+    this.router.navigate(['/reports']); 
   }
 }

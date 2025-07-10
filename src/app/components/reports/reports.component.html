@@ -1,0 +1,27 @@
+<div class="container">
+  <div class="card">
+    <!-- ปุ่มย้อนกลับ -->
+    <div class="back" (click)="goBack()">
+      <i class="fas fa-arrow-left"></i>
+    </div>
+
+    <!-- โลโก้หรือไอคอนบนสุด -->
+    <div class="logo">
+      <img src="https://cdn-icons-png.freepik.com/512/1345/1345362.png" alt="Report Icon" />
+      <h2>ติดต่อ Admin</h2>
+    </div>
+
+    <!-- แบบฟอร์มแจ้งปัญหา -->
+    <div class="input-group">
+      <label>ชื่อเรื่อง</label>
+      <input type="text" placeholder="ระบุหัวข้อปัญหา" [(ngModel)]="subject" />
+    </div>
+
+    <div class="input-group">
+      <label>รายละเอียด</label>
+      <textarea placeholder="โปรดระบุรายละเอียดปัญหาที่ต้องการแจ้ง" [(ngModel)]="message"></textarea>
+    </div>
+
+    <button class="send-btn" (click)="sendReport()">ส่งเรื่อง</button>
+  </div>
+</div>

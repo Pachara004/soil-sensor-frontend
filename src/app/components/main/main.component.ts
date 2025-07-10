@@ -26,4 +26,10 @@ export class MainComponent {
   goToMeasure() {
     this.router.navigate(['/measure']);
   }
+  goToContactAdmin() {
+    this.router.navigate(['/reports']); 
+  }
+  goToHistory() {
+    this.router.navigate(['/history']); 
+  }
 }
