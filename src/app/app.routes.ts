@@ -1,13 +1,13 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './components/login/login.component';
 import { RegisterComponent } from './components/register/register.component';
-import { MainComponent } from './components/main/main.component';
-import { ProfileComponent } from './components/profile/profile.component';
-import { EditProfileComponent } from './components/edit-profile/edit-profile.component';
-import { MeasureComponent } from './components/measure/measure.component';
-import { ForgotpassComponent } from './components/forgotpass/forgotpass.component';
-import { ReportsComponent } from './components/reports/reports.component';
-import { HistoryComponent } from './components/history/history.component';
+import { MainComponent } from './components/users/main/main.component';
+import { ProfileComponent } from './components/users/profile/profile.component';
+import { EditProfileComponent } from './components/users/edit-profile/edit-profile.component';
+import { MeasureComponent } from './components/users/measure/measure.component';
+import { ForgotpassComponent } from './components/users/forgotpass/forgotpass.component';
+import { ReportsComponent } from './components/users/reports/reports.component';
+import { HistoryComponent } from './components/users/history/history.component';
 
 export const routes: Routes = [
     { path: '', component: LoginComponent },
