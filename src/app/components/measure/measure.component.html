@@ -56,8 +56,11 @@
 
     <div class="location-box">
       <label>รายละเอียด/ตำแหน่งที่ตั้ง</label>
-      <textarea></textarea>
-      <img src="https://cdn-icons-png.flaticon.com/512/1865/1865269.png" />
+      <textarea [(ngModel)]="locationDetail"></textarea>
+      <img src="https://cdn-icons-png.flaticon.com/512/1865/1865269.png"
+        alt="เลือกตำแหน่ง"
+        style="cursor: pointer; width: 25px; height: 25px;"
+        (click)="openMapPicker()" />
     </div>
 
     <button class="save-btn">บันทึกค่า</button>

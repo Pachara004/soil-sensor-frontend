@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-profile',
@@ -14,10 +15,12 @@ export class ProfileComponent implements OnInit {
   email: string = '';
   phone: string = '';
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private location: Location 
+  ) {}
 
   ngOnInit(): void {
-    // รับข้อมูลจาก localStorage
     const userData = localStorage.getItem('user');
     if (userData) {
       const user = JSON.parse(userData);
@@ -27,13 +30,15 @@ export class ProfileComponent implements OnInit {
       this.phone = user.phone || user[0]?.phone || '';
     } else {
       alert('ไม่พบข้อมูลผู้ใช้');
-      this.router.navigate(['/']); // redirect ไปหน้า login
+      this.router.navigate(['/']); 
     }
   }
+
   goBack() {
-    this.router.navigate(['/main']);
+    this.location.back(); 
   }
-  goToEditProfile(){
+
+  goToEditProfile() {
     this.router.navigate(['/edit-profile']);
   }
 }

@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-
+import { Location } from '@angular/common';
 // Define interface for form data
 interface FormData {
   name: string;
@@ -49,7 +49,9 @@ export class RegisterComponent {
     { label: 'Confirm Password', name: 'confirmPassword', type: 'password' },
   ];
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private location: Location) {}
 
   onRegister() {
     // Reset previous errors
@@ -100,6 +102,6 @@ export class RegisterComponent {
   }
 
   goBack() {
-    this.router.navigate(['/login']);
+    this.location.back(); // กลับไปหน้าก่อนหน้า 
   }
 }

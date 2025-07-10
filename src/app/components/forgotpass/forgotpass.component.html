@@ -1,0 +1,37 @@
+<div class="container">
+  <div class="card">
+    <!-- ปุ่มย้อนกลับ -->
+    <div class="back" (click)="goBack()">
+      <i class="fas fa-arrow-left"></i>
+    </div>
+
+    <!-- Logo -->
+    <div class="logo">
+      <img src="https://cdn-icons-png.freepik.com/512/1345/1345362.png" alt="Logo" />
+      <h2>Forgot Password</h2>
+    </div>
+
+    <!-- Email -->
+    <div class="input-group">
+      <label>Email</label>
+      <input type="email" placeholder="Enter your email" />
+      <button class="otp-btn">ส่ง OTP</button>
+    </div>
+
+    <!-- OTP -->
+    <div class="otp-group">
+      <label>OTP</label>
+      <div class="otp-boxes">
+        <input maxlength="1" />
+        <input maxlength="1" />
+        <input maxlength="1" />
+        <input maxlength="1" />
+        <input maxlength="1" />
+        <input maxlength="1" />
+      </div>
+    </div>
+
+    <!-- ปุ่มยืนยัน -->
+    <button class="confirm-btn">ยืนยัน</button>
+  </div>
+</div>
