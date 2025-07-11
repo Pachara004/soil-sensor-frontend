@@ -24,20 +24,25 @@ constructor(
     private location: Location,
   ) {}
 
-  ngOnInit(): void {
-    // รับข้อมูลจาก localStorage
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      const user = JSON.parse(userData);
-      this.userID = user.userID || user[0]?.userID || null;
-      this.username = user.username || user[0]?.username || '';
-      this.email = user.email || user[0]?.email || '';
-      this.phone = user.phone || user[0]?.phone || '';
-    } else {
-      alert('ไม่พบข้อมูลผู้ใช้');
-      this.router.navigate(['/']); // redirect ไปหน้า login
-    }
+ ngOnInit(): void {
+  let userData = localStorage.getItem('user');
+
+  if (!userData) {
+    userData = localStorage.getItem('admin'); // ถ้าไม่มี user → ลองหา admin
   }
+
+  if (userData) {
+    const user = JSON.parse(userData);
+    this.userID = user.userID || user[0]?.userID || null;
+    this.username = user.username || user[0]?.username || '';
+    this.email = user.email || user[0]?.email || '';
+    this.phone = user.phone || user[0]?.phone || '';
+  } else {
+    alert('ไม่พบข้อมูลผู้ใช้');
+    this.router.navigate(['/']);
+  }
+}
+
   goBack() {
     this.location.back(); 
   }

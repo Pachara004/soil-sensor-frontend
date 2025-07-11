@@ -1,11 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [],
+  imports: [FormsModule],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss'
 })
@@ -20,19 +21,24 @@ export class ProfileComponent implements OnInit {
     private location: Location 
   ) {}
 
-  ngOnInit(): void {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      const user = JSON.parse(userData);
-      this.userID = user.userID || user[0]?.userID || null;
-      this.username = user.username || user[0]?.username || '';
-      this.email = user.email || user[0]?.email || '';
-      this.phone = user.phone || user[0]?.phone || '';
-    } else {
-      alert('ไม่พบข้อมูลผู้ใช้');
-      this.router.navigate(['/']); 
-    }
+ngOnInit(): void {
+  let userData = localStorage.getItem('user');
+
+  if (!userData) {
+    userData = localStorage.getItem('admin'); // ถ้าไม่มี user → ลองหา admin
   }
+
+  if (userData) {
+    const user = JSON.parse(userData);
+    this.userID = user.userID || user[0]?.userID || null;
+    this.username = user.username || user[0]?.username || '';
+    this.email = user.email || user[0]?.email || '';
+    this.phone = user.phone || user[0]?.phone || '';
+  } else {
+    alert('ไม่พบข้อมูลผู้ใช้');
+    this.router.navigate(['/']);
+  }
+}
 
   goBack() {
     this.location.back(); 

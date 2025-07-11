@@ -66,7 +66,7 @@ export class LoginComponent {
 
     localStorage.setItem('user', JSON.stringify(mockUser));
     this.router.navigate(['main'], navigationExtras);
-  } else if( username === 'admin' && password === 'admin') {  
+  } else if( username === 'admin' && password === 's') {  
     const mockAdmin = {
       userID: 'A0001',
       username: 'admin',

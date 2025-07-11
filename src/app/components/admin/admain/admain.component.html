@@ -1,1 +1,45 @@
-<p>admain works!</p>
+<div class="admin-container">
+<button (click)="logout()" class="logout-btn">ออกจากระบบ</button>
+  <div class="card">
+    <!-- Icon Soil Sensor กลาง -->
+    <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png" class="chip-icon" alt="chip" />
+
+    <!-- ขวาบน: ข้อมูลผู้ใช้ + แจ้งเตือน -->
+    <div class="top-right-icons">
+      <div class="icon-box" (click)="goToUsers()" title="ข้อมูลผู้ใช้">
+        <img src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png" alt="Users" />
+        <div class="text">ข้อมูลผู้ใช้</div>
+      </div>
+      <div class="icon-box" (click)="goToReports()" title="แจ้งเตือน Reports">
+        <img src="https://cdn-icons-png.flaticon.com/512/565/565340.png" alt="Reports" />
+        <div class="text">ข้อความ</div>
+      </div>
+    </div>
+
+    <!-- ชื่อ Admin -->
+    <h2 class="admin-name">Admin : ADMIN01</h2>
+
+    <!-- ส่วนอุปกรณ์ในระบบ -->
+    <div class="device-section">
+      <h3>อุปกรณ์ในระบบ</h3>
+      <div class="device-list">
+        <div class="device-item">
+          <div class="device-info">
+            <div class="device-name">NPK0001</div>
+            <div class="device-user">ผู้ใช้: ADD12</div>
+          </div>
+          <button class="view-btn">ดูข้อมูล</button>
+        </div>
+        <div class="device-item">
+          <div class="device-info">
+            <div class="device-name">NPK0002</div>
+            <div class="device-user">ผู้ใช้: ADD13</div>
+          </div>
+          <button class="view-btn">ดูข้อมูล</button>
+        </div>
+        <!-- เพิ่มได้ตามต้องการ -->
+      </div>
+    </div>
+    <button class="save-btn">เพิ่มอุปกรณ์</button>
+  </div>
+</div>
