@@ -1,94 +1,57 @@
-import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { NavigationExtras, Router } from '@angular/router';
-import { Users } from '../../Models/login-signup';
-import { Npkservice } from '../../service/npkservice';
+
+import { AuthService } from '../../service/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [MatProgressSpinnerModule,CommonModule],
+  imports: [CommonModule, FormsModule, MatProgressSpinnerModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss'
 })
 export class LoginComponent {
-  isLoading: boolean = false;
-  userlogin : Users[] = [];
-  constructor(private npkservice: Npkservice, private router: Router, private http: HttpClient) {}
-  // async loginuser(username: string, password: string,event: Event) {
+  isLoading = false;
 
-  //   // event.preventDefault();
-  //   if (username.trim() === '' || password.trim() === '') {
-  //     alert("Username or password is not provided.");
-  //     return;
-  //   }else{
-  //     // this.isLoading = true;
-  //     this.userlogin = await this.npkservice.LoginUser(username, password);
-  //   if(this.userlogin.length > 0 && this.userlogin[0].type === 'user' ){
-  //     console.log(this.userlogin);
-  //     const user = this.userlogin[0];
-  //     const navigationExtras: NavigationExtras = {state: {data: this.userlogin[0].userID}};
-  //       localStorage.setItem('user', JSON.stringify(this.userlogin));
-  //       this.router.navigate(['main'], navigationExtras);
-  //     }else if(this.userlogin.length > 0 && this.userlogin[0].type === 'admin'){
-  //       localStorage.setItem('admin', JSON.stringify(this.userlogin));
-  //         this.router.navigate(['admin']);
-  //     }else{
-  //     alert("Login failed.");
-  //     }
-  //     // setTimeout(() => {
-  //     //   // this.router.navigate(['']);
-  //     //   this.isLoading = false;
-  //     // }, 2000); 
-  //   }
-  // }
+  constructor(private auth: AuthService, private router: Router) {}
+
   async loginuser(username: string, password: string, event: Event) {
-  // ตรวจสอบว่า email และ password ไม่ว่าง
-  if (username.trim() === '' || password.trim() === '') {
-    alert("Username or password is not provided.");
-    return;
+    event.preventDefault();
+
+    if (!username || !password) {
+      alert('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
+      return;
+    }
+
+    this.isLoading = true;
+
+    try {
+      const user = await this.auth.login(username, password);
+
+      if (user.type === 'user') {
+        localStorage.setItem('user', JSON.stringify(user));
+        this.router.navigate(['main']);
+      } else if (user.type === 'admin') {
+        localStorage.setItem('admin', JSON.stringify(user));
+        this.router.navigate(['adminmain']);
+      } else {
+        alert('ไม่พบสิทธิ์ผู้ใช้');
+      }
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      this.isLoading = false;
+    }
   }
-
-  // ตรวจสอบค่าที่กำหนดไว้
-  if (username === 's' && password === 's') {
-    const mockUser = {
-      userID: 'U0001',
-      username: 's',
-      email: 's',
-      type: 'user'
-    };
-
-    const navigationExtras: NavigationExtras = {
-      state: { data: mockUser.userID }
-    };
-
-    localStorage.setItem('user', JSON.stringify(mockUser));
-    this.router.navigate(['main'], navigationExtras);
-  } else if( username === 'admin' && password === 's') {  
-    const mockAdmin = {
-      userID: 'A0001',
-      username: 'admin',
-      email: 'admin',
-      type: 'admin'
-    };  
-
-    localStorage.setItem('admin', JSON.stringify(mockAdmin));
-    this.router.navigate(['adminmain']); // สมมุติว่า route admin มีอยู่แล้ว
-  }
-  else {
-    alert('Login failed. Invalid credentials.');
-  }
-}
 
   register() {
-    console.log('Navigating to register...');
     this.router.navigate(['/register']);
   }
 
   goToForgotPassword() {
-    console.log('Navigate to forgot password');
     this.router.navigate(['/forgotpass']);
   }
 }

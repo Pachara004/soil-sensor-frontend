@@ -3,7 +3,8 @@ import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Location } from '@angular/common';
-// Define interface for form data
+import { AuthService } from '../../service/auth.service'; // ✅ import Service
+
 interface FormData {
   name: string;
   username: string;
@@ -13,17 +14,16 @@ interface FormData {
   confirmPassword: string;
 }
 
-// Define interface for field configuration
 interface FieldConfig {
   label: string;
-  name: keyof FormData; // This ensures type safety
+  name: keyof FormData;
   type: string;
 }
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [FormsModule, CommonModule], // Import required modules here
+  imports: [FormsModule, CommonModule],
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.scss'],
 })
@@ -51,57 +51,60 @@ export class RegisterComponent {
 
   constructor(
     private router: Router,
-    private location: Location) {}
+    private location: Location,
+    private authService: AuthService // ✅ Inject AuthService
+  ) {}
 
-  onRegister() {
-    // Reset previous errors
+  async onRegister() {
     this.passwordMismatch = false;
-    
+
     const { password, confirmPassword } = this.formData;
-    
-    // Validate password match
+
     if (password !== confirmPassword) {
       this.passwordMismatch = true;
       return;
     }
 
-    // Validate required fields
     if (!this.validateRequiredFields()) {
       return;
     }
 
     this.isSubmitting = true;
 
-    // TODO: ส่งข้อมูลไป API หรือจัดเก็บ
-    console.log('Registered:', this.formData);
+    try {
+      await this.authService.register({
+        name: this.formData.name,
+        username: this.formData.username,
+        phone: this.formData.phone,
+        email: this.formData.email,
+        password: this.formData.password,
+      });
 
-    // Simulate API call
-    setTimeout(() => {
-      this.isSubmitting = false;
-      // กลับไปหน้า login
+      alert('ลงทะเบียนสำเร็จ!');
       this.router.navigate(['/login']);
-    }, 2000);
+    } catch (err: any) {
+      alert(err.message || 'ลงทะเบียนไม่สำเร็จ');
+    } finally {
+      this.isSubmitting = false;
+    }
   }
 
   validateRequiredFields(): boolean {
     const requiredFields: (keyof FormData)[] = ['name', 'username', 'phone', 'email', 'password', 'confirmPassword'];
-    
     for (const field of requiredFields) {
       if (!this.formData[field]?.trim()) {
         console.error(`${field} is required`);
         return false;
       }
     }
-    
     return true;
   }
 
-  // Track by function for ngFor performance
   trackByFieldName(index: number, field: FieldConfig): string {
     return field.name;
   }
 
   goBack() {
-    this.location.back(); // กลับไปหน้าก่อนหน้า 
+    this.location.back();
   }
 }
