@@ -24,7 +24,7 @@ export class AuthService {
   async login(username: string, password: string): Promise<any> {
     const dbRef = ref(this.db);
     try {
-      const snapshot = await get(child(dbRef, `users/${username}`)); // เปลี่ยนเป็น users
+      const snapshot = await get(child(dbRef, `users/${username}`)); 
       if (snapshot.exists()) {
         const data = snapshot.val();
         if (data.password === password) {
@@ -32,7 +32,7 @@ export class AuthService {
           localStorage.setItem('user', JSON.stringify({
             username,
             userID: data.userID,
-            name: data.name, // เพิ่ม name
+            name: data.name, 
             email: data.email,
             phone: data.phone
           }));
@@ -55,10 +55,9 @@ export class AuthService {
     const result = await signInWithPopup(auth, provider);
     const googleUser = result.user;
 
-    // ตรวจว่ามีใน DB ไหม
     const snapshot = await get(ref(this.db, `users/${googleUser.uid}`));
     if (!snapshot.exists()) {
-      // ถ้ายังไม่มี ให้สร้างใน DB ด้วย
+
       const userRef = ref(this.db, `users/${googleUser.uid}`);
       await set(userRef, {
         userID: googleUser.uid,

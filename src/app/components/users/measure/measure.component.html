@@ -5,7 +5,7 @@
       </div>
     
     <div class="header">
-      <div class="user-id">User : ADD12</div>
+      <div class="user-id">User :  {{ username }}</div>
       <div class="user-icon" (click)="goToProfile()" style="cursor: pointer;">
         <img src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png" alt="user" />
         <div class="text">ข้อมูลผู้ใช้</div>
@@ -15,53 +15,73 @@
     <div class="section">
       <p class="subtitle">Customize your own NPK</p>
       <div class="device-id">
-        <span class="label-orange">ชื่ออุปกรณ์ :</span> <strong>NPK0001</strong>
+        <span class="label-orange">ชื่ออุปกรณ์ :</span> <strong>{{deviceId}}</strong>
       </div>
     </div>
 
     <h2 class="title">วัดและบันทึกค่า</h2>
 
     <div class="grid">
-      <div class="sensor-box">
-        <img src="https://cdn-icons-png.flaticon.com/512/3534/3534501.png" />
-        <div class="unit">°C</div>
-        <div class="label">Temperature</div>
-      </div>
-      <div class="sensor-box">
-        <img src="https://cdn-icons-png.flaticon.com/512/6393/6393411.png" />
-        <div class="unit">%</div>
-        <div class="label">Moisture</div>
-      </div>
-      <div class="sensor-box">
-        <img src="https://cdn-icons-png.flaticon.com/512/6678/6678672.png" />
-        <div class="unit">mg/kg</div>
-        <div class="label">Nitrogen</div>
-      </div>
-      <div class="sensor-box">
-        <img src="https://cdn-icons-png.flaticon.com/512/6678/6678656.png" />
-        <div class="unit">mg/kg</div>
-        <div class="label">Phosphorus</div>
-      </div>
-      <div class="sensor-box">
-        <img src="https://cdn-icons-png.flaticon.com/512/6678/6678660.png" />
-        <div class="unit">mg/kg</div>
-        <div class="label">Potassium</div>
-      </div>
-      <div class="sensor-box">
-        <img src="https://cdn-icons-png.flaticon.com/512/9162/9162345.png" />
-        <div class="unit">%</div>
-        <div class="label">Potential of Hydrogen (PH)</div>
-      </div>
+    <div class="sensor-box">
+      <img src="https://cdn-icons-png.flaticon.com/512/3534/3534501.png" />
+      <div class="value">{{ temperature }}</div>
+      <div class="unit">°C</div>
+      <div class="label">Temperature</div>
     </div>
+    <div class="sensor-box">
+      <img src="https://cdn-icons-png.flaticon.com/512/6393/6393411.png" />
+      <div class="value">{{ moisture }}</div>
+      <div class="unit">%</div>
+      <div class="label">Moisture</div>
+    </div>
+    <div class="sensor-box">
+      <img src="https://cdn-icons-png.flaticon.com/512/6678/6678672.png" />
+      <div class="value">{{ nitrogen }}</div>
+      <div class="unit">mg/kg</div>
+      <div class="label">Nitrogen</div>
+    </div>
+    <div class="sensor-box">
+      <img src="https://cdn-icons-png.flaticon.com/512/6678/6678656.png" />
+      <div class="value">{{ phosphorus }}</div>
+      <div class="unit">mg/kg</div>
+      <div class="label">Phosphorus</div>
+    </div>
+    <div class="sensor-box">
+      <img src="https://cdn-icons-png.flaticon.com/512/6678/6678660.png" />
+      <div class="value">{{ potassium }}</div>
+      <div class="unit">mg/kg</div>
+      <div class="label">Potassium</div>
+    </div>
+    <div class="sensor-box">
+      <img src="https://cdn-icons-png.flaticon.com/512/9162/9162345.png" />
+      <div class="value">{{ ph }}</div>
+      <div class="unit">%</div>
+      <div class="label">Potential of Hydrogen (PH)</div>
+    </div>
+  </div>
 
-    <div class="location-box">
-      <label>รายละเอียด/ตำแหน่งที่ตั้ง</label>
-      <textarea [(ngModel)]="locationDetail"></textarea>
-      <img src="https://cdn-icons-png.flaticon.com/512/1865/1865269.png"
-        alt="เลือกตำแหน่ง"
-        style="cursor: pointer; width: 25px; height: 25px;"
-        (click)="openMapPicker()" />
-    </div>
+    <!-- ส่วนเลือกตำแหน่ง -->
+      <div class="location-box">
+        <label>รายละเอียด/ตำแหน่งที่ตั้ง</label>
+        <textarea [(ngModel)]="locationDetail"></textarea>
+
+        <!-- ปุ่มเลือกพิกัด -->
+        <img src="https://cdn-icons-png.flaticon.com/512/1865/1865269.png"
+            alt="เลือกตำแหน่ง"
+            style="cursor: pointer; width: 25px; height: 25px;"
+            (click)="openMapPicker()" />
+
+        <!-- ✅ แผนที่ฝังกลางหน้า -->
+        <div class="map-container" *ngIf="mapUrl">
+          <iframe [attr.src]="mapUrl"
+                  width="100%"
+                  height="300"
+                  frameborder="0"
+                  style="border:0;"
+                  allowfullscreen>
+          </iframe>
+        </div>
+      </div>
 
     <button class="save-btn" (click)="saveMeasurement()">บันทึกค่า</button>
 

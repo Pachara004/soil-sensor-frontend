@@ -4,10 +4,12 @@
     <div class="back" (click)="goBack()">
       <i class="fas fa-arrow-left"></i>
     </div>
-    <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png" class="chip-icon" alt="chip" />
-    <!-- ส่วนหัว -->
+
+    <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png"
+         class="chip-icon" alt="chip" />
+
     <div class="header">
-      <div class="user-id">User : ADD12</div>
+      <div class="user-id">User : {{ username }}</div>
 
       <div class="user-icon" (click)="goToProfile()" style="cursor: pointer;">
         <img src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png" alt="user" />
@@ -15,36 +17,26 @@
       </div>
     </div>
 
-    <!-- ข้อมูลทั่วไป -->
     <div class="section">
-  <p class="subtitle">Customize your own NPK</p>    
-  <div class="device-box">
+      <p class="subtitle">ประวัติการวัดค่า</p>
+      <div class="device-box">
+        <span class="label-orange">ชื่ออุปกรณ์ :</span>
+        <strong>{{ deviceId }}</strong>
+      </div>
+    </div>
 
-    <span class="label-orange">ชื่ออุปกรณ์ :</span>
-    <strong>NPK0001</strong>
-  </div>
-</div>
+    <!-- กล่องประวัติ -->
+    <div class="history-list">
+      <div class="history-item" *ngFor="let item of history">
+        <div class="history-name">{{ item.location }} | {{ item.date }}</div>
+        <button class="view-btn" (click)="viewDetail(item)">ดูข้อมูล</button>
+      </div>
 
-<!-- กล่องประวัติ -->
-<div class="history-list">
-  <div class="history-item">
-    <div class="history-name">หลังบ้านนายธนาร์</div>
-    <button class="view-btn">ดูข้อมูล</button>
-  </div>
+      <div *ngIf="!history.length" class="empty">
+        ไม่พบข้อมูลการวัดค่า
+      </div>
+    </div>
 
-  <div class="history-item">
-    <div class="history-name">โรงเรือน A</div>
-    <button class="view-btn">ดูข้อมูล</button>
-  </div>
-
-  <div class="history-item">
-    <div class="history-name">แปลงผักข้างบ้าน</div>
-    <button class="view-btn">ดูข้อมูล</button>
-  </div>
-</div>
-
-
-    <!-- ติดต่อแอดมิน -->
     <div class="admin" (click)="goToContactAdmin()">
       <img src="https://cdn-icons-png.flaticon.com/512/9703/9703596.png" alt="admin" />
       <div>ติดต่อ Admin</div>
