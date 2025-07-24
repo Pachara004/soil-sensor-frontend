@@ -1,1 +1,70 @@
-<p>history-detail works!</p>
+<div class="detail-container">
+  <div class="card">
+    <div class="back" (click)="goBack()">
+      <i class="fas fa-arrow-left"></i>
+    </div>
+
+    <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png"
+         class="chip-icon" alt="chip" />
+
+    <div class="header">
+      <div class="user-id">User : {{ username }}</div>
+      <div class="user-icon" (click)="goToProfile()" style="cursor: pointer;">
+        <img src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png" alt="user" />
+        <div class="text">ข้อมูลผู้ใช้</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="subtitle">Customize your own NPK</p>
+      <div class="device-box">
+        <span class="label-orange">ชื่ออุปกรณ์ :</span> <strong>{{ deviceId }}</strong>
+      </div>
+      <div class="measure-time">
+        การวัดวันที่ {{ measureDate }} เวลา {{ measureTime }}
+      </div>
+    </div>
+
+    <div class="map-container" *ngIf="mapUrl">
+      <iframe [src]="mapUrl | safe" width="100%" height="300"></iframe>
+    </div>
+
+    <div class="grid">
+      <div class="sensor-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/3534/3534501.png" />
+        <div>{{ temperature }} °C</div>
+        <div class="label">Temperature</div>
+      </div>
+      <div class="sensor-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/6393/6393411.png" />
+        <div>{{ moisture }} %</div>
+        <div class="label">Moisture</div>
+      </div>
+      <div class="sensor-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/6678/6678672.png" />
+        <div>{{ nitrogen }} mg/kg</div>
+        <div class="label">Nitrogen</div>
+      </div>
+      <div class="sensor-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/6678/6678656.png" />
+        <div>{{ phosphorus }} mg/kg</div>
+        <div class="label">Phosphorus</div>
+      </div>
+      <div class="sensor-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/6678/6678660.png" />
+        <div>{{ potassium }} mg/kg</div>
+        <div class="label">Potassium</div>
+      </div>
+      <div class="sensor-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/9162/9162345.png" />
+        <div>{{ ph }} %</div>
+        <div class="label">Potential of Hydrogen (PH)</div>
+      </div>
+    </div>
+
+    <div class="location-detail">
+      <label>รายละเอียด/ตำแหน่งที่ตั้ง</label>
+      <div class="detail-box">{{ locationDetail }}</div>
+    </div>
+  </div>
+</div>

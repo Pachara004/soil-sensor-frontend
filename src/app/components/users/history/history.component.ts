@@ -4,12 +4,19 @@ import { Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { Database, ref, onValue, get } from '@angular/fire/database';
 import { CommonModule } from '@angular/common';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 interface Measurement {
   id: string;
   location: string;
   date: string;
-  [key: string]: any; // รองรับข้อมูลเพิ่มเติม
+  temperature?: number;
+  moisture?: number;
+  nitrogen?: number;
+  phosphorus?: number;
+  potassium?: number;
+  ph?: number;
+  [key: string]: any;
 }
 
 interface UserData {
@@ -24,14 +31,16 @@ interface UserData {
 @Component({
   selector: 'app-history',
   standalone: true,
-  imports: [FormsModule, CommonModule],
+  imports: [FormsModule, CommonModule, MatProgressSpinnerModule],
   templateUrl: './history.component.html',
   styleUrl: './history.component.scss'
 })
 export class HistoryComponent implements OnInit {
   username: string = '';
   deviceId: string = '';
+  devices: string[] = [];
   history: Measurement[] = [];
+  isLoading = false;
 
   constructor(
     private router: Router,
@@ -44,54 +53,85 @@ export class HistoryComponent implements OnInit {
     if (userData) {
       const user: UserData = JSON.parse(userData);
       this.username = user.username || 'ไม่พบชื่อผู้ใช้';
-      // โหลด deviceId จาก Firebase
-      await this.loadDeviceId();
-      // โหลดประวัติ
-      this.loadHistory();
+      await this.loadDevices();
+      if (this.devices.length > 0) {
+        this.deviceId = localStorage.getItem('selectedDevice') || this.devices[0];
+        this.loadHistory();
+      }
     } else {
       alert('กรุณาล็อกอินก่อน');
       this.router.navigate(['/']);
     }
   }
 
-  async loadDeviceId() {
+  async loadDevices() {
+    this.isLoading = true;
     try {
       const userRef = ref(this.db, `users/${this.username}/devices`);
       const snapshot = await get(userRef);
       if (snapshot.exists()) {
-        const devices = snapshot.val();
-        this.deviceId = Object.keys(devices)[0] || 'NPK0001'; // ใช้ device แรกหรือ fallback
+        this.devices = Object.keys(snapshot.val());
+        if (this.devices.length === 0) {
+          alert('ไม่พบอุปกรณ์ที่เชื่อมโยง');
+          this.devices = ['NPK0001'];
+        }
       } else {
-        this.deviceId = 'NPK0001'; // Fallback
+        alert('ไม่พบข้อมูลอุปกรณ์');
+        this.devices = ['NPK0001'];
       }
     } catch (error) {
-      console.error('ข้อผิดพลาดในการโหลด deviceId:', error);
-      this.deviceId = 'NPK0001';
+      console.error('ข้อผิดพลาดในการโหลดอุปกรณ์:', error);
+      this.devices = ['NPK0001'];
+    } finally {
+      this.isLoading = false;
     }
   }
 
   loadHistory() {
+    if (!this.deviceId) return;
+    this.isLoading = true;
     const measurementRef = ref(this.db, `measurements/${this.deviceId}`);
-    onValue(measurementRef, snapshot => {
-      const data = snapshot.val();
-      if (data) {
-        this.history = Object.entries(data).map(([key, value]: [string, any]) => ({
-          id: key,
-          location: value.location || 'ไม่ระบุสถานที่',
-          date: value.date || new Date().toISOString().split('T')[0],
-          ...value
-        }));
-      } else {
+    onValue(
+      measurementRef,
+      snapshot => {
+        const data = snapshot.val();
+        if (data) {
+          this.history = Object.entries(data).map(([key, value]: [string, any]) => ({
+            id: key,
+            location: value.location || 'ไม่ระบุสถานที่',
+            date: value.date || new Date().toISOString().split('T')[0],
+            temperature: value.temperature,
+            moisture: value.moisture,
+            nitrogen: value.nitrogen,
+            phosphorus: value.phosphorus,
+            potassium: value.potassium,
+            ph: value.ph,
+            ...value
+          }));
+        } else {
+          this.history = [];
+        }
+        this.isLoading = false;
+      },
+      error => {
+        console.error('ข้อผิดพลาดในการโหลดประวัติ:', error);
         this.history = [];
+        this.isLoading = false;
       }
-    }, error => {
-      console.error('ข้อผิดพลาดในการโหลดประวัติ:', error);
-      this.history = [];
-    });
+    );
+  }
+
+  onDeviceChange() {
+    localStorage.setItem('selectedDevice', this.deviceId);
+    this.loadHistory();
   }
 
   viewDetail(item: Measurement) {
-    localStorage.setItem('selectedHistory', JSON.stringify(item));
+    const measurementData = {
+      ...item,
+      deviceId: this.deviceId
+    };
+    localStorage.setItem('selectedMeasurement', JSON.stringify(measurementData));
     this.router.navigate(['/history-detail']);
   }
 

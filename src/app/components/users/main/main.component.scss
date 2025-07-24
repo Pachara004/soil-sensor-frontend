@@ -69,6 +69,26 @@
   align-items: center;
 }
 
+.device-box .chip-icon {
+  width: 30px;
+  height: 30px;
+}
+
+.device-select {
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  background-color: #ffffff;
+  font-size: 16px;
+  cursor: pointer;
+  min-width: 150px;
+}
+
+.device-select:focus {
+  outline: none;
+  box-shadow: 0 0 5px #00aaff;
+}
+
 .label-orange {
   color: orange;
   font-weight: bold;
