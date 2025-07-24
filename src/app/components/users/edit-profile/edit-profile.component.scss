@@ -133,3 +133,7 @@ body, html {
   width: 30px;
   height: 30px;
 }
+.value[readonly] {
+  background-color: #e0e0e0; /* เทาอ่อน */
+  cursor: not-allowed;
+}

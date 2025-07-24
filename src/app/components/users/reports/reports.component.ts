@@ -48,6 +48,7 @@ export class ReportsComponent {
     alert('ส่งเรื่องสำเร็จ! ทีมงานจะติดต่อกลับโดยเร็ว');
 
     // ล้างฟอร์ม
+    alert('ส่งสำเร็จ!');
     this.subject = '';
     this.message = '';
   }
