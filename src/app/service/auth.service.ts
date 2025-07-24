@@ -15,6 +15,8 @@ export class AuthService {
     if (snapshot.exists()) {
       const data = snapshot.val();
       if (data.password === password) {
+        // บันทึก adminID ลงใน localStorage
+          localStorage.setItem('admin', JSON.stringify({ username, name: data.name || username }));
         return data; // สำเร็จ → ส่งข้อมูล user กลับไป
       } else {
         throw new Error('รหัสผ่านไม่ถูกต้อง');

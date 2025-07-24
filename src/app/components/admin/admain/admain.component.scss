@@ -5,8 +5,10 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
 }
-/* ปุ่มออกจากระบบที่มุมซ้ายบน */
+
+/* ปุ่มออกจากระบบซ้ายบน */
 .logout-btn {
   position: absolute;
   top: 20px;
@@ -25,6 +27,7 @@
 .logout-btn:hover {
   background-color: #cc0000;
 }
+
 .card {
   background-color: white;
   width: 1000px;
@@ -35,7 +38,7 @@
   box-sizing: border-box;
 }
 
-/* ไอคอนตรงกลาง */
+/* ไอคอน Soil Sensor กลาง */
 .chip-icon {
   width: 50px;
   position: absolute;
@@ -43,7 +46,6 @@
   left: calc(50% - 25px);
 }
 
-/* ชื่อ Admin */
 .admin-name {
   margin-top: 80px;
   text-align: center;
@@ -53,17 +55,26 @@
 /* มุมขวาบน */
 .top-right-icons {
   position: absolute;
-  top: 30px;
-  text-align: center;
+  top: 20px;
   right: 30px;
   display: flex;
   gap: 20px;
+  z-index: 5;
 }
 
-.icon-box img {
-  width: 30px;
-  height: 30px;
+.icon-box {
+  text-align: center;
   cursor: pointer;
+
+  img {
+    width: 30px;
+    height: 30px;
+  }
+
+  .text {
+    font-size: 12px;
+    margin-top: 5px;
+  }
 }
 
 /* โซนอุปกรณ์ */
@@ -115,18 +126,37 @@
     }
   }
 }
-.save-btn {
-  background-color: #3aea3a;
-  border: none;
-  padding: 12px 40px;
-  border-radius: 20px;
-  margin: 20px auto 10px;
-  display: block;
-  font-weight: bold;
-  cursor: pointer;
+
+/* ฟอร์มเพิ่มอุปกรณ์ */
+.add-device-form {
+  margin-top: 30px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+
+  input {
+    padding: 8px 15px;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+
+  .save-btn {
+    background-color: #3aea3a;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+
+    &:hover {
+      background-color: #2ecc71;
+    }
+  }
 }
+
 /* กันซ้อนมือถือ */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .device-item {
     flex-direction: column;
     align-items: flex-start;
@@ -136,4 +166,52 @@
   .view-btn {
     align-self: flex-end;
   }
+
+  .add-device-form {
+    flex-direction: column;
+    align-items: stretch;
+
+    input {
+      width: 100%;
+    }
+
+    .save-btn {
+      width: 100%;
+    }
+  }
+
+  .top-right-icons {
+    top: 70px;
+    right: 20px;
+    flex-direction: row;
+    gap: 15px;
+  }
+}
+.user-input-box {
+  position: relative;
+}
+
+.suggest-list {
+  position: absolute;
+  top: 38px;
+  left: 0;
+  width: 100%;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 100;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.suggest-list li {
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.suggest-list li:hover {
+  background: #eee;
 }
