@@ -1,0 +1,26 @@
+<div class="mail-container">
+  <div class="card">
+    <!-- ไอคอนบนสุด -->
+    <img
+      src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png"
+      class="chip-icon"
+      alt="chip"
+    />
+
+    <h2 class="mail-title">กล่องข้อความผู้ใช้</h2>
+
+    <div class="mail-list">
+      <div class="mail-item" *ngFor="let report of reports">
+        <div class="mail-info">
+          <div class="subject">{{ report.subject }}</div>
+          <div class="meta">
+            <span class="user">ผู้ใช้: {{ report.username }}</span>
+            <span class="time">{{ report.timestamp | date:'short' }}</span>
+          </div>
+          <p class="message">{{ report.message }}</p>
+        </div>
+        <button class="delete-btn" (click)="deleteReport(report.key)">ลบ</button>
+      </div>
+    </div>
+  </div>
+</div>

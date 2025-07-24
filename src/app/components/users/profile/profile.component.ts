@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 })
 export class ProfileComponent implements OnInit {
   userID: string | null = null;
+  name: string = ''; // เพิ่ม name        
   username: string = '';
   email: string = '';
   phone: string = '';
@@ -31,6 +32,7 @@ ngOnInit(): void {
   if (userData) {
     const user = JSON.parse(userData);
     this.userID = user.userID || user[0]?.userID || null;
+    this.name = user.name || user[0]?.name || ''; // โหลด name
     this.username = user.username || user[0]?.username || '';
     this.email = user.email || user[0]?.email || '';
     this.phone = user.phone || user[0]?.phone || '';

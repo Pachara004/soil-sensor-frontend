@@ -92,11 +92,11 @@ export class AdmainComponent implements OnInit {
   }
 
   goToUsers() {
-    this.router.navigate(['/users']);
+    this.router.navigate(['/profile']);
   }
 
   goToReports() {
-    this.router.navigate(['/reports']);
+    this.router.navigate(['/mail']);
   }
 
 }

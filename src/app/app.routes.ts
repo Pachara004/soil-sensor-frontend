@@ -10,6 +10,7 @@ import { ReportsComponent } from './components/users/reports/reports.component';
 import { HistoryComponent } from './components/users/history/history.component';
 import { AdmainComponent } from './components/admin/admain/admain.component';
 import { DetailComponent } from './components/admin/detail/detail.component';
+import { MailComponent } from './components/admin/mail/mail.component';
 
 
 export const routes: Routes = [
@@ -25,4 +26,5 @@ export const routes: Routes = [
     { path: 'history', component: HistoryComponent },
     { path: 'adminmain', component: AdmainComponent },
     { path: 'device-detail', component: DetailComponent }, 
+    { path: 'mail', component: MailComponent},
 ];

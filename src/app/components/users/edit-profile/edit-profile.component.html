@@ -4,8 +4,13 @@
         <i class="fas fa-arrow-left"></i>
       </div>
 
-    <div class="user-id">User : ADD12</div>
+    <div class="user-id">User : {{ username }}</div>
     <h2 class="title">ข้อมูลผู้ใช้</h2>
+
+    <div class="info-row">
+    <div class="label">Name</div>
+    <input type="text" class="value" [(ngModel)]="name" />
+    </div>
 
     <div class="info-row">
     <div class="label">Username</div>
@@ -34,7 +39,7 @@
  
 
     <div class="button-group">
-      <button class="edit-button">บันทึก</button>
+      <button class="edit-button" (click)="saveProfile()">บันทึก</button>
     </div>
 
     <div class="admin" (click)="goToContactAdmin()">

@@ -100,4 +100,50 @@
     outline: 1px solid red;
   }
   */
-  
+  .google-btn {
+  background: white;
+  border: 2px solid #4285F4;
+  color: #4285F4;
+  font-weight: bold;
+  padding: 12px 0;
+  width: 100%;
+  border-radius: 25px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.google-btn:hover {
+  background: #f1f1f1;
+}
+
+.google-btn img {
+  width: 20px;
+  height: 20px;
+}
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #888; /* สีเทาอ่อน */
+  font-size: 14px;
+  margin: 20px 0;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid #ccc;
+}
+
+.divider::before {
+  margin-right: 10px;
+}
+
+.divider::after {
+  margin-left: 10px;
+}

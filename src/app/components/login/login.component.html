@@ -2,10 +2,6 @@
   <div class="card">
     <div class="card-small">
       <form>
-        <div class="loading-container" *ngIf="isLoading">
-          <mat-spinner class="spinner"></mat-spinner>
-        </div>
-
         <!-- Logo -->
         <div class="logo">
           <img src="https://cdn-icons-png.freepik.com/512/1345/1345362.png" alt="">
@@ -33,6 +29,14 @@
         <button type="submit" class="login-btn"
                 (click)="loginuser(usernameInput.value, passwordInput.value, $event)">
           Login
+        </button>
+        <!-- หรือ Divider -->
+        <div class="divider">หรือ</div>
+
+        <!-- ปุ่ม Google Sign-In -->
+        <button type="button" class="google-btn" (click)="loginWithGoogle()">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/768px-Google_%22G%22_logo.svg.png" alt="Google Logo" />
+          Login with Google
         </button>
       </form>
     </div>

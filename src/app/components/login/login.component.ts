@@ -14,7 +14,6 @@ import { AuthService } from '../../service/auth.service';
   styleUrl: './login.component.scss'
 })
 export class LoginComponent {
-  isLoading = false;
 
   constructor(private auth: AuthService, private router: Router) {}
 
@@ -26,7 +25,6 @@ export class LoginComponent {
       return;
     }
 
-    this.isLoading = true;
 
     try {
       const user = await this.auth.login(username, password);
@@ -43,10 +41,21 @@ export class LoginComponent {
     } catch (err: any) {
       alert(err.message);
     } finally {
-      this.isLoading = false;
+      (event.target as HTMLFormElement).reset(); // รีเซ็ตฟอร์มหลังจากล็อกอิน 
     }
   }
-
+async loginWithGoogle() {
+    try {
+      const user = await this.auth.loginWithGoogle();
+      if (user) {
+        localStorage.setItem('user', JSON.stringify(user));
+        this.router.navigate(['main']);
+      }
+    } catch (error: any) {
+      console.error(error);
+      alert('Login with Google failed.');
+    }
+  }
   register() {
     this.router.navigate(['/register']);
   }

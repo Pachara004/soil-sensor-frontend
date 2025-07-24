@@ -1,24 +1,27 @@
 <div class="container">
-<button (click)="logout()" class="logout-btn">ออกจากระบบ</button>
+  <button (click)="logout()" class="logout-btn">ออกจากระบบ</button>
+
   <div class="card">
     <!-- ไอคอนบนสุด -->
-    <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png" class="chip-icon" alt="chip" />
-    <!-- <p *ngIf="userID">Your ID: {{ userID }}</p> -->
+    <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png"
+         class="chip-icon" alt="chip" />
+
     <!-- ข้อมูลผู้ใช้ -->
     <div class="user-box">
-      <span class="label">User :</span> <span class="value">ADD12</span>
+      <span class="label">User :</span>
+      <span class="value">{{ userID }}</span>
     </div>
 
     <!-- ข้อมูลชื่ออุปกรณ์ -->
     <div class="device-box">
       <span class="label-orange">ชื่ออุปกรณ์ :</span>
-      <span class="value">NPK0001</span>
+      <span class="value">{{ deviceName }}</span>
     </div>
 
     <!-- ปุ่มข้อมูลผู้ใช้ -->
     <div class="user-icon" (click)="goToProfile()" style="cursor: pointer;">
-        <img src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png" alt="user" />
-        <div class="text">ข้อมูลผู้ใช้</div>
+      <img src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png" alt="user" />
+      <div class="text">ข้อมูลผู้ใช้</div>
     </div>
 
     <!-- ปุ่มประวัติการวัดค่า -->
@@ -28,7 +31,7 @@
     <button class="btn-main" (click)="goToMeasure()">วัดค่า</button>
 
     <!-- ปุ่มติดต่อแอดมิน -->
-    <div class="admin" (click)="goToContactAdmin()" >
+    <div class="admin" (click)="goToContactAdmin()">
       <img src="https://cdn-icons-png.flaticon.com/512/9703/9703596.png" alt="admin" />
       <div>ติดต่อ Admin</div>
     </div>
