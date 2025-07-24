@@ -14,7 +14,8 @@ import { AuthService } from '../../service/auth.service';
   styleUrl: './login.component.scss'
 })
 export class LoginComponent {
-
+username = '';
+password = '';
   constructor(private auth: AuthService, private router: Router) {}
 
   async loginuser(username: string, password: string, event: Event) {
@@ -41,7 +42,8 @@ export class LoginComponent {
     } catch (err: any) {
       alert(err.message);
     } finally {
-      (event.target as HTMLFormElement).reset(); // รีเซ็ตฟอร์มหลังจากล็อกอิน 
+      this.username = '';
+      this.password = '';
     }
   }
 async loginWithGoogle() {

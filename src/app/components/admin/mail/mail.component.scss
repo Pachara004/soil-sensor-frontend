@@ -91,3 +91,14 @@
     right: 10px;
   }
 }
+.back {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  cursor: pointer;
+
+  i {
+    font-size: 20px;
+    color: #000;
+  }
+}

@@ -11,9 +11,15 @@
         <div class="text">ข้อมูลผู้ใช้</div>
       </div>
       <div class="icon-box" (click)="goToReports()" title="แจ้งเตือน Reports">
-        <img src="https://cdn-icons-png.flaticon.com/512/565/565340.png" alt="Reports" />
-        <div class="text">ข้อความ</div>
-      </div>
+  <img src="https://cdn-icons-png.flaticon.com/512/565/565340.png" alt="Reports" />
+  <div class="text">ข้อความ</div>
+
+  <!-- Badge -->
+  <span class="badge" *ngIf="unreadCount > 0">
+    {{ unreadCount > 99 ? '99+' : unreadCount }}
+  </span>
+</div>
+
     </div>
 
     <h2 class="admin-name">Admin : {{ adminName }}</h2>

@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Database, ref, onValue, remove } from '@angular/fire/database';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 
 @Component({
   selector: 'app-mail',
@@ -12,7 +12,12 @@ import { CommonModule } from '@angular/common';
 export class MailComponent implements OnInit {
   reports: any[] = [];
 
-  constructor(private db: Database) {}
+  constructor
+  (
+    private db: Database,
+    private location: Location,
+
+  ) {}
 
   ngOnInit(): void {
     const reportsRef = ref(this.db, 'reports');
@@ -43,5 +48,8 @@ export class MailComponent implements OnInit {
       await remove(reportRef);
       alert('ลบสำเร็จ');
     }
+  }
+  goBack() {
+    this.location.back();
   }
 }

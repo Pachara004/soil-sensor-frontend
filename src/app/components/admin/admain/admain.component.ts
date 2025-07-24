@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { AdminService } from '../../../service/AdminService';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { Database, ref, onValue, update } from '@angular/fire/database';
 @Component({
   selector: 'app-admain',
   standalone: true,
@@ -17,10 +18,12 @@ export class AdmainComponent implements OnInit {
   newDeviceUser = '';
   allUsers: any[] = [];
   filteredUsers: any[] = [];
+  unreadCount: number = 0;
 
   constructor(
     private adminService: AdminService,
-    private router: Router
+    private router: Router,
+    private db: Database
   ) {
     // ดึงข้อมูลจาก localStorage และแยก name
     const adminData = localStorage.getItem('admin');
@@ -42,6 +45,16 @@ export class AdmainComponent implements OnInit {
     }
     await this.loadDevices();
     this.allUsers = await this.adminService.getAllUsers();
+    const reportsRef = ref(this.db, 'reports');
+    onValue(reportsRef, (snapshot) => {
+      let count = 0;
+      snapshot.forEach(child => {
+        if (!child.val().read) {
+          count++;
+        }
+      });
+      this.unreadCount = count;
+    });
   }
 
   async loadDevices() {
@@ -96,7 +109,18 @@ export class AdmainComponent implements OnInit {
   }
 
   goToReports() {
-    this.router.navigate(['/mail']);
+    // mark all as read
+    const reportsRef = ref(this.db, 'reports');
+    onValue(reportsRef, (snapshot) => {
+      snapshot.forEach(child => {
+        const key = child.key!;
+        if (!child.val().read) {
+          update(ref(this.db, `reports/${key}`), { read: true });
+        }
+      });
+    });
+
+    this.router.navigate(['/mail']); // หรือ path กล่องข้อความ
   }
 
 }

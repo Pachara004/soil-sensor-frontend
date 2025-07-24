@@ -22,17 +22,7 @@ export const firebaseConfig = {
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    {
-      provide: IMAGE_CONFIG,
-      useValue: {
-        disableImageSizeWarning: true,
-        disableImageLazyLoadWarning: true
-      }
-    },
-
     provideRouter(routes),
-    provideAnimationsAsync(),
-    provideHttpClient(),
     provideFirebaseApp(() => initializeApp(firebaseConfig)),
     provideAuth(() => getAuth()),
     provideDatabase(() => getDatabase()),
