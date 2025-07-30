@@ -8,30 +8,127 @@
     <!-- Logo -->
     <div class="logo">
       <img src="https://cdn-icons-png.freepik.com/512/1345/1345362.png" alt="Logo" />
-      <h2>Forgot Password</h2>
+      <h2>{{ getTitle() }}</h2>
     </div>
 
-    <!-- Email -->
-    <div class="input-group">
-      <label>Email</label>
-      <input type="email" placeholder="Enter your email" />
-      <button class="otp-btn">ส่ง OTP</button>
-    </div>
-
-    <!-- OTP -->
-    <div class="otp-group">
-      <label>OTP</label>
-      <div class="otp-boxes">
-        <input maxlength="1" />
-        <input maxlength="1" />
-        <input maxlength="1" />
-        <input maxlength="1" />
-        <input maxlength="1" />
-        <input maxlength="1" />
+    <!-- Step 1: กรอกอีเมล -->
+    <div *ngIf="step === 1" class="step-content">
+      <div class="input-group">
+        <label>Email</label>
+        <input 
+          type="email" 
+          [(ngModel)]="email" 
+          placeholder="กรุณากรอกอีเมลของคุณ"
+          [disabled]="isLoading" />
+        <button 
+          class="otp-btn" 
+          (click)="sendOtp()"
+          [disabled]="!email || isLoading || countdown > 0">
+          <span *ngIf="!isLoading && countdown === 0">ส่ง OTP</span>
+          <span *ngIf="isLoading">กำลังส่ง...</span>
+          <span *ngIf="countdown > 0">ส่งใหม่ใน {{ countdown }}s</span>
+        </button>
       </div>
     </div>
 
-    <!-- ปุ่มยืนยัน -->
-    <button class="confirm-btn">ยืนยัน</button>
+    <!-- Step 2: กรอก OTP -->
+    <div *ngIf="step === 2" class="step-content">
+      <div class="otp-group">
+        <label>กรุณากรอก OTP ที่ส่งไปยังอีเมล</label>
+        <p class="email-display">{{ email }}</p>
+        <div class="otp-boxes">
+          <input 
+            *ngFor="let digit of otp; let i = index"
+            #otpInput
+            type="text" 
+            maxlength="1" 
+            [(ngModel)]="otp[i]"
+            (input)="moveToNext($event, i)"
+            (keydown)="onKeyDown($event, i)"
+            [disabled]="isLoading" />
+        </div>
+        <div class="resend-section">
+          <button 
+            class="resend-btn" 
+            (click)="resendOtp()"
+            [disabled]="countdown > 0 || isLoading">
+            <span *ngIf="countdown === 0">ส่ง OTP อีกครั้ง</span>
+            <span *ngIf="countdown > 0">{{ countdown }}s</span>
+          </button>
+        </div>
+      </div>
+      <button 
+        class="confirm-btn" 
+        (click)="verifyOtp()"
+        [disabled]="!isOtpComplete() || isLoading">
+        <span *ngIf="!isLoading">ยืนยัน OTP</span>
+        <span *ngIf="isLoading">กำลังตรวจสอบ...</span>
+      </button>
+    </div>
+
+    <!-- Step 3: ตั้งรหัสผ่านใหม่ -->
+    <div *ngIf="step === 3" class="step-content">
+      <div class="input-group">
+        <label>รหัสผ่านใหม่</label>
+        <div class="password-container">
+          <input 
+            [type]="showNewPassword ? 'text' : 'password'"
+            [(ngModel)]="newPassword"
+            placeholder="กรุณากรอกรหัสผ่านใหม่"
+            (input)="checkPasswordStrength()"
+            [disabled]="isLoading" />
+          <i 
+            class="password-toggle fas" 
+            [class.fa-eye]="!showNewPassword" 
+            [class.fa-eye-slash]="showNewPassword"
+            (click)="toggleNewPassword()">
+          </i>
+        </div>
+        <!-- Password Strength Indicator -->
+        <div class="password-strength" *ngIf="newPassword">
+          <div class="strength-bar">
+            <div class="strength-fill" 
+                 [style.width.%]="passwordStrength.width"
+                 [class]="passwordStrength.class"></div>
+          </div>
+          <span class="strength-text" [class]="passwordStrength.class">
+            {{ passwordStrength.text }}
+          </span>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>ยืนยันรหัสผ่านใหม่</label>
+        <div class="password-container">
+          <input 
+            [type]="showConfirmPassword ? 'text' : 'password'"
+            [(ngModel)]="confirmPassword"
+            placeholder="กรุณายืนยันรหัสผ่านใหม่"
+            [disabled]="isLoading" />
+          <i 
+            class="password-toggle fas" 
+            [class.fa-eye]="!showConfirmPassword" 
+            [class.fa-eye-slash]="showConfirmPassword"
+            (click)="toggleConfirmPassword()">
+          </i>
+        </div>
+        <div class="error-message" *ngIf="passwordMismatch">
+          รหัสผ่านไม่ตรงกัน
+        </div>
+      </div>
+
+      <button 
+        class="confirm-btn" 
+        (click)="resetPassword()"
+        [disabled]="!canResetPassword() || isLoading">
+        <span *ngIf="!isLoading">เปลี่ยนรหัสผ่าน</span>
+        <span *ngIf="isLoading">กำลังเปลี่ยนรหัสผ่าน...</span>
+      </button>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div *ngIf="isLoading" class="loading-overlay">
+      <div class="spinner"></div>
+    </div>
   </div>
 </div>
