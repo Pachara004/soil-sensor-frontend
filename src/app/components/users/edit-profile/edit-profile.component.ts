@@ -9,7 +9,7 @@ interface UserData {
   email: string;
   name: string;
   password: string;
-  phone: string;
+  phoneNumber: string;
   type: string;
   userID: string;
   username: string;
@@ -28,7 +28,7 @@ export class EditProfileComponent implements OnInit {
   username: string = '';
   name: string = ''; // เพิ่ม name
   email: string = '';
-  phone: string = '';
+  phoneNumber: string = '';
   password: string = '';
   confirmPassword: string = '';
 
@@ -50,7 +50,7 @@ export class EditProfileComponent implements OnInit {
       this.username = user.username || '';
       this.name = user.name || user.username || ''; // โหลด name
       this.email = user.email || '';
-      this.phone = user.phone || '';
+      this.phoneNumber = user.phoneNumber || '';
     } else {
       alert('ไม่พบข้อมูลผู้ใช้');
       this.router.navigate(['/']);
@@ -74,7 +74,7 @@ export class EditProfileComponent implements OnInit {
         username: this.username,
         name: this.name, // เพิ่ม name
         email: this.email,
-        phone: this.phone
+        phoneNumber: this.phoneNumber
       };
       if (this.password) {
         updates.password = this.password;
@@ -88,7 +88,7 @@ export class EditProfileComponent implements OnInit {
         username: this.username,
         name: this.name, // เพิ่ม name
         email: this.email,
-        phone: this.phone
+        phoneNumber: this.phoneNumber
       }));
       localStorage.setItem('admin', JSON.stringify({
         username: this.username,

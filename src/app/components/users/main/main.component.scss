@@ -1,40 +1,50 @@
 /* พื้นหลัง */
 .container {
   background-color: #013220;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
 }
+
 /* ปุ่มออกจากระบบที่มุมซ้ายบน */
 .logout-btn {
-  position: absolute;
-  top: 20px;
-  left: 20px;
+  position: fixed;
+  top: 15px;
+  left: 15px;
   background-color: #ff4d4d;
   color: white;
-  padding: 10px 15px;
+  padding: 8px 12px;
   font-weight: bold;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   z-index: 10;
-  transition: background-color 0.3s;
+  transition: all 0.3s ease;
+  font-size: 14px;
 }
 
 .logout-btn:hover {
   background-color: #cc0000;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
+
 /* กรอบหลัก */
 .card {
-  width: 750px;
-  height: 550px;
+  width: 100%;
+  max-width: 750px;
+  height: auto;
+  min-height: 500px;
   background: white;
   border-radius: 20px;
   border: 4px solid #00aaff;
   padding: 20px;
   position: relative;
   box-sizing: border-box;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
 /* ไอคอนบนสุด */
@@ -51,9 +61,11 @@
   padding: 10px 15px;
   border-radius: 10px;
   width: fit-content;
+  max-width: calc(100% - 100px);
   margin-top: 40px;
-  font-size: 20px;
+  font-size: clamp(16px, 2.5vw, 20px);
   font-weight: bold;
+  word-wrap: break-word;
 }
 
 /* ชื่ออุปกรณ์ */
@@ -62,16 +74,19 @@
   padding: 10px 15px;
   border-radius: 10px;
   width: fit-content;
+  max-width: calc(100% - 100px);
   margin-top: 15px;
-  font-size: 18px;
+  font-size: clamp(14px, 2vw, 18px);
   display: flex;
   gap: 5px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .device-box .chip-icon {
   width: 30px;
   height: 30px;
+  flex-shrink: 0;
 }
 
 .device-select {
@@ -79,9 +94,11 @@
   border-radius: 8px;
   border: none;
   background-color: #ffffff;
-  font-size: 16px;
+  font-size: clamp(14px, 1.8vw, 16px);
   cursor: pointer;
-  min-width: 150px;
+  min-width: 120px;
+  max-width: 200px;
+  flex: 1;
 }
 
 .device-select:focus {
@@ -101,10 +118,10 @@
 /* ไอคอนผู้ใช้ */
 .user-icon {
   position: absolute;
-  right: 30px;
+  right: 20px;
   top: 40px;
   text-align: center;
-  font-size: 14px;
+  font-size: clamp(12px, 1.5vw, 14px);
   color: #000;
 }
 
@@ -117,16 +134,28 @@
 .btn-main {
   background: #4cd964;
   border-radius: 50%;
-  width: 140px;
-  height: 140px;
+  width: clamp(100px, 15vw, 140px);
+  height: clamp(100px, 15vw, 140px);
   border: none;
-  font-size: 24px;
+  font-size: clamp(18px, 3vw, 24px);
   font-weight: bold;
   position: absolute;
-  top: 50%;
+  top: 55%;
   left: 50%;
   transform: translate(-50%, -50%);
   cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(76, 217, 100, 0.4);
+}
+
+.btn-main:hover {
+  background: #45c55a;
+  transform: translate(-50%, -52%) scale(1.05);
+  box-shadow: 0 6px 20px rgba(76, 217, 100, 0.6);
+}
+
+.btn-main:active {
+  transform: translate(-50%, -50%) scale(0.95);
 }
 
 /* ปุ่มประวัติ */
@@ -135,12 +164,20 @@
   color: black;
   border: none;
   border-radius: 20px;
-  padding: 5px 15px;
-  font-size: 14px;
+  padding: 8px 15px;
+  font-size: clamp(12px, 1.5vw, 14px);
   position: absolute;
-  right: 30px;
+  right: 20px;
   top: 120px;
   cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-history:hover {
+  background: #9ee89e;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 /* ติดต่อ Admin */
@@ -149,10 +186,189 @@
   bottom: 20px;
   right: 20px;
   text-align: center;
-  font-size: 14px;
+  font-size: clamp(12px, 1.5vw, 14px);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.admin:hover {
+  transform: scale(1.1);
 }
 
 .admin img {
   width: 30px;
   height: 30px;
+  transition: all 0.3s ease;
+}
+
+.admin:hover img {
+  filter: brightness(1.2);
+}
+
+/* Responsive Design */
+
+/* Tablet Portrait */
+@media (max-width: 768px) {
+  .container {
+    padding: 15px;
+  }
+  
+  .card {
+    max-width: 100%;
+    min-height: 400px;
+    padding: 15px;
+    border-width: 3px;
+  }
+  
+  .logout-btn {
+    top: 10px;
+    left: 10px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  
+  .user-box, .device-box {
+    max-width: calc(100% - 80px);
+  }
+  
+  .user-icon {
+    right: 15px;
+    top: 35px;
+  }
+  
+  .btn-history {
+    right: 15px;
+    top: 100px;
+    padding: 6px 12px;
+  }
+  
+  .admin {
+    bottom: 15px;
+    right: 15px;
+  }
+}
+
+/* Mobile Landscape */
+@media (max-width: 640px) and (orientation: landscape) {
+  .card {
+    min-height: 350px;
+  }
+  
+  .btn-main {
+    top: 50%;
+  }
+}
+
+/* Mobile Portrait */
+@media (max-width: 480px) {
+  .container {
+    padding: 10px;
+  }
+  
+  .card {
+    border-radius: 15px;
+    padding: 15px;
+    min-height: 450px;
+  }
+  
+  .chip-icon {
+    width: 35px;
+    left: calc(50% - 17.5px);
+  }
+  
+  .user-box {
+    margin-top: 35px;
+    padding: 8px 12px;
+    max-width: calc(100% - 60px);
+  }
+  
+  .device-box {
+    padding: 8px 12px;
+    max-width: calc(100% - 60px);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .device-select {
+    width: 100%;
+    max-width: none;
+    min-width: auto;
+  }
+  
+  .user-icon {
+    right: 10px;
+    top: 30px;
+  }
+  
+  .user-icon img {
+    width: 25px;
+    height: 25px;
+  }
+  
+  .btn-history {
+    right: 10px;
+    top: 85px;
+    padding: 5px 10px;
+  }
+  
+  .admin {
+    bottom: 10px;
+    right: 10px;
+  }
+  
+  .admin img {
+    width: 25px;
+    height: 25px;
+  }
+}
+
+/* Very Small Mobile */
+@media (max-width: 320px) {
+  .card {
+    padding: 12px;
+    min-height: 400px;
+  }
+  
+  .user-box, .device-box {
+    max-width: calc(100% - 40px);
+  }
+  
+  .btn-main {
+    width: 90px;
+    height: 90px;
+    font-size: 16px;
+  }
+}
+
+/* Animation สำหรับ Loading State */
+@keyframes pulse {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.05); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+.btn-main.loading {
+  animation: pulse 1.5s ease-in-out infinite;
+  background: #ffa500;
+  cursor: not-allowed;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .card {
+    background: #1e1e1e;
+    color: white;
+    border-color: #0088cc;
+  }
+  
+  .user-box, .device-box {
+    background: #333333;
+    color: white;
+  }
+  
+  .device-select {
+    background-color: #2a2a2a;
+    color: white;
+  }
 }

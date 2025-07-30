@@ -15,7 +15,7 @@ export class ProfileComponent implements OnInit {
   name: string = ''; // เพิ่ม name        
   username: string = '';
   email: string = '';
-  phone: string = '';
+  phoneNumber: string = '';
 
   constructor(
     private router: Router,
@@ -35,7 +35,7 @@ ngOnInit(): void {
     this.name = user.name || user[0]?.name || ''; // โหลด name
     this.username = user.username || user[0]?.username || '';
     this.email = user.email || user[0]?.email || '';
-    this.phone = user.phone || user[0]?.phone || '';
+    this.phoneNumber = user.phoneNumber || user[0]?.phoneNumber || '';
   } else {
     alert('ไม่พบข้อมูลผู้ใช้');
     this.router.navigate(['/']);
