@@ -54,11 +54,6 @@ export class AuthService {
           throw new Error('ไม่พบข้อมูลผู้ใช้ในระบบ');
         }
 
-        // ตรวจสอบการยืนยันอีเมล
-        if (userData.emailVerified !== true) {
-          throw new Error('กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ');
-        }
-
         // กำหนด type ถ้าไม่มี (default เป็น user)
         const userType = userData.type || 'user';
 

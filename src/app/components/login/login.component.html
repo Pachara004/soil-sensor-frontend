@@ -1,26 +1,34 @@
 <div class="container">
   <div class="card">
     <div class="card-small">
-      <form>
+      <form (ngSubmit)="loginuser(email, password, $event)">
         <!-- Logo -->
         <div class="logo">
           <img src="https://cdn-icons-png.freepik.com/512/1345/1345362.png" alt="">
         </div>
 
         <!-- Input fields -->
-      <div class="form-group">
-        <div class="input-label">Email</div>
-        <input #emailInput type="email" [(ngModel)]="email" placeholder="กรุณากรอกอีเมล" />
-      </div>
+        <div class="form-group">
+          <div class="input-label">Email</div>
+          <input 
+            type="email" 
+            name="email"
+            [(ngModel)]="email" 
+            placeholder="กรุณากรอกอีเมล" 
+            [disabled]="isLoading"
+            required />
+        </div>
 
-       <div class="form-group">
+        <div class="form-group">
           <div class="input-label">Password</div>
           <div class="password-container">
-            <input #passwordInput 
-                  [type]="showPassword ? 'text' : 'password'" 
-                  [(ngModel)]="password" 
-                  placeholder="กรุณากรอกรหัสผ่าน" 
-                  (keyup.enter)="loginuser(emailInput.value, passwordInput.value, $event)">
+            <input 
+              [type]="showPassword ? 'text' : 'password'" 
+              name="password"
+              [(ngModel)]="password" 
+              placeholder="กรุณากรอกรหัสผ่าน"
+              [disabled]="isLoading"
+              required>
             <i 
               class="password-toggle fas" 
               [class.fa-eye]="!showPassword" 
@@ -37,14 +45,26 @@
         </div>
 
         <!-- Login button -->
-        <button type="submit" class="primary-btn" [disabled]="!email || !password">Login</button>
+        <button 
+          type="submit" 
+          class="primary-btn" 
+          [disabled]="!email || !password || isLoading">
+          <span *ngIf="!isLoading">Login</span>
+          <span *ngIf="isLoading">กำลังเข้าสู่ระบบ...</span>
+        </button>
+
         <!-- หรือ Divider -->
         <div class="divider">หรือ</div>
 
         <!-- ปุ่ม Google Sign-In -->
-        <button type="button" class="google-btn" (click)="loginWithGoogle()">
+        <button 
+          type="button" 
+          class="google-btn" 
+          (click)="loginWithGoogle()"
+          [disabled]="isLoading">
           <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/768px-Google_%22G%22_logo.svg.png" alt="Google Logo" />
-          Login With Google
+          <span *ngIf="!isLoading">Login With Google</span>
+          <span *ngIf="isLoading">กำลังเข้าสู่ระบบ...</span>
         </button>
       </form>
     </div>
