@@ -2,7 +2,6 @@ import { Component, ViewChildren, QueryList, ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { Auth, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from '@angular/fire/auth';
 import { Database, ref, set, get, child } from '@angular/fire/database';
-import { sendEmailVerification } from 'firebase/auth';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
@@ -285,11 +284,8 @@ export class RegisterComponent {
         fullName: this.fullName,
         phoneNumber: this.phoneNumber.replace(/\D/g, ''),
         createdAt: Date.now(),
-        emailVerified: false
       });
 
-      // ส่งอีเมลยืนยัน
-      await sendEmailVerification(user);
 
       alert('สมัครสำเร็จ! กรุณายืนยันอีเมลของคุณ');
       this.router.navigate(['/']);
@@ -345,7 +341,6 @@ export class RegisterComponent {
         fullName: user.displayName || '',
         phoneNumber: '',
         createdAt: Date.now(),
-        emailVerified: user.emailVerified,
         provider: 'google'
       });
 
