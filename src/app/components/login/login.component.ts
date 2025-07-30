@@ -70,10 +70,13 @@ export class LoginComponent {
     try {
       const userData = await this.auth.loginWithGoogle();
       
-      if (userData) {
+      if (userData.type === 'user') {
         console.log('✅ Google login successful:', userData);
         localStorage.setItem('user', JSON.stringify(userData));
         this.router.navigate(['/main']);
+      } else {
+        localStorage.setItem('admin', JSON.stringify(userData));
+        this.router.navigate(['/adminmain']);
       }
     } catch (error: any) {
       console.error('❌ Google login error:', error);
