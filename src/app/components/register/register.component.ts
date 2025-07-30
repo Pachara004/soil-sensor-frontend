@@ -88,59 +88,79 @@ export class RegisterComponent {
   }
 
   private async sendOtpEmail(email: string, otp: string): Promise<void> {
-    // วิธีที่ 1: ใช้ EmailJS (แนะนำสำหรับการทดสอบ)
-    const useEmailJS = true; // เปลี่ยนเป็น true และใส่ข้อมูล EmailJS
-    
-    if (useEmailJS) {
-      const emailJSData = {
-        service_id: 'service_y6enw8s', // Service ID ที่คุณสร้าง
-        template_id: 'template_ztt7b87', // แทนที่ด้วย Template ID ที่สร้างใหม่
-        user_id: '8ypHiGBky5C_KnLx8', // แทนที่ด้วย Public Key จาก Account > API Keys
-        template_params: {
-          to_email: email,
-          to_name: 'ผู้สมัครใหม่',
-          otp_code: otp,
-          from_name: 'ระบบสมัครสมาชิก'
-        }
-      };
+  // วิธีที่ 1: ใช้ EmailJS (แนะนำสำหรับการทดสอบ)
+  const useEmailJS = true; // เปลี่ยนเป็น true และใส่ข้อมูล EmailJS
+  
+  if (useEmailJS) {
+    const emailJSData = {
+      service_id: 'service_y6enw8s', // Service ID ที่คุณสร้าง
+      template_id: 'template_ztt7b87', // แทนที่ด้วย Template ID ที่สร้างใหม่
+      user_id: '8ypHiGBky5C_KnLx8', // แทนที่ด้วย Public Key จาก Account > API Keys
+      template_params: {
+        to_email: email,
+        to_name: 'ผู้สมัครใหม่',
+        otp_code: otp,
+        from_name: 'ระบบสมัครสมาชิก'
+      }
+    };
 
+    try {
+      // เพิ่ม responseType: 'text' เพื่อบอก Angular ว่าจะได้รับ response เป็น text
       const response = await firstValueFrom(
-        this.http.post('https://api.emailjs.com/api/v1.0/email/send', emailJSData)
-      );
-      return;
-    }
-
-    // วิธีที่ 2: ใช้ Firebase Cloud Functions
-    const useCloudFunction = false; // เปลี่ยนเป็น true และสร้าง Cloud Function
-    
-    if (useCloudFunction) {
-      const cloudFunctionUrl = 'https://YOUR_REGION-YOUR_PROJECT.cloudfunctions.net/sendOtpEmail';
-      const response = await firstValueFrom(
-        this.http.post(cloudFunctionUrl, {
-          email: email,
-          otp: otp
+        this.http.post('https://api.emailjs.com/api/v1.0/email/send', emailJSData, {
+          responseType: 'text' // <-- นี่คือส่วนที่สำคัญ
         })
       );
-      return;
+      
+      console.log('EmailJS Response:', response);
+      return; // สำเร็จ
+      
+    } catch (error: any) {
+      console.error('EmailJS Error Details:', error);
+      
+      // ตรวจสอบว่าเป็น error จริงๆ หรือแค่ response format ผิด
+      if (error.status === 200) {
+        // ถ้า status เป็น 200 แสดงว่าส่งสำเร็จแล้ว
+        console.log('Email sent successfully despite error format');
+        return;
+      }
+      
+      // ถ้าเป็น error จริงๆ ให้ throw ต่อไป
+      throw new Error(`EmailJS failed: ${error.message || 'Unknown error'}`);
     }
-
-    // วิธีที่ 3: ใช้ Backend API ของคุณเอง
-    const useCustomAPI = false; // เปลี่ยนเป็น true และใส่ URL ของ API
-    
-    if (useCustomAPI) {
-      const apiUrl = 'https://your-backend-api.com/send-otp';
-      const response = await firstValueFrom(
-        this.http.post(apiUrl, {
-          email: email,
-          otp: otp
-        })
-      );
-      return;
-    }
-
-    // หากไม่ได้เปิดใช้งานวิธีใดเลย จะ throw error
-    throw new Error('No email service configured');
   }
+
+  // วิธีที่ 2: ใช้ Firebase Cloud Functions
+  const useCloudFunction = false; // เปลี่ยนเป็น true และสร้าง Cloud Function
+  
+  if (useCloudFunction) {
+    const cloudFunctionUrl = 'https://YOUR_REGION-YOUR_PROJECT.cloudfunctions.net/sendOtpEmail';
+    const response = await firstValueFrom(
+      this.http.post(cloudFunctionUrl, {
+        email: email,
+        otp: otp
+      })
+    );
+    return;
+  }
+
+  // วิธีที่ 3: ใช้ Backend API ของคุณเอง
+  const useCustomAPI = false; // เปลี่ยนเป็น true และใส่ URL ของ API
+  
+  if (useCustomAPI) {
+    const apiUrl = 'https://your-backend-api.com/send-otp';
+    const response = await firstValueFrom(
+      this.http.post(apiUrl, {
+        email: email,
+        otp: otp
+      })
+    );
+    return;
+  }
+
+  // หากไม่ได้เปิดใช้งานวิธีใดเลย จะ throw error
+  throw new Error('No email service configured');
+}
 
   async resendOtp() {
     await this.sendOtp();
