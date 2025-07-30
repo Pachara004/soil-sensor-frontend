@@ -93,9 +93,9 @@ export class RegisterComponent {
     
     if (useEmailJS) {
       const emailJSData = {
-        service_id: 'service_a3fbb53', // Service ID ที่คุณสร้าง
-        template_id: 'YOUR_TEMPLATE_ID', // แทนที่ด้วย Template ID ที่สร้างใหม่
-        user_id: 'YOUR_PUBLIC_KEY', // แทนที่ด้วย Public Key จาก Account > API Keys
+        service_id: 'service_y6enw8s', // Service ID ที่คุณสร้าง
+        template_id: 'template_ztt7b87', // แทนที่ด้วย Template ID ที่สร้างใหม่
+        user_id: '8ypHiGBky5C_KnLx8', // แทนที่ด้วย Public Key จาก Account > API Keys
         template_params: {
           to_email: email,
           to_name: 'ผู้สมัครใหม่',
