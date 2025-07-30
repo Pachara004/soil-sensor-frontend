@@ -9,14 +9,14 @@
 
         <!-- Input fields -->
         <div class="form-group">
-          <div class="input-label">Username</div>
-          <input type="text" #usernameInput />
+          <div class="input-label">Email</div>
+          <input type="text" #emailInput />
         </div>
 
         <div class="form-group">
           <div class="input-label">Password</div>
           <input type="password" #passwordInput
-                 (keyup.enter)="loginuser(usernameInput.value, passwordInput.value, $event)">
+                 (keyup.enter)="loginuser(emailInput.value, passwordInput.value, $event)">
         </div>
 
         <!-- Links -->
@@ -27,7 +27,7 @@
 
         <!-- Login button -->
         <button type="submit" class="login-btn"
-                (click)="loginuser(usernameInput.value, passwordInput.value, $event)">
+                (click)="loginuser(emailInput.value, passwordInput.value, $event)">
           Login
         </button>
         <!-- หรือ Divider -->
@@ -36,7 +36,7 @@
         <!-- ปุ่ม Google Sign-In -->
         <button type="button" class="google-btn" (click)="loginWithGoogle()">
           <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/768px-Google_%22G%22_logo.svg.png" alt="Google Logo" />
-          Login with Google
+          Login With Google
         </button>
       </form>
     </div>

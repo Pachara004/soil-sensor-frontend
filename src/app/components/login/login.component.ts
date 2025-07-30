@@ -14,21 +14,21 @@ import { AuthService } from '../../service/auth.service';
   styleUrl: './login.component.scss'
 })
 export class LoginComponent {
-username = '';
+email = '';
 password = '';
   constructor(private auth: AuthService, private router: Router) {}
 
-  async loginuser(username: string, password: string, event: Event) {
+  async loginuser(email: string, password: string, event: Event) {
     event.preventDefault();
 
-    if (!username || !password) {
+    if (!email || !password) {
       alert('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
       return;
     }
 
 
     try {
-      const user = await this.auth.login(username, password);
+      const user = await this.auth.login(email, password);
 
       if (user.type === 'user') {
         localStorage.setItem('user', JSON.stringify(user));
@@ -42,7 +42,7 @@ password = '';
     } catch (err: any) {
       alert(err.message);
     } finally {
-      this.username = '';
+      this.email = '';
       this.password = '';
     }
   }
