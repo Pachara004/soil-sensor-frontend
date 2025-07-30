@@ -4,7 +4,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../service/auth.service';
-import { Database, ref, get } from '@angular/fire/database'; // เพิ่มการใช้ Database
 
 @Component({
   selector: 'app-login',
@@ -16,63 +15,76 @@ import { Database, ref, get } from '@angular/fire/database'; // เพิ่ม�
 export class LoginComponent {
   email = '';
   password = '';
+  isLoading = false;
+  showPassword = false;
 
   constructor(
     private auth: AuthService,
-    private router: Router,
-    private database: Database // เพิ่ม Database
+    private router: Router
   ) {}
 
   async loginuser(email: string, password: string, event: Event) {
     event.preventDefault();
 
     if (!email || !password) {
-      alert('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
+      alert('กรุณากรอกอีเมลและรหัสผ่าน');
       return;
     }
 
+    if (!this.isValidEmail(email)) {
+      alert('กรุณากรอกอีเมลที่ถูกต้อง');
+      return;
+    }
+
+    this.isLoading = true;
+
     try {
-      const userCredential = await this.auth.login(email, password); // สมมติว่า login คืน userCredential
-      const user = userCredential.user; // ใช้ user จาก Firebase Auth
+      const userData = await this.auth.login(email, password);
+      
+      console.log('✅ Login successful:', userData);
 
-      // ตรวจสอบ emailVerified จาก Realtime Database
-      const dbRef = ref(this.database, `users/${user.uid}/emailVerified`);
-      const snapshot = await get(dbRef);
-      const isEmailVerified = snapshot.exists() && snapshot.val() === true;
-
-      if (isEmailVerified) {
-        if (userCredential.type === 'user') {
-          localStorage.setItem('user', JSON.stringify(userCredential));
-          this.router.navigate(['main']);
-        } else if (userCredential.type === 'admin') {
-          localStorage.setItem('admin', JSON.stringify(userCredential));
-          this.router.navigate(['adminmain']);
-        } else {
-          alert('ไม่พบสิทธิ์ผู้ใช้');
-        }
+      // เก็บข้อมูลใน localStorage ตาม type
+      if (userData.type === 'admin') {
+        localStorage.setItem('admin', JSON.stringify(userData));
+        this.router.navigate(['/adminmain']);
       } else {
-        alert('กรุณายืนยันอีเมลก่อนล็อกอิน');
-        // await this.auth.logout(); // สมมติมีฟังก์ชัน logout
+        localStorage.setItem('user', JSON.stringify(userData));
+        this.router.navigate(['/main']);
       }
+
     } catch (err: any) {
-      alert(err.message);
+      console.error('❌ Login error:', err);
+      alert(err.message || 'เข้าสู่ระบบล้มเหลว');
     } finally {
-      this.email = '';
-      this.password = '';
+      this.isLoading = false;
+      // ล้างฟอร์มเมื่อมี error
+      if (this.isLoading === false) {
+        this.password = '';
+      }
     }
   }
 
   async loginWithGoogle() {
+    this.isLoading = true;
+    
     try {
-      const user = await this.auth.loginWithGoogle();
-      if (user) {
-        localStorage.setItem('user', JSON.stringify(user));
-        this.router.navigate(['main']);
+      const userData = await this.auth.loginWithGoogle();
+      
+      if (userData) {
+        console.log('✅ Google login successful:', userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        this.router.navigate(['/main']);
       }
     } catch (error: any) {
-      console.error(error);
-      alert('Login with Google failed.');
+      console.error('❌ Google login error:', error);
+      alert('เข้าสู่ระบบด้วย Google ล้มเหลว');
+    } finally {
+      this.isLoading = false;
     }
+  }
+
+  togglePassword() {
+    this.showPassword = !this.showPassword;
   }
 
   register() {
@@ -81,5 +93,10 @@ export class LoginComponent {
 
   goToForgotPassword() {
     this.router.navigate(['/forgotpass']);
+  }
+
+  private isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   }
 }

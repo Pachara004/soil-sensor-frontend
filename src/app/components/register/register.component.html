@@ -35,7 +35,7 @@
       <p class="step-description">กรุณาใส่รหัส OTP ที่ส่งไปยัง {{ email }}</p>
       <div class="otp-boxes">
         <input 
-          *ngFor="let box of otpInputArray; let i = index" 
+          *ngFor="let box of otpInputsArray; let i = index" 
           maxlength="1" 
           [(ngModel)]="otp[i]" 
           (input)="moveToNext($event, i)"

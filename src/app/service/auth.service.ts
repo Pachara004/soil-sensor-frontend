@@ -1,158 +1,212 @@
 import { Injectable } from '@angular/core';
 import { Database, ref, get, set, child } from '@angular/fire/database';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import {
+  Auth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword
+} from '@angular/fire/auth';
 
 interface UserData {
+  uid: string;
   email: string;
-  name: string;
-  password: string;
-  phone: string;
-  type: string;
-  userID: string;
   username: string;
+  fullName: string;
+  phoneNumber: string;
+  createdAt: number;
   emailVerified: boolean;
-  devices?: { [key: string]: boolean };
+  type?: string;
+  provider?: string;
 }
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  logout() {
-    throw new Error('Method not implemented.');
-  }
-  constructor(private db: Database) {}
+  constructor(private db: Database, private auth: Auth) {}
 
-  /**
-   * ✅ Login User
-   * ดึงข้อมูลจาก path: users/{uid} โดยใช้ email และ password
-   */
   async login(email: string, password: string): Promise<any> {
-    const auth = getAuth();
     try {
-      // ใช้ Firebase Authentication เพื่อตรวจสอบ email และ password
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // 1. Authenticate กับ Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
       const user = userCredential.user;
       const uid = user.uid;
 
-      // ดึงข้อมูลจาก Realtime Database
+      // 2. ค้นหาข้อมูลผู้ใช้ใน Realtime Database
       const dbRef = ref(this.db);
-      const snapshot = await get(child(dbRef, `users/${uid}`));
+      const usersRef = child(dbRef, 'users');
+      const snapshot = await get(usersRef);
+      
       if (snapshot.exists()) {
-        const data = snapshot.val();
-        // ตรวจสอบ emailVerified
-        if (data.emailVerified !== true) {
-          throw new Error('กรุณายืนยันอีเมลก่อนล็อกอิน');
+        const allUsers = snapshot.val();
+        let userData = null;
+        let username = null;
+
+        // ค้นหาผู้ใช้ที่มี uid ตรงกัน
+        for (const [key, value] of Object.entries(allUsers)) {
+          if ((value as any).uid === uid) {
+            userData = value as any;
+            username = key;
+            break;
+          }
         }
-        // เก็บข้อมูลใน localStorage
-        localStorage.setItem('admin', JSON.stringify({ username: data.username, name: data.name || data.username }));
-        localStorage.setItem('user', JSON.stringify({
-          username: data.username,
-          userID: data.userID || uid,
-          name: data.name,
-          email: data.email,
-          phone: data.phone
-        }));
-        return data;
+
+        if (!userData) {
+          throw new Error('ไม่พบข้อมูลผู้ใช้ในระบบ');
+        }
+
+        // ตรวจสอบการยืนยันอีเมล
+        if (userData.emailVerified !== true) {
+          throw new Error('กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ');
+        }
+
+        // กำหนด type ถ้าไม่มี (default เป็น user)
+        const userType = userData.type || 'user';
+
+        const returnData = {
+          uid: userData.uid,
+          username: userData.username || username,
+          email: userData.email,
+          fullName: userData.fullName,
+          phoneNumber: userData.phoneNumber,
+          type: userType,
+          emailVerified: userData.emailVerified
+        };
+
+        return returnData;
       } else {
-        throw new Error('ไม่พบผู้ใช้');
+        throw new Error('ไม่พบข้อมูลผู้ใช้ในระบบ');
       }
     } catch (err: any) {
       console.error('ข้อผิดพลาดในการล็อกอิน:', err);
+      
+      // แปลง Firebase Auth errors เป็นภาษาไทย
+      if (err.code === 'auth/user-not-found') {
+        throw new Error('ไม่พบผู้ใช้นี้ในระบบ');
+      } else if (err.code === 'auth/wrong-password') {
+        throw new Error('รหัสผ่านไม่ถูกต้อง');
+      } else if (err.code === 'auth/invalid-email') {
+        throw new Error('รูปแบบอีเมลไม่ถูกต้อง');
+      } else if (err.code === 'auth/too-many-requests') {
+        throw new Error('มีการพยายามเข้าสู่ระบบมากเกินไป กรุณาลองใหม่ภายหลัง');
+      }
+      
       throw err;
     }
   }
 
   async loginWithGoogle() {
-    const auth = getAuth();
     const provider = new GoogleAuthProvider();
-
     try {
-      const result = await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(this.auth, provider);
       const googleUser = result.user;
       const uid = googleUser.uid;
 
-      const snapshot = await get(ref(this.db, `users/${uid}`));
-      // สร้าง sanitizedUsername ก่อนใช้งาน
-      const sanitizedUsername = this.sanitizePath(googleUser.displayName || googleUser.email?.split('@')[0] || `user_${Date.now()}`);
-      if (!snapshot.exists()) {
-        // สร้างข้อมูลผู้ใช้ใหม่หากยังไม่มี
-        const userRef = ref(this.db, `users/${uid}`);
-        await set(userRef, {
-          userID: uid,
-          username: sanitizedUsername,
-          email: googleUser.email || '',
-          name: googleUser.displayName || '',
-          phone: '',
-          type: 'user',
-          emailVerified: true // ตั้งค่า emailVerified เป็น true สำหรับ Google Login
-        });
-        await set(ref(this.db, `usernames/${sanitizedUsername}`), true); // เก็บ username เพื่อตรวจสอบซ้ำ
+      // ตรวจสอบว่ามีผู้ใช้อยู่แล้วหรือไม่
+      const dbRef = ref(this.db);
+      const usersRef = child(dbRef, 'users');
+      const snapshot = await get(usersRef);
+
+      let userData = null;
+      let username = null;
+
+      if (snapshot.exists()) {
+        const allUsers = snapshot.val();
+        
+        // ค้นหาผู้ใช้ที่มี uid ตรงกัน
+        for (const [key, value] of Object.entries(allUsers)) {
+          if ((value as any).uid === uid) {
+            userData = value as any;
+            username = key;
+            break;
+          }
+        }
       }
 
-      const userData = {
-        userID: uid,
-        username: snapshot.exists() ? snapshot.val().username : sanitizedUsername,
-        email: googleUser.email || '',
-        type: 'user'
-      };
+      if (!userData) {
+        // สร้างผู้ใช้ใหม่
+        username = this.sanitizeUsername(
+          googleUser.displayName || googleUser.email?.split('@')[0] || `user${Date.now()}`
+        );
 
-      localStorage.setItem('user', JSON.stringify(userData));
-      return userData;
+        // ตรวจสอบว่า username ซ้ำหรือไม่
+        const finalUsername = await this.getUniqueUsername(username);
+
+        userData = {
+          uid: uid,
+          email: googleUser.email || '',
+          username: finalUsername,
+          fullName: googleUser.displayName || '',
+          phoneNumber: '',
+          createdAt: Date.now(),
+          emailVerified: true,
+          type: 'user',
+          provider: 'google'
+        };
+
+        // บันทึกข้อมูลผู้ใช้ใหม่
+        await set(ref(this.db, `users/${finalUsername}`), userData);
+        username = finalUsername;
+      }
+
+      return {
+        uid: userData.uid,
+        username: userData.username || username,
+        email: userData.email,
+        fullName: userData.fullName,
+        type: userData.type || 'user'
+      };
     } catch (error: any) {
       console.error('ข้อผิดพลาดในการล็อกอินด้วย Google:', error);
-      throw error;
+      throw new Error('เข้าสู่ระบบด้วย Google ล้มเหลว');
     }
   }
 
-  /**
-   * ✅ Register User
-   * เขียนข้อมูลใหม่ลง path: users/{uid}
-   */
-  async register(user: {
-    name: string;
-    username: string;
-    password: string;
-    email: string;
-    phone?: string;
-    type?: string;
-  }): Promise<void> {
-    const auth = getAuth();
-    try {
-      // สร้างผู้ใช้ใน Firebase Authentication
-      const userCredential = await createUserWithEmailAndPassword(auth, user.email, user.password);
-      const uid = userCredential.user.uid;
+  private sanitizeUsername(username: string): string {
+    return username
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+      .substring(0, 20);
+  }
 
-      // ตรวจสอบความซ้ำของ username
-      const sanitizedUsername = this.sanitizePath(user.username);
-      const dbRef = ref(this.db);
-      const usernameSnapshot = await get(child(dbRef, `usernames/${sanitizedUsername}`));
-      if (usernameSnapshot.exists()) {
-        throw new Error('Username นี้มีอยู่แล้ว');
+  private async getUniqueUsername(baseUsername: string): Promise<string> {
+    let username = baseUsername;
+    let counter = 1;
+
+    while (true) {
+      const snapshot = await get(ref(this.db, `users/${username}`));
+      if (!snapshot.exists()) {
+        return username;
       }
-
-      // บันทึกข้อมูลใน Realtime Database
-      const userRef = ref(this.db, `users/${uid}`);
-      const newUser: UserData = {
-        userID: uid,
-        name: user.name,
-        username: sanitizedUsername,
-        password: user.password,
-        email: user.email,
-        phone: user.phone || '',
-        type: user.type || 'user',
-        emailVerified: false // ตั้งค่าเริ่มต้นเป็น false รอการยืนยัน OTP
-      };
-      await set(userRef, newUser);
-      await set(ref(this.db, `usernames/${sanitizedUsername}`), true); // เก็บ username เพื่อตรวจสอบซ้ำ
-
-      return;
-    } catch (err: any) {
-      console.error('ข้อผิดพลาดในการสมัคร:', err);
-      throw err;
+      username = `${baseUsername}${counter}`;
+      counter++;
     }
   }
 
-  // ฟังก์ชันเพื่อทำให้ path ปลอดภัยโดยกำจัดตัวอักษรพิเศษ
-  private sanitizePath(path: string): string {
-    return path.replace(/[.#$[\]]/g, '_');
+  // ฟังก์ชันเสริม
+  async checkEmailExists(email: string): Promise<boolean> {
+    const dbRef = ref(this.db);
+    const usersRef = child(dbRef, 'users');
+    const snapshot = await get(usersRef);
+    
+    if (snapshot.exists()) {
+      const allUsers = snapshot.val();
+      for (const userData of Object.values(allUsers)) {
+        if ((userData as any).email === email) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  async checkUsernameExists(username: string): Promise<boolean> {
+    const snapshot = await get(ref(this.db, `users/${username}`));
+    return snapshot.exists();
+  }
+
+  logout() {
+    localStorage.removeItem('user');
+    localStorage.removeItem('admin');
+    return this.auth.signOut();
   }
 }

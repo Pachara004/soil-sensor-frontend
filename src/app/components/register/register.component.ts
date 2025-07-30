@@ -2,9 +2,10 @@ import { Component, ViewChildren, QueryList, ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { Auth, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from '@angular/fire/auth';
 import { Database, ref, set, get, child } from '@angular/fire/database';
+import { sendEmailVerification } from 'firebase/auth';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
@@ -17,7 +18,6 @@ import { firstValueFrom } from 'rxjs';
 export class RegisterComponent {
   @ViewChildren('otpInput') otpInputs!: QueryList<ElementRef>;
 
-  otpInputArray = Array(6).fill(0);
   step = 1;
   email = '';
   otp = ['', '', '', '', '', ''];
@@ -56,76 +56,91 @@ export class RegisterComponent {
   }
 
   async sendOtp() {
-  if (!this.email || !this.isValidEmail(this.email)) {
-    alert('กรุณากรอก Email ที่ถูกต้อง');
-    return;
-  }
+    if (!this.email || !this.isValidEmail(this.email)) {
+      alert('กรุณากรอก Email ที่ถูกต้อง');
+      return;
+    }
 
-  this.isLoading = true;
-  this.generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-
-  try {
-    await this.sendOtpEmail(this.email, this.generatedOtp);
-    alert('OTP ถูกส่งไปยังอีเมลของคุณแล้ว');
-    this.step = 2;
-    this.startCountdown();
-  } catch (error) {
-    console.error('Error sending OTP:', error);
-    alert('เกิดข้อผิดพลาดในการส่ง OTP กรุณาลองใหม่อีกครั้ง');
-  } finally {
-    this.isLoading = false;
-  }
-}
-
-  private async sendOtpEmail(email: string, otp: string): Promise<void> {
-  const useEmailJS = true;
-
-  if (useEmailJS) {
-    const emailJSData = {
-      service_id: 'service_y6enw8s',
-      template_id: 'template_ztt7b87',
-      user_id: '8ypHiGBky5C_KnLx8',
-      template_params: {
-        to_email: this.email,
-        to_name: 'ผู้สมัครใหม่',
-        from_name: 'ระบบสมัครสมาชิก',
-        otp_code: this.generatedOtp
-      }
-    };
-
-    console.log('📤 EmailJS Payload:', JSON.stringify(emailJSData, null, 2));
+    this.isLoading = true;
+    this.generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
     try {
-      const response = await firstValueFrom(
-        this.http.post('https://api.emailjs.com/api/v1.0/email/send', emailJSData, {
-          headers: new HttpHeaders({
-            'Content-Type': 'application/json'
-          }),
-          responseType: 'text' // บังคับให้รับผลลัพธ์เป็น text แทน JSON
-        })
-      );
-      console.log('📥 EmailJS Response:', response);
-      if (response === 'OK') {
+      // ตัวเลือกการส่ง OTP
+      const useRealEmail = true; // เปลี่ยนเป็น true เพื่อส่ง email จริง
+      
+      if (useRealEmail) {
+        await this.sendOtpEmail(this.email, this.generatedOtp);
         alert('OTP ถูกส่งไปยังอีเมลของคุณแล้ว');
-        this.step = 2;
-        this.startCountdown();
       } else {
-        throw new Error('Unexpected response from EmailJS: ' + response);
+        // ระบบจำลองสำหรับการทดสอบ
+        console.log('OTP สำหรับ', this.email, ':', this.generatedOtp);
+        alert(`OTP สำหรับการทดสอบ: ${this.generatedOtp}\n(ในการใช้งานจริงจะส่งไปยังอีเมล)`);
       }
-    } catch (error: any) {
-      console.error('📛 EmailJS Error:', error);
-      if (error.error) {
-        console.error('Error Details:', error.error);
-      } else {
-        console.error('Error Message:', error.message);
-      }
-      throw new Error('Failed to send OTP email: ' + (error.message || 'Unknown error'));
+      
+      this.step = 2;
+      this.startCountdown();
+    } catch (error) {
+      console.error('Error sending OTP:', error);
+      alert('เกิดข้อผิดพลาดในการส่ง OTP กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      this.isLoading = false;
     }
-    return;
   }
 
-  throw new Error('No email service configured');
-}
+  private async sendOtpEmail(email: string, otp: string): Promise<void> {
+    // วิธีที่ 1: ใช้ EmailJS (แนะนำสำหรับการทดสอบ)
+    const useEmailJS = true; // เปลี่ยนเป็น true และใส่ข้อมูล EmailJS
+    
+    if (useEmailJS) {
+      const emailJSData = {
+        service_id: 'service_a3fbb53', // Service ID ที่คุณสร้าง
+        template_id: 'YOUR_TEMPLATE_ID', // แทนที่ด้วย Template ID ที่สร้างใหม่
+        user_id: 'YOUR_PUBLIC_KEY', // แทนที่ด้วย Public Key จาก Account > API Keys
+        template_params: {
+          to_email: email,
+          to_name: 'ผู้สมัครใหม่',
+          otp_code: otp,
+          from_name: 'ระบบสมัครสมาชิก'
+        }
+      };
+
+      const response = await firstValueFrom(
+        this.http.post('https://api.emailjs.com/api/v1.0/email/send', emailJSData)
+      );
+      return;
+    }
+
+    // วิธีที่ 2: ใช้ Firebase Cloud Functions
+    const useCloudFunction = false; // เปลี่ยนเป็น true และสร้าง Cloud Function
+    
+    if (useCloudFunction) {
+      const cloudFunctionUrl = 'https://YOUR_REGION-YOUR_PROJECT.cloudfunctions.net/sendOtpEmail';
+      const response = await firstValueFrom(
+        this.http.post(cloudFunctionUrl, {
+          email: email,
+          otp: otp
+        })
+      );
+      return;
+    }
+
+    // วิธีที่ 3: ใช้ Backend API ของคุณเอง
+    const useCustomAPI = false; // เปลี่ยนเป็น true และใส่ URL ของ API
+    
+    if (useCustomAPI) {
+      const apiUrl = 'https://your-backend-api.com/send-otp';
+      const response = await firstValueFrom(
+        this.http.post(apiUrl, {
+          email: email,
+          otp: otp
+        })
+      );
+      return;
+    }
+
+    // หากไม่ได้เปิดใช้งานวิธีใดเลย จะ throw error
+    throw new Error('No email service configured');
+  }
 
   async resendOtp() {
     await this.sendOtp();
@@ -284,8 +299,11 @@ export class RegisterComponent {
         fullName: this.fullName,
         phoneNumber: this.phoneNumber.replace(/\D/g, ''),
         createdAt: Date.now(),
+        emailVerified: false
       });
 
+      // ส่งอีเมลยืนยัน
+      await sendEmailVerification(user);
 
       alert('สมัครสำเร็จ! กรุณายืนยันอีเมลของคุณ');
       this.router.navigate(['/']);
@@ -341,6 +359,7 @@ export class RegisterComponent {
         fullName: user.displayName || '',
         phoneNumber: '',
         createdAt: Date.now(),
+        emailVerified: user.emailVerified,
         provider: 'google'
       });
 
