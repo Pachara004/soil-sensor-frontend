@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Database, ref, get, set, child } from '@angular/fire/database';
 import {
+  updatePassword,
   Auth,
   GoogleAuthProvider,
   signInWithPopup,
@@ -193,7 +194,18 @@ export class AuthService {
     }
     return false;
   }
+  async changeUserPassword(email: string, oldPassword: string, newPassword: string): Promise<void> {
+    try {
+      const userCredential = await signInWithEmailAndPassword(this.auth, email, oldPassword);
+      const user = userCredential.user;
 
+      await updatePassword(user, newPassword);
+      console.log('✅ เปลี่ยนรหัสผ่าน Firebase Auth สำเร็จ');
+    } catch (error) {
+      console.error('❌ เปลี่ยนรหัสผ่าน Firebase Auth ล้มเหลว:', error);
+      throw error;
+    }
+  }
   async checkUsernameExists(username: string): Promise<boolean> {
     const snapshot = await get(ref(this.db, `users/${username}`));
     return snapshot.exists();

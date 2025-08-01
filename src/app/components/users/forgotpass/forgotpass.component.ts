@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Database, ref, get, child, update } from '@angular/fire/database';
-import { Auth, updatePassword, signInWithEmailAndPassword } from '@angular/fire/auth';
+import { Auth, signInWithEmailAndPassword, sendPasswordResetEmail } from '@angular/fire/auth';
 
 @Component({
   selector: 'app-forgotpass',
@@ -20,6 +20,7 @@ export class ForgotpassComponent {
   step = 1; // 1: อีเมล, 2: OTP, 3: รหัสผ่านใหม่
   email = '';
   otp = ['', '', '', '', '', ''];
+  otpInputsArray = Array(6).fill('');
   generatedOtp = '';
   newPassword = '';
   confirmPassword = '';
@@ -61,15 +62,40 @@ export class ForgotpassComponent {
 
   private resetStepData() {
     if (this.step === 1) {
-      this.otp = ['', '', '', '', '', ''];
+      this.clearOtp();
       this.generatedOtp = '';
     } else if (this.step === 2) {
       this.newPassword = '';
       this.confirmPassword = '';
       this.passwordMismatch = false;
+      this.passwordStrength = { width: 0, class: '', text: '' };
     }
   }
-
+private focusNextInput(index: number) {
+  if (index < this.otp.length) {
+    setTimeout(() => {
+      const nextInput = this.otpInputs.toArray()[index];
+      if (nextInput) {
+        nextInput.nativeElement.focus();
+      }
+    }, 10);
+  }
+}
+private focusPrevInput(index: number) {
+  if (index >= 0) {
+    setTimeout(() => {
+      const prevInput = this.otpInputs.toArray()[index];
+      if (prevInput) {
+        prevInput.nativeElement.value = '';
+        prevInput.nativeElement.focus();
+      }
+    }, 10);
+  }
+}
+async sendResetEmail(email: string): Promise<void> {
+  await sendPasswordResetEmail(this.auth, email);
+  alert('ระบบได้ส่งอีเมลรีเซ็ตรหัสผ่านให้แล้ว');
+}
   async sendOtp() {
     if (!this.email || !this.isValidEmail(this.email)) {
       alert('กรุณากรอกอีเมลที่ถูกต้อง');
@@ -167,7 +193,36 @@ export class ForgotpassComponent {
       }
     }, 1000);
   }
+  onOtpInput(event: Event, index: number) {
+    const input = event.target as HTMLInputElement;
+    let value = input.value;
 
+    // ลบทุกอย่างที่ไม่ใช่ตัวเลข
+    value = value.replace(/[^0-9]/g, '');
+    
+    // ถ้ามีมากกว่า 1 ตัว เอาแค่ตัวสุดท้าย
+    if (value.length > 1) {
+      value = value.slice(-1);
+    }
+
+    // อัพเดทค่าใน array
+    this.otp[index] = value;
+    
+    // บังคับให้ input แสดงค่าที่ถูกต้อง
+    input.value = value;
+
+    // ถ้ากรอกตัวเลขแล้ว ให้ไปช่องถัดไป
+    if (value && index < this.otp.length - 1) {
+      this.focusNextInput(index + 1);
+    }
+  }
+  onFocus(event: Event, index: number) {
+    const input = event.target as HTMLInputElement;
+    // เลือกข้อความทั้งหมดเมื่อ focus (เพื่อให้แทนที่ได้ง่าย)
+    setTimeout(() => {
+      input.select();
+    }, 10);
+  }
   moveToNext(event: any, index: number) {
     const value = event.target.value;
     if (value && index < 5) {
@@ -177,7 +232,6 @@ export class ForgotpassComponent {
       }
     }
   }
-
   onKeyDown(event: KeyboardEvent, index: number) {
     if (event.key === 'Backspace' && !this.otp[index] && index > 0) {
       const prevInput = this.otpInputs.toArray()[index - 1];
@@ -186,20 +240,65 @@ export class ForgotpassComponent {
       }
     }
   }
-
-  isOtpComplete(): boolean {
-    return this.otp.every(digit => digit.length === 1);
+  onPaste(event: ClipboardEvent, index: number) {
+    event.preventDefault();
+    
+    const pastedData = event.clipboardData?.getData('text') || '';
+    const numbers = pastedData.replace(/[^0-9]/g, '');
+    
+    if (numbers.length > 0) {
+      // กรอกตัวเลขที่ paste มาตามลำดับ
+      for (let i = 0; i < Math.min(numbers.length, this.otp.length - index); i++) {
+        this.otp[index + i] = numbers[i];
+        
+        // อัพเดท input value
+        const targetInput = this.otpInputs.toArray()[index + i];
+        if (targetInput) {
+          targetInput.nativeElement.value = numbers[i];
+        }
+      }
+      
+      // ย้าย focus ไปช่องถัดไปหลังจาก paste
+      const nextIndex = Math.min(index + numbers.length, this.otp.length - 1);
+      this.focusNextInput(nextIndex);
+    }
   }
 
+  isOtpComplete(): boolean {
+    return this.otp.every(digit => digit !== '' && /^[0-9]$/.test(digit));
+  }
   verifyOtp() {
+    if (!this.isOtpComplete()) {
+      alert('กรุณากรอก OTP ให้ครบทุกช่อง');
+      return;
+    }
+
     const enteredOtp = this.otp.join('');
+    console.log('Generated OTP:', this.generatedOtp);
+    console.log('Entered OTP:', enteredOtp);
+    
     if (enteredOtp === this.generatedOtp) {
       this.step = 3;
     } else {
       alert('OTP ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
+      this.clearOtp();
     }
   }
-
+  clearOtp() {
+    this.otp = ['', '', '', '', '', ''];
+    
+    // เคลียร์ input elements ด้วย
+    this.otpInputs.forEach((input, index) => {
+      input.nativeElement.value = '';
+    });
+    
+    setTimeout(() => {
+      const firstInput = this.otpInputs.toArray()[0];
+      if (firstInput) {
+        firstInput.nativeElement.focus();
+      }
+    }, 10);
+  }
   toggleNewPassword() {
     this.showNewPassword = !this.showNewPassword;
   }
@@ -244,91 +343,49 @@ export class ForgotpassComponent {
 
   async resetPassword() {
     if (!this.canResetPassword()) {
-      if (this.newPassword.length < 6) {
-        alert('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
-      } else if (this.newPassword !== this.confirmPassword) {
-        alert('รหัสผ่านไม่ตรงกัน');
-      }
+      alert('รหัสผ่านไม่ตรงกัน หรือไม่ตรงตามเกณฑ์');
       return;
     }
 
     this.isLoading = true;
 
     try {
-      // หาผู้ใช้ในฐานข้อมูล
       const dbRef = ref(this.database);
-      const usersRef = child(dbRef, 'users');
-      const snapshot = await get(usersRef);
-      
-      if (snapshot.exists()) {
-        const allUsers = snapshot.val();
-        let userKey = null;
-        let userData = null;
+      const usersSnapshot = await get(child(dbRef, 'users'));
 
-        // ค้นหาผู้ใช้ที่มีอีเมลตรงกัน
+      let userKey = null;
+      if (usersSnapshot.exists()) {
+        const allUsers = usersSnapshot.val();
         for (const [key, value] of Object.entries(allUsers)) {
           if ((value as any).email === this.email) {
             userKey = key;
-            userData = value as any;
             break;
           }
         }
-
-        if (userKey && userData) {
-          try {
-            // ลอง sign in ด้วยรหัสผ่านเก่าก่อน (เพื่อให้ Firebase Auth อัพเดทได้)
-            // ในระบบจริงควรใช้ Admin SDK หรือ Cloud Function
-            
-            // อัพเดทรหัสผ่านใน Realtime Database (เก็บ hash)
-            const hashedPassword = this.simpleHash(this.newPassword); // ใช้การ hash แบบง่าย
-            
-            await update(ref(this.database, `users/${userKey}`), {
-              passwordHash: hashedPassword,
-              lastPasswordReset: Date.now()
-            });
-
-            alert('เปลี่ยนรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่');
-            this.router.navigate(['/']);
-            
-          } catch (authError) {
-            console.error('Auth error:', authError);
-            // ถ้า Firebase Auth ล้มเหลว ให้อัพเดทแค่ในฐานข้อมูล
-            const hashedPassword = this.simpleHash(this.newPassword);
-            
-            await update(ref(this.database, `users/${userKey}`), {
-              passwordHash: hashedPassword,
-              lastPasswordReset: Date.now()
-            });
-
-            alert('เปลี่ยนรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่');
-            this.router.navigate(['/']);
-          }
-        } else {
-          throw new Error('ไม่พบข้อมูลผู้ใช้');
-        }
       }
 
+      if (!userKey) throw new Error('ไม่พบข้อมูลผู้ใช้');
+
+      // อัปเดตรหัสผ่านใหม่ใน database
+      const newPassword = this.newPassword;
+      await update(ref(this.database, `users/${userKey}`), {
+        password: newPassword, // หรือใช้ this.simpleHash(newPassword)
+        lastPasswordReset: Date.now()
+      });
+
+      alert('เปลี่ยนรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่');
+      this.router.navigate(['/']);
     } catch (error: any) {
-      console.error('Reset password error:', error);
-      alert('เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน: ' + (error.message || 'Unknown error'));
+      console.error('เกิดข้อผิดพลาด:', error);
+      alert('ไม่สามารถเปลี่ยนรหัสผ่านได้: ' + (error.message || 'Unknown error'));
     } finally {
       this.isLoading = false;
     }
-  }
-
-  private simpleHash(password: string): string {
-    // Hash แบบง่ายๆ (ในระบบจริงควรใช้ bcrypt หรือ library อื่น)
-    let hash = 0;
-    for (let i = 0; i < password.length; i++) {
-      const char = password.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return hash.toString();
   }
 
   private isValidEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   }
+  
 }

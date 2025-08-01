@@ -18,6 +18,7 @@
         <input 
           type="email" 
           [(ngModel)]="email" 
+          name="email"
           placeholder="กรุณากรอกอีเมลของคุณ"
           [disabled]="isLoading" />
         <button 
@@ -38,14 +39,13 @@
         <p class="email-display">{{ email }}</p>
         <div class="otp-boxes">
           <input 
-            *ngFor="let digit of otp; let i = index"
-            #otpInput
-            type="text" 
+            *ngFor="let box of otpInputsArray; let i = index"
             maxlength="1" 
-            [(ngModel)]="otp[i]"
+            [(ngModel)]="otp[i]" 
             (input)="moveToNext($event, i)"
             (keydown)="onKeyDown($event, i)"
-            [disabled]="isLoading" />
+            #otpInput
+          />
         </div>
         <div class="resend-section">
           <button 
@@ -74,6 +74,7 @@
           <input 
             [type]="showNewPassword ? 'text' : 'password'"
             [(ngModel)]="newPassword"
+            name="newPassword"
             placeholder="กรุณากรอกรหัสผ่านใหม่"
             (input)="checkPasswordStrength()"
             [disabled]="isLoading" />
@@ -103,7 +104,9 @@
           <input 
             [type]="showConfirmPassword ? 'text' : 'password'"
             [(ngModel)]="confirmPassword"
+            name="confirmPassword"
             placeholder="กรุณายืนยันรหัสผ่านใหม่"
+            (input)="checkPasswordStrength()"
             [disabled]="isLoading" />
           <i 
             class="password-toggle fas" 
