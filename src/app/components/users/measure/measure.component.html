@@ -1,93 +1,101 @@
 <div class="measure-container">
   <div class="card">
-    <div class="back" (click)="goBack()">
-        <i class="fas fa-arrow-left"></i>
-      </div>
-    
+    <i class="fas fa-arrow-left back" (click)="goBack()"></i>
+
     <div class="header">
-      <div class="user-id">User :  {{ username }}</div>
-      <div class="user-icon" (click)="goToProfile()" style="cursor: pointer;">
-        <img src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png" alt="user" />
-        <div class="text">ข้อมูลผู้ใช้</div>
-    </div>
+      <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png" class="icon" alt="Sensor Icon" />
+      <div class="user-id">User : {{ username }}</div>
     </div>
 
-    <div class="section">
-      <p class="subtitle">Customize your own NPK</p>
-      <div class="device-id">
-        <span class="label-orange">ชื่ออุปกรณ์ :</span> <strong>{{deviceId}}</strong>
-      </div>
+    <h2 class="title">Customize your own NPK</h2>
+
+    <div class="device-id">
+      <span class="label-orange">ชื่ออุปกรณ์ :  </span> {{ devices }}
     </div>
 
-    <h2 class="title">วัดและบันทึกค่า</h2>
+    <button class="save-btn" (click)="saveMeasurement()" [disabled]="isLoading || !bounds">
+      <span *ngIf="!isLoading">วัดและบันทึกค่า</span>
+      <span *ngIf="isLoading">กำลังบันทึก...</span>
+    </button>
 
     <div class="grid">
-    <div class="sensor-box">
-      <img src="https://cdn-icons-png.flaticon.com/512/3534/3534501.png" />
-      <div class="value">{{ temperature }}</div>
-      <div class="unit">°C</div>
-      <div class="label">Temperature</div>
-    </div>
-    <div class="sensor-box">
-      <img src="https://cdn-icons-png.flaticon.com/512/6393/6393411.png" />
-      <div class="value">{{ moisture }}</div>
-      <div class="unit">%</div>
-      <div class="label">Moisture</div>
-    </div>
-    <div class="sensor-box">
-      <img src="https://cdn-icons-png.flaticon.com/512/6678/6678672.png" />
-      <div class="value">{{ nitrogen }}</div>
-      <div class="unit">mg/kg</div>
-      <div class="label">Nitrogen</div>
-    </div>
-    <div class="sensor-box">
-      <img src="https://cdn-icons-png.flaticon.com/512/6678/6678656.png" />
-      <div class="value">{{ phosphorus }}</div>
-      <div class="unit">mg/kg</div>
-      <div class="label">Phosphorus</div>
-    </div>
-    <div class="sensor-box">
-      <img src="https://cdn-icons-png.flaticon.com/512/6678/6678660.png" />
-      <div class="value">{{ potassium }}</div>
-      <div class="unit">mg/kg</div>
-      <div class="label">Potassium</div>
-    </div>
-    <div class="sensor-box">
-      <img src="https://cdn-icons-png.flaticon.com/512/9162/9162345.png" />
-      <div class="value">{{ ph }}</div>
-      <div class="unit">%</div>
-      <div class="label">Potential of Hydrogen (PH)</div>
-    </div>
-  </div>
-
-    <!-- ส่วนเลือกตำแหน่ง -->
-      <div class="location-box">
-        <label>รายละเอียด/ตำแหน่งที่ตั้ง</label>
-        <textarea [(ngModel)]="locationDetail"></textarea>
-
-        <!-- ปุ่มเลือกพิกัด -->
-        <img src="https://cdn-icons-png.flaticon.com/512/1865/1865269.png"
-            alt="เลือกตำแหน่ง"
-            style="cursor: pointer; width: 25px; height: 25px;"
-            (click)="openMapPicker()" />
-
-        <!-- ✅ แผนที่ฝังกลางหน้า -->
-        <div class="map-container" *ngIf="mapUrl">
-          <iframe [attr.src]="mapUrl"
-                  width="100%"
-                  height="300"
-                  frameborder="0"
-                  style="border:0;"
-                  allowfullscreen>
-          </iframe>
-        </div>
+      <div class="sensor-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/4850/4850456.png" class="sensor-icon" alt="Temperature Icon" />
+        <span class="value">{{ temperature }}</span>
+        <span class="unit">°C</span>
+        <p class="label">Temperature</p>
       </div>
+      <div class="sensor-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/4148/4148460.png" class="sensor-icon" alt="Moisture Icon" />
+        <span class="value">{{ moisture }}</span>
+        <span class="unit">%</span>
+        <p class="label">Moisture</p>
+      </div>
+      <div class="sensor-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/6678/6678672.png" class="sensor-icon" alt="Nitrogen Icon" />
+        <span class="value">{{ nitrogen }}</span>
+        <span class="unit">mg/kg</span>
+        <p class="label">Nitrogen</p>
+      </div>
+      <div class="sensor-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/6678/6678656.png" class="sensor-icon" alt="Phosphorus Icon" />
+        <span class="value">{{ phosphorus }}</span>
+        <span class="unit">mg/kg</span>
+        <p class="label">Phosphorus</p>
+      </div>
+      <div class="sensor-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/6678/6678660.png" class="sensor-icon" alt="Potassium Icon" />
+        <span class="value">{{ potassium }}</span>
+        <span class="unit">mg/kg</span>
+        <p class="label">Potassium</p>
+      </div>
+      <div class="sensor-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/4236/4236740.png" class="sensor-icon" alt="PH Icon" />
+        <span class="value">{{ ph }}</span>
+        <span class="unit">%</span>
+        <p class="label">Potential of Hydrogen (PH)</p>
+      </div>
+    </div>
 
-    <button class="save-btn" (click)="saveMeasurement()">บันทึกค่า</button>
+    <div class="location-box">
+      <textarea [(ngModel)]="locationDetail" placeholder="คลิกที่แผนที่เพื่อเลือกตำแหน่ง..." readonly></textarea>
+    </div>
+
+    <div class="map-container">
+      <div #mapContainer class="map" style="width: 100%; height: 300px;"></div>
+    </div>
 
     <div class="admin" (click)="goToContactAdmin()">
-      <img src="https://cdn-icons-png.flaticon.com/512/9703/9703596.png" alt="admin" />
-      <div>ติดต่อ Admin</div>
+      <img src="https://cdn-icons-png.flaticon.com/512/2914/2914688.png" alt="Admin Icon" />
+      ติดต่อ Admin
     </div>
+    <button class="history-btn" (click)="goToHistory()">ดูประวัติการวัด</button>
+
+    <!-- Popup สำหรับเลือก 4 จุด -->
+    <div class="popup-overlay" *ngIf="showPopup" (click)="closePopup()">
+      <div class="popup-content" (click)="stopPropagation($event)">
+        <h3>กำหนดพื้นที่วัดดิน</h3>
+        <p>คลิกบนแผนที่เพื่อวางจุดหมายกำหนดพื้นที่ (อย่างน้อย 3 จุด)</p>
+        <p>จุดที่เลือกแล้ว: <strong>{{ points.length }}</strong> จุด</p>
+        
+        <div #mapPopupContainer class="map-popup" style="width: 100%; height: 300px;"></div>
+        
+        <div class="popup-buttons">
+          <button class="btn-test" (click)="testAddPoint()" style="background: green; color: white; margin: 5px;">
+            🧪 เพิ่มจุดทดสอบ
+          </button>
+          <button class="btn-secondary" (click)="clearMarks()" [disabled]="points.length === 0">
+            เคลียร์จุดทั้งหมด
+          </button>
+          <button class="btn-primary" (click)="confirmArea()" [disabled]="points.length < 3">
+            ยืนยันพื้นที่ ({{ points.length }} จุด)
+          </button>
+          <button class="btn-cancel" (click)="closePopup()">
+            ยกเลิก
+          </button>
+        </div>
+      </div>
+    </div>
+    
   </div>
 </div>

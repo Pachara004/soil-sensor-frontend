@@ -18,8 +18,12 @@
       <span class="label-orange">ชื่ออุปกรณ์ :</span>
       <span class="value" *ngIf="devices.length <= 1">{{ deviceName }}</span>
       <select class="device-select" *ngIf="devices.length > 1" [(ngModel)]="deviceName" (ngModelChange)="onDeviceChange()">
-        <option *ngFor="let device of devices" [value]="device">{{ device }}</option>
+        <option *ngFor="let device of devices" [value]="device.name">{{ device.name }}</option>
       </select>
+      <span class="status-indicator" [ngClass]="{'online': selectedDevice?.status === 'online', 'offline': selectedDevice?.status !== 'online'}">
+        <span class="status-dot"></span>
+        <span class="status-text">{{ selectedDevice?.status === 'online' ? 'Online' : 'Offline' }}</span>
+      </span>
     </div>
 
     <!-- ปุ่มข้อมูลผู้ใช้ -->

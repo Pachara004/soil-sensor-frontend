@@ -115,6 +115,42 @@
   font-weight: bold;
 }
 
+/* สถานะอุปกรณ์ */
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 10px;
+  font-weight: bold;
+
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .status-text {
+    font-size: 14px;
+  }
+
+  &.online {
+    color: #00cc00;
+
+    .status-dot {
+      background-color: #00cc00;
+    }
+  }
+
+  &.offline {
+    color: #ff0000;
+
+    .status-dot {
+      background-color: #ff0000;
+    }
+  }
+}
+
 /* ไอคอนผู้ใช้ */
 .user-icon {
   position: absolute;
@@ -123,6 +159,7 @@
   text-align: center;
   font-size: clamp(12px, 1.5vw, 14px);
   color: #000;
+  cursor: pointer;
 }
 
 .user-icon img {

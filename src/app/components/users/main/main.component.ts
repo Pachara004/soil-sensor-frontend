@@ -2,7 +2,12 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Database, ref, get, child } from '@angular/fire/database';
+import { Database, ref, get, child, onValue } from '@angular/fire/database';
+
+interface Device {
+  name: string;
+  status: 'online' | 'offline';
+}
 
 @Component({
   selector: 'app-main',
@@ -14,7 +19,8 @@ import { Database, ref, get, child } from '@angular/fire/database';
 export class MainComponent implements OnInit {
   userID: string = '';
   deviceName: string = '';
-  devices: string[] = [];
+  devices: Device[] = [];
+  selectedDevice: Device | null = null;
   isLoading = false;
 
   constructor(
@@ -31,10 +37,12 @@ export class MainComponent implements OnInit {
       
       await this.loadDevices();
       
-      if (this.devices.length > 0 && this.devices[0] !== 'ไม่มีอุปกรณ์') {
-        this.deviceName = localStorage.getItem('selectedDevice') || this.devices[0];
+      if (this.devices.length > 0 && this.devices[0].name !== 'ไม่มีอุปกรณ์') {
+        this.deviceName = localStorage.getItem('selectedDevice') || this.devices[0].name;
+        this.selectedDevice = this.devices.find(d => d.name === this.deviceName) || this.devices[0];
       } else {
         this.deviceName = 'ไม่มีอุปกรณ์';
+        this.selectedDevice = null;
         localStorage.removeItem('selectedDevice'); // ลบข้อมูลเก่าออก
       }
     } else {
@@ -51,18 +59,18 @@ export class MainComponent implements OnInit {
       console.log('Loading devices for user:', this.userID);
       
       // วิธีที่ 1: ตรวจสอบ path users/{userID}/devices
-      const userDevicesSnapshot = await get(child(ref(this.db), `users/${this.userID}/devices`));
+      const userDevicesRef = ref(this.db, `users/${this.userID}/devices`);
+      const userDevicesSnapshot = await get(userDevicesRef);
       
       if (userDevicesSnapshot.exists()) {
         const userDevicesData = userDevicesSnapshot.val();
         console.log('User devices data:', userDevicesData);
         
         if (typeof userDevicesData === 'object' && userDevicesData !== null) {
-          // ถ้าเป็น object ให้เอา keys
-          this.devices = Object.keys(userDevicesData);
-        } else if (Array.isArray(userDevicesData)) {
-          // ถ้าเป็น array
-          this.devices = userDevicesData;
+          this.devices = Object.entries(userDevicesData).map(([key, value]: [string, any]) => ({
+            name: value.name || key,
+            status: value.status || 'offline'
+          }));
         }
       }
       
@@ -70,42 +78,53 @@ export class MainComponent implements OnInit {
       if (this.devices.length === 0) {
         console.log('No devices found in user node, searching in devices node...');
         
-        const allDevicesSnapshot = await get(child(ref(this.db), 'devices'));
-        
-        if (allDevicesSnapshot.exists()) {
-          const allDevicesData = allDevicesSnapshot.val();
-          console.log('All devices data:', allDevicesData);
-          
-          const userDevices: string[] = [];
-          
-          // ค้นหาอุปกรณ์ที่เป็นของ user นี้
-          for (const [deviceId, deviceData] of Object.entries(allDevicesData)) {
-            const device = deviceData as any;
-            
-            // ตรวจสอบทั้ง user field และ owner field
-            if (device.user === this.userID || device.owner === this.userID || device.userId === this.userID) {
-              userDevices.push(device.name || deviceId);
+        const allDevicesRef = ref(this.db, 'devices');
+        onValue(allDevicesRef, (snapshot) => {
+          const allDevicesData = snapshot.val();
+          if (allDevicesData) {
+            const userDevices: Device[] = [];
+            for (const [deviceId, deviceData] of Object.entries(allDevicesData)) {
+              const device = deviceData as any;
+              if (device.user === this.userID || device.owner === this.userID || device.userId === this.userID) {
+                userDevices.push({
+                  name: device.name || deviceId,
+                  status: device.status || 'offline'
+                });
+              }
+            }
+            this.devices = userDevices;
+            if (this.devices.length > 0) {
+              this.deviceName = localStorage.getItem('selectedDevice') || this.devices[0].name;
+              this.selectedDevice = this.devices.find(d => d.name === this.deviceName) || this.devices[0];
+            } else {
+              this.devices = [{ name: 'ไม่มีอุปกรณ์', status: 'offline' }];
+              this.deviceName = 'ไม่มีอุปกรณ์';
+              this.selectedDevice = null;
             }
           }
-          
-          this.devices = userDevices;
-        }
+        }, (error) => {
+          console.error('Error fetching devices:', error);
+        });
       }
       
       // วิธีที่ 3: ถ้ายังไม่พบ ให้ค้นหาใน userDevices node
       if (this.devices.length === 0) {
         console.log('Searching in userDevices node...');
         
-        const userDevicesSnapshot = await get(child(ref(this.db), `userDevices/${this.userID}`));
+        const userDevicesRef = ref(this.db, `userDevices/${this.userID}`);
+        const userDevicesSnapshot = await get(userDevicesRef);
         
         if (userDevicesSnapshot.exists()) {
           const userData = userDevicesSnapshot.val();
           console.log('UserDevices data:', userData);
           
           if (Array.isArray(userData)) {
-            this.devices = userData;
+            this.devices = userData.map((d: any) => ({ name: d.name, status: d.status || 'offline' }));
           } else if (typeof userData === 'object') {
-            this.devices = Object.keys(userData);
+            this.devices = Object.entries(userData).map(([key, value]: [string, any]) => ({
+              name: value.name || key,
+              status: value.status || 'offline'
+            }));
           }
         }
       }
@@ -113,36 +132,36 @@ export class MainComponent implements OnInit {
       // ตรวจสอบผลลัพธ์สุดท้าย
       if (this.devices.length === 0) {
         console.log('No devices found for user:', this.userID);
-        this.devices = ['ไม่มีอุปกรณ์'];
+        this.devices = [{ name: 'ไม่มีอุปกรณ์', status: 'offline' }];
         this.deviceName = 'ไม่มีอุปกรณ์';
+        this.selectedDevice = null;
       } else {
         console.log('Found devices:', this.devices);
-        // ตรวจสอบว่าไม่มีข้อมูลแปลกๆ เช่น object ที่แสดงเป็น string
-        this.devices = this.devices.filter(device => {
-          if (typeof device === 'string' && !device.startsWith('{')) {
-            return true;
-          }
-          return false;
-        });
-        
+        this.devices = this.devices.filter(device => typeof device.name === 'string');
         if (this.devices.length === 0) {
-          this.devices = ['ไม่มีอุปกรณ์'];
+          this.devices = [{ name: 'ไม่มีอุปกรณ์', status: 'offline' }];
           this.deviceName = 'ไม่มีอุปกรณ์';
+          this.selectedDevice = null;
+        } else {
+          this.selectedDevice = this.devices.find(d => d.name === this.deviceName) || this.devices[0];
         }
       }
       
     } catch (error) {
       console.error('ข้อผิดพลาดในการโหลดชื่ออุปกรณ์:', error);
-      this.devices = ['เกิดข้อผิดพลาด'];
+      this.devices = [{ name: 'เกิดข้อผิดพลาด', status: 'offline' }];
       this.deviceName = 'เกิดข้อผิดพลาด';
+      this.selectedDevice = null;
     } finally {
       this.isLoading = false;
       console.log('Final devices array:', this.devices);
       console.log('Final device name:', this.deviceName);
+      console.log('Selected device:', this.selectedDevice);
     }
   }
 
   onDeviceChange() {
+    this.selectedDevice = this.devices.find(d => d.name === this.deviceName) || null;
     if (this.deviceName !== 'ไม่มีอุปกรณ์' && this.deviceName !== 'เกิดข้อผิดพลาด') {
       localStorage.setItem('selectedDevice', this.deviceName);
     } else {
@@ -161,7 +180,6 @@ export class MainComponent implements OnInit {
   }
 
   goToHistory() {
-    // ตรวจสอบว่ามีอุปกรณ์หรือไม่
     if (this.deviceName === 'ไม่มีอุปกรณ์') {
       alert('กรุณาเพิ่มอุปกรณ์ก่อนดูประวัติ');
       return;
@@ -170,7 +188,6 @@ export class MainComponent implements OnInit {
   }
 
   goToMeasure() {
-    // ตรวจสอบว่ามีอุปกรณ์หรือไม่
     if (this.deviceName === 'ไม่มีอุปกรณ์') {
       alert('กรุณาเพิ่มอุปกรณ์ก่อนทำการวัดค่า');
       return;

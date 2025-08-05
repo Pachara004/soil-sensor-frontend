@@ -41,7 +41,7 @@ export class ReportsComponent {
       subject: this.subject,
       message: this.message,
       timestamp: new Date().toISOString(),
-      userID: userData.userID || 'unknown',
+      uid: userData.uid || 'unknown',
       username: userData.username || 'unknown'
     });
 
