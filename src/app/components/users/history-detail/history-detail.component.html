@@ -1,12 +1,15 @@
 <div class="detail-container">
   <div class="card">
+    <!-- ปุ่มย้อนกลับ -->
     <div class="back" (click)="goBack()">
       <i class="fas fa-arrow-left"></i>
     </div>
 
+    <!-- ไอคอนบนสุด -->
     <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png"
          class="chip-icon" alt="chip" />
 
+    <!-- Header ด้านบน -->
     <div class="header">
       <div class="user-id">User : {{ username }}</div>
       <div class="user-icon" (click)="goToProfile()" style="cursor: pointer;">
@@ -15,56 +18,179 @@
       </div>
     </div>
 
-    <div class="section">
-      <p class="subtitle">Customize your own NPK</p>
-      <div class="device-box">
-        <span class="label-orange">ชื่ออุปกรณ์ :</span> <strong>{{ deviceId }}</strong>
-      </div>
-      <div class="measure-time">
-        การวัดวันที่ {{ measureDate }} เวลา {{ measureTime }}
-      </div>
-    </div>
-
-    <div class="map-container" *ngIf="mapUrl">
-      <iframe [src]="mapUrl | safe" width="100%" height="300"></iframe>
-    </div>
-
-    <div class="grid">
-      <div class="sensor-box">
-        <img src="https://cdn-icons-png.flaticon.com/512/3534/3534501.png" />
-        <div>{{ temperature }} °C</div>
-        <div class="label">Temperature</div>
-      </div>
-      <div class="sensor-box">
-        <img src="https://cdn-icons-png.flaticon.com/512/6393/6393411.png" />
-        <div>{{ moisture }} %</div>
-        <div class="label">Moisture</div>
-      </div>
-      <div class="sensor-box">
-        <img src="https://cdn-icons-png.flaticon.com/512/6678/6678672.png" />
-        <div>{{ nitrogen }} mg/kg</div>
-        <div class="label">Nitrogen</div>
-      </div>
-      <div class="sensor-box">
-        <img src="https://cdn-icons-png.flaticon.com/512/6678/6678656.png" />
-        <div>{{ phosphorus }} mg/kg</div>
-        <div class="label">Phosphorus</div>
-      </div>
-      <div class="sensor-box">
-        <img src="https://cdn-icons-png.flaticon.com/512/6678/6678660.png" />
-        <div>{{ potassium }} mg/kg</div>
-        <div class="label">Potassium</div>
-      </div>
-      <div class="sensor-box">
-        <img src="https://cdn-icons-png.flaticon.com/512/9162/9162345.png" />
-        <div>{{ ph }} %</div>
-        <div class="label">Potential of Hydrogen (PH)</div>
+    <!-- ข้อมูลอุปกรณ์และวันที่ -->
+    <div class="measurement-info-section">
+      <div class="section-title">รายละเอียดการวัด</div>
+      
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">อุปกรณ์:</span>
+          <span class="info-value">{{ deviceId }}</span>
+        </div>
+        
+        <div class="info-item">
+          <span class="info-label">วันที่:</span>
+          <span class="info-value">{{ measureDate }}</span>
+        </div>
+        
+        <div class="info-item">
+          <span class="info-label">เวลา:</span>
+          <span class="info-value">{{ measureTime }}</span>
+        </div>
+        
+        <div class="info-item full-width">
+          <span class="info-label">สถานที่:</span>
+          <span class="info-value">{{ getDisplayLocation() }}</span>
+        </div>
       </div>
     </div>
 
-    <div class="location-detail">
-      <label>รายละเอียด/ตำแหน่งที่ตั้ง</label>
-      <div class="detail-box">{{ locationDetail }}</div>
+    <!-- แผนที่ -->
+    <div class="map-section" *ngIf="mapUrl">
+      <div class="section-title">ตำแหน่งที่วัด</div>
+      <div class="map-container">
+        <iframe 
+          [src]="mapUrl | safe" 
+          width="100%" 
+          height="250"
+          frameborder="0"
+          style="border-radius: 12px;">
+        </iframe>
+      </div>
+    </div>
+
+    <!-- ผลการวัด -->
+    <div class="results-section">
+      <div class="section-title">ผลการวัด</div>
+      
+      <div class="sensors-grid">
+        <div class="sensor-card temperature">
+          <div class="sensor-icon">
+            <img src="https://cdn-icons-png.flaticon.com/512/3534/3534501.png" alt="temperature" />
+          </div>
+          <div class="sensor-content">
+            <div class="sensor-value">{{ temperature }}</div>
+            <div class="sensor-unit">°C</div>
+            <div class="sensor-label">อุณหภูมิ</div>
+            <div class="sensor-status" [ngClass]="getTemperatureStatus()">
+              {{ getTemperatureStatusText() }}
+            </div>
+          </div>
+        </div>
+
+        <div class="sensor-card moisture">
+          <div class="sensor-icon">
+            <img src="https://cdn-icons-png.flaticon.com/512/6393/6393411.png" alt="moisture" />
+          </div>
+          <div class="sensor-content">
+            <div class="sensor-value">{{ moisture }}</div>
+            <div class="sensor-unit">%</div>
+            <div class="sensor-label">ความชื้น</div>
+            <div class="sensor-status" [ngClass]="getMoistureStatus()">
+              {{ getMoistureStatusText() }}
+            </div>
+          </div>
+        </div>
+
+        <div class="sensor-card nitrogen">
+          <div class="sensor-icon">
+            <img src="https://cdn-icons-png.flaticon.com/512/6678/6678672.png" alt="nitrogen" />
+          </div>
+          <div class="sensor-content">
+            <div class="sensor-value">{{ nitrogen }}</div>
+            <div class="sensor-unit">mg/kg</div>
+            <div class="sensor-label">ไนโตรเจน (N)</div>
+            <div class="sensor-status" [ngClass]="getNitrogenStatus()">
+              {{ getNitrogenStatusText() }}
+            </div>
+          </div>
+        </div>
+
+        <div class="sensor-card phosphorus">
+          <div class="sensor-icon">
+            <img src="https://cdn-icons-png.flaticon.com/512/6678/6678656.png" alt="phosphorus" />
+          </div>
+          <div class="sensor-content">
+            <div class="sensor-value">{{ phosphorus }}</div>
+            <div class="sensor-unit">mg/kg</div>
+            <div class="sensor-label">ฟอสฟอรัส (P)</div>
+            <div class="sensor-status" [ngClass]="getPhosphorusStatus()">
+              {{ getPhosphorusStatusText() }}
+            </div>
+          </div>
+        </div>
+
+        <div class="sensor-card potassium">
+          <div class="sensor-icon">
+            <img src="https://cdn-icons-png.flaticon.com/512/6678/6678660.png" alt="potassium" />
+          </div>
+          <div class="sensor-content">
+            <div class="sensor-value">{{ potassium }}</div>
+            <div class="sensor-unit">mg/kg</div>
+            <div class="sensor-label">โพแทสเซียม (K)</div>
+            <div class="sensor-status" [ngClass]="getPotassiumStatus()">
+              {{ getPotassiumStatusText() }}
+            </div>
+          </div>
+        </div>
+
+        <div class="sensor-card ph">
+          <div class="sensor-icon">
+            <img src="https://cdn-icons-png.flaticon.com/512/9162/9162345.png" alt="ph" />
+          </div>
+          <div class="sensor-content">
+            <div class="sensor-value">{{ ph }}</div>
+            <div class="sensor-unit">pH</div>
+            <div class="sensor-label">ค่าความเป็นกรด-ด่าง</div>
+            <div class="sensor-status" [ngClass]="getPhStatus()">
+              {{ getPhStatusText() }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- สรุปผลและคำแนะนำ -->
+    <div class="summary-section">
+      <div class="section-title">สรุปผลการวัด</div>
+      <div class="summary-content">
+        <div class="overall-status" [ngClass]="getOverallStatus()">
+          <div class="status-icon">
+            <i [class]="getOverallStatusIcon()"></i>
+          </div>
+          <div class="status-text">
+            <div class="status-title">{{ getOverallStatusTitle() }}</div>
+            <div class="status-description">{{ getOverallStatusDescription() }}</div>
+          </div>
+        </div>
+        
+        <div class="recommendations" *ngIf="getRecommendations().length > 0">
+          <h4>คำแนะนำ:</h4>
+          <ul>
+            <li *ngFor="let recommendation of getRecommendations()">
+              {{ recommendation }}
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ปุ่มดาวน์โหลดรายงาน -->
+    <div class="action-section">
+      <button class="download-btn" (click)="downloadReport()">
+        <i class="fas fa-download"></i>
+        ดาวน์โหลดรายงาน
+      </button>
+      <button class="share-btn" (click)="shareReport()">
+        <i class="fas fa-share-alt"></i>
+        แชร์ผลการวัด
+      </button>
+    </div>
+
+    <!-- ติดต่อ Admin -->
+    <div class="admin" (click)="goToContactAdmin()">
+      <img src="https://cdn-icons-png.flaticon.com/512/9703/9703596.png" alt="admin" />
+      <div>ติดต่อ Admin</div>
     </div>
   </div>
 </div>

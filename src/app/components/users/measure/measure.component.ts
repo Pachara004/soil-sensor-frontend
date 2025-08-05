@@ -34,6 +34,27 @@ interface Measurement {
   locationNameType?: 'custom' | 'auto';
   customLocationName?: string | null;
   autoLocationName?: string | null;
+  areaId?: string; // เพิ่ม areaId เพื่อกลุ่มข้อมูลตามพื้นที่
+  measurementPoint?: number; // ลำดับจุดที่วัดในพื้นที่นี้
+}
+
+interface Area {
+  id: string;
+  name: string;
+  deviceId: string;
+  username: string;
+  polygonBounds: [number, number][];
+  createdDate: string;
+  createdTimestamp: number;
+  totalMeasurements: number;
+  averages?: {
+    temperature: number;
+    moisture: number;
+    nitrogen: number;
+    phosphorus: number;
+    potassium: number;
+    ph: number;
+  };
 }
 
 @Component({
@@ -70,6 +91,13 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
   private clickTimeout: any = null; // For debouncing clicks
   private isProcessingClick = false; // Prevent multiple rapid clicks
 
+  // เพิ่มตัวแปรสำหรับจัดการพื้นที่
+  currentAreaId: string = '';
+  areaName: string = '';
+  currentArea: Area | null = null;
+  measurementCount: number = 0;
+  showAreaStats: boolean = false;
+
   @ViewChild('mapContainer') private mapContainer!: ElementRef<HTMLElement>;
   @ViewChild('mapPopupContainer') private mapPopupContainer!: ElementRef<HTMLElement>;
 
@@ -83,37 +111,38 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit() {
-  const userData = localStorage.getItem('user');
-  if (userData) {
-    const user: UserData = JSON.parse(userData);
-    this.username = user.username || 'ไม่พบชื่อผู้ใช้';
-    
-    // โหลด devices ก่อน แล้วค่อยกำหนด deviceId
-    this.loadDevices().then(() => {
-      // หลังจากโหลด devices เสร็จแล้ว ค่อยกำหนด deviceId
-      const savedDevice = localStorage.getItem('selectedDevice');
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const user: UserData = JSON.parse(userData);
+      this.username = user.username || 'ไม่พบชื่อผู้ใช้';
       
-      if (savedDevice && this.devices.includes(savedDevice)) {
-        // ใช้ device ที่บันทึกไว้ถ้ามีในรายการ devices ของ user
-        this.deviceId = savedDevice;
-      } else if (this.devices.length > 0) {
-        // ใช้ device แรกในรายการถ้าไม่มีการบันทึกไว้หรือ device ที่บันทึกไว้ไม่อยู่ในรายการ
-        this.deviceId = this.devices[0];
-        // บันทึกค่าใหม่ลง localStorage
-        localStorage.setItem('selectedDevice', this.deviceId);
-      } else {
-        // fallback case ถ้าไม่มี devices เลย
-        this.deviceId = 'NPK0001';
-      }
-      
-      // โหลดข้อมูล sensor หลังจากกำหนด deviceId แล้ว
-      this.loadSensorData();
-    });
-  } else {
-    alert('กรุณาล็อกอินก่อน');
-    this.router.navigate(['/']);
+      // โหลด devices ก่อน แล้วค่อยกำหนด deviceId
+      this.loadDevices().then(() => {
+        // หลังจากโหลด devices เสร็จแล้ว ค่อยกำหนด deviceId
+        const savedDevice = localStorage.getItem('selectedDevice');
+        
+        if (savedDevice && this.devices.includes(savedDevice)) {
+          // ใช้ device ที่บันทึกไว้ถ้ามีในรายการ devices ของ user
+          this.deviceId = savedDevice;
+        } else if (this.devices.length > 0) {
+          // ใช้ device แรกในรายการถ้าไม่มีการบันทึกไว้หรือ device ที่บันทึกไว้ไม่อยู่ในรายการ
+          this.deviceId = this.devices[0];
+          // บันทึกค่าใหม่ลง localStorage
+          localStorage.setItem('selectedDevice', this.deviceId);
+        } else {
+          // fallback case ถ้าไม่มี devices เลย
+          this.deviceId = 'NPK0001';
+        }
+        
+        // โหลดข้อมูล sensor หลังจากกำหนด deviceId แล้ว
+        this.loadSensorData();
+      });
+    } else {
+      alert('กรุณาล็อกอินก่อน');
+      this.router.navigate(['/']);
+    }
   }
-}
+
   ngAfterViewInit() {
     this.initializeMapWithDefault();
     // Don't initialize popup map here, wait until popup is actually shown
@@ -358,27 +387,67 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  confirmArea() {
+  async confirmArea() {
     if (this.points.length < 3) {
       alert('กรุณาเลือกอย่างน้อย 3 จุดเพื่อสร้างพื้นที่');
       return;
     }
 
+    // ถ้ายังไม่ได้ตั้งชื่อพื้นที่
+    if (!this.areaName.trim()) {
+      this.areaName = prompt('กรุณาตั้งชื่อพื้นที่วัด:') || '';
+      if (!this.areaName.trim()) {
+        alert('กรุณาตั้งชื่อพื้นที่');
+        return;
+      }
+    }
+
     console.log('Confirming area with', this.points.length, 'points');
     
-    // Store the polygon boundary points (copy of points)
-    this.polygonBounds = [...this.points];
-    
-    // Create rectangular bounds for map fitting (still needed for fitBounds)
-    this.createBoundsFromPoints();
-    
-    // Close popup
-    this.showPopup = false;
-    
-    // Show the area on main map
-    if (this.map && this.bounds) {
-      this.map.fitBounds(this.bounds, { padding: 50 });
-      this.drawBoundsAsPolygon();
+    try {
+      // สร้าง Area ID ใหม่
+      this.currentAreaId = `${this.username}_${this.deviceId}_${Date.now()}`;
+      
+      // Store the polygon boundary points (copy of points)
+      this.polygonBounds = [...this.points];
+      
+      // สร้างข้อมูล Area
+      const areaData: Area = {
+        id: this.currentAreaId,
+        name: this.areaName,
+        deviceId: this.deviceId,
+        username: this.username,
+        polygonBounds: this.polygonBounds,
+        createdDate: new Date().toISOString().split('T')[0],
+        createdTimestamp: Date.now(),
+        totalMeasurements: 0
+      };
+
+      // บันทึก Area ลง Firebase
+      const areaRef = ref(this.db, `areas/${this.currentAreaId}`);
+      await push(areaRef, areaData);
+      
+      this.currentArea = areaData;
+      this.measurementCount = 0;
+      this.showAreaStats = true;
+
+      // Create rectangular bounds for map fitting (still needed for fitBounds)
+      this.createBoundsFromPoints();
+      
+      // Close popup
+      this.showPopup = false;
+      
+      // Show the area on main map
+      if (this.map && this.bounds) {
+        this.map.fitBounds(this.bounds, { padding: 50 });
+        this.drawBoundsAsPolygon();
+      }
+
+      alert(`สร้างพื้นที่ "${this.areaName}" เรียบร้อยแล้ว\nตีค่อนคลิกในพื้นที่เพื่อเริ่มวัด`);
+
+    } catch (error) {
+      console.error('Error creating area:', error);
+      alert('เกิดข้อผิดพลาดในการสร้างพื้นที่');
     }
   }
 
@@ -540,10 +609,17 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
 
   reopenPopup() {
     console.log('Manually reopening popup');
+    
+    // รีเซ็ตข้อมูลพื้นที่
     this.bounds = null;
-    this.polygonBounds = []; // Clear polygon bounds
+    this.polygonBounds = [];
     this.points = [];
     this.markers = [];
+    this.currentAreaId = '';
+    this.areaName = '';
+    this.currentArea = null;
+    this.measurementCount = 0;
+    this.showAreaStats = false;
     
     // Clean up existing popup map
     if (this.popupMap) {
@@ -621,7 +697,6 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     }
   }
-  
 
   private drawBounds() {
     if (this.map && this.bounds) {
@@ -667,27 +742,27 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async loadDevices(): Promise<void> {
-  this.isLoading = true;
-  try {
-    const userDevicesRef = ref(this.db, `users/${this.username}/devices`);
-    const devicesSnapshot = await get(userDevicesRef);
-    if (devicesSnapshot.exists()) {
-      this.devices = Object.keys(devicesSnapshot.val());
-      if (this.devices.length === 0) {
-        console.warn('ไม่พบอุปกรณ์ในระบบ');
+    this.isLoading = true;
+    try {
+      const userDevicesRef = ref(this.db, `users/${this.username}/devices`);
+      const devicesSnapshot = await get(userDevicesRef);
+      if (devicesSnapshot.exists()) {
+        this.devices = Object.keys(devicesSnapshot.val());
+        if (this.devices.length === 0) {
+          console.warn('ไม่พบอุปกรณ์ในระบบ');
+          this.devices = ['NPK0001']; // fallback
+        }
+      } else {
+        console.warn('ไม่พบข้อมูลอุปกรณ์');
         this.devices = ['NPK0001']; // fallback
       }
-    } else {
-      console.warn('ไม่พบข้อมูลอุปกรณ์');
+    } catch (error) {
+      console.error('ข้อผิดพลาดในการโหลดอุปกรณ์:', error);
       this.devices = ['NPK0001']; // fallback
+    } finally {
+      this.isLoading = false;
     }
-  } catch (error) {
-    console.error('ข้อผิดพลาดในการโหลดอุปกรณ์:', error);
-    this.devices = ['NPK0001']; // fallback
-  } finally {
-    this.isLoading = false;
   }
-}
 
   async loadSensorData() {
     this.isLoading = true;
@@ -716,6 +791,7 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     localStorage.setItem('selectedDevice', this.deviceId);
     this.loadSensorData();
   }
+
   // ฟังก์ชันสำหรับเปลี่ยนโหมดการตั้งชื่อสถานที่
   onLocationNameModeChange() {
     // ถ้ามี locationDetail อยู่แล้ว ให้อัปเดตชื่อใหม่
@@ -728,6 +804,7 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     }
   }
+
   // ฟังก์ชันสำหรับอัปเดตชื่อสถานที่ตามโหมดที่เลือก
   private updateLocationDetailWithMode(lat: number, lng: number) {
     if (this.useCustomName && this.customLocationName.trim()) {
@@ -737,7 +814,7 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-// ฟังก์ชันเมื่อผู้ใช้พิมพ์ชื่อสถานที่
+  // ฟังก์ชันเมื่อผู้ใช้พิมพ์ชื่อสถานที่
   onCustomLocationNameChange() {
     if (this.useCustomName && this.locationDetail) {
       const coords = this.locationDetail.match(/Lat: ([\d.-]+), Lng: ([\d.-]+)/);
@@ -748,10 +825,17 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     }
   }
+
   async saveMeasurement() {
+    // ตรวจสอบว่าต้องมี Area ที่กำหนดแล้ว
+    if (!this.currentAreaId || this.polygonBounds.length < 3) {
+      alert('กรุณากำหนดพื้นที่วัดก่อนบันทึก');
+      return;
+    }
+
     // ตรวจสอบว่าต้องมีชื่อสถานที่ (ไม่ว่าจะเป็นชื่อที่ตั้งเองหรือจาก API)
-    if (!this.locationDetail || this.polygonBounds.length < 3) {
-      alert('กรุณากำหนดพื้นที่และตำแหน่ง/ชื่อสถานที่ก่อนบันทึก');
+    if (!this.locationDetail) {
+      alert('กรุณาเลือกตำแหน่งในพื้นที่ก่อนบันทึก');
       return;
     }
 
@@ -767,6 +851,9 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       const [latStr, lngStr] = coords.replace(')', '').split(', ');
       const lat = parseFloat(latStr.split(': ')[1]);
       const lng = parseFloat(lngStr.split(': ')[1]);
+
+      // เพิ่มลำดับจุดวัด
+      this.measurementCount++;
 
       const data: Measurement = {
         deviceId: this.deviceId,
@@ -784,25 +871,139 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
         // เพิ่มข้อมูลประเภทชื่อสถานที่
         locationNameType: this.useCustomName ? 'custom' : 'auto',
         customLocationName: this.useCustomName ? this.customLocationName.trim() : null,
-        autoLocationName: this.autoLocationName || null
+        autoLocationName: this.autoLocationName || null,
+        // เพิ่มข้อมูลพื้นที่
+        areaId: this.currentAreaId,
+        measurementPoint: this.measurementCount
       };
 
+      // บันทึกข้อมูลการวัดแยกตาม Device เท่านั้น
       const measureRef = ref(this.db, `measurements/${this.deviceId}`);
       await push(measureRef, data);
 
-      alert('บันทึกข้อมูลสำเร็จ!');
+      // อัปเดต Area statistics
+      await this.updateAreaStatistics();
+
+      alert(`บันทึกข้อมูลจุดที่ ${this.measurementCount} สำเร็จ!\nพื้นที่: ${this.areaName}`);
       
-      // รีเซ็ตค่าหลังบันทึก
+      // รีเซ็ตค่าหลังบันทึก (เฉพาะตำแหน่ง ไม่รีเซ็ตพื้นที่)
       this.locationDetail = '';
       this.customLocationName = '';
       this.autoLocationName = '';
       this.useCustomName = false;
+
+      // โหลดข้อมูลเซ็นเซอร์ใหม่สำหรับการวัดครั้งต่อไป
+      await this.loadSensorData();
+
     } catch (err) {
       console.error('ข้อผิดพลาดในการบันทึก:', err);
       alert('บันทึกไม่สำเร็จ');
     } finally {
       this.isLoading = false;
     }
+  }
+
+  // ฟังก์ชันคำนวณและอัปเดตค่าเฉลี่ยของพื้นที่
+  private async updateAreaStatistics() {
+    if (!this.currentAreaId) return;
+
+    try {
+      // ดึงข้อมูลการวัดทั้งหมดในพื้นที่นี้
+      const measureRef = ref(this.db, `measurements/${this.currentAreaId}`);
+      const measureSnap = await get(measureRef);
+      
+      if (!measureSnap.exists()) return;
+
+      const measurements = Object.values(measureSnap.val()) as Measurement[];
+      const count = measurements.length;
+
+      if (count === 0) return;
+
+      // คำนวณค่าเฉลี่ย
+      const totals = measurements.reduce((acc, measurement) => {
+        acc.temperature += measurement.temperature;
+        acc.moisture += measurement.moisture;
+        acc.nitrogen += measurement.nitrogen;
+        acc.phosphorus += measurement.phosphorus;
+        acc.potassium += measurement.potassium;
+        acc.ph += measurement.ph;
+        return acc;
+      }, {
+        temperature: 0,
+        moisture: 0,
+        nitrogen: 0,
+        phosphorus: 0,
+        potassium: 0,
+        ph: 0
+      });
+
+      const averages = {
+        temperature: parseFloat((totals.temperature / count).toFixed(2)),
+        moisture: parseFloat((totals.moisture / count).toFixed(2)),
+        nitrogen: parseFloat((totals.nitrogen / count).toFixed(2)),
+        phosphorus: parseFloat((totals.phosphorus / count).toFixed(2)),
+        potassium: parseFloat((totals.potassium / count).toFixed(2)),
+        ph: parseFloat((totals.ph / count).toFixed(2))
+      };
+
+      // อัปเดต Area ใน Firebase
+      const areaRef = ref(this.db, `areas/${this.currentAreaId}`);
+      const areaSnap = await get(areaRef);
+      
+      if (areaSnap.exists()) {
+        const areaKey = Object.keys(areaSnap.val())[0];
+        const updateRef = ref(this.db, `areas/${this.currentAreaId}/${areaKey}`);
+        
+        await push(updateRef, {
+          totalMeasurements: count,
+          averages: averages,
+          lastUpdated: Date.now()
+        });
+
+        // อัปเดต currentArea ในหน้า
+        if (this.currentArea) {
+          this.currentArea.totalMeasurements = count;
+          this.currentArea.averages = averages;
+        }
+      }
+
+      console.log('Area statistics updated:', averages);
+
+    } catch (error) {
+      console.error('Error updating area statistics:', error);
+    }
+  }
+
+  // ฟังก์ชันแสดงสถิติของพื้นที่
+  showAreaStatistics() {
+    if (!this.currentArea || !this.currentArea.averages) {
+      alert('ยังไม่มีข้อมูลสถิติของพื้นที่นี้');
+      return;
+    }
+
+    const stats = this.currentArea.averages;
+    const message = `สถิติพื้นที่: ${this.currentArea.name}
+จำนวนจุดวัด: ${this.currentArea.totalMeasurements} จุด
+
+ค่าเฉลี่ย:
+• อุณหภูมิ: ${stats.temperature}°C
+• ความชื้น: ${stats.moisture}%
+• ไนโตรเจน: ${stats.nitrogen} mg/kg
+• ฟอสฟอรัส: ${stats.phosphorus} mg/kg
+• โพแทสเซียม: ${stats.potassium} mg/kg
+• ค่า pH: ${stats.ph}`;
+
+    alert(message);
+  }
+
+  // ฟังก์ชันสำหรับเริ่มพื้นที่ใหม่
+  startNewArea() {
+    if (this.measurementCount > 0) {
+      const confirm = window.confirm(`คุณมีข้อมูลการวัด ${this.measurementCount} จุดในพื้นที่ "${this.areaName}"\nต้องการเริ่มพื้นที่ใหม่หรือไม่?`);
+      if (!confirm) return;
+    }
+
+    this.reopenPopup();
   }
 
   goBack() {

@@ -25,15 +25,124 @@
       </div>
     </div>
 
-    <!-- กล่องประวัติ -->
-    <div class="history-list">
-      <div class="history-item" *ngFor="let item of history">
-        <div class="history-name">{{ item.location }} | {{ item.date }}</div>
-        <button class="view-btn" (click)="viewDetail(item)">ดูข้อมูล</button>
+    <!-- Loading -->
+    <div *ngIf="isLoading" class="loading">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>กำลังโหลดข้อมูล...</p>
+    </div>
+
+    <!-- รายการพื้นที่ -->
+    <div *ngIf="!isLoading && !showAreaDetails" class="history-list">
+      <h3 class="area-title">รายการพื้นที่การวัด</h3>
+      
+      <div class="area-item" *ngFor="let area of areaGroups">
+        <div class="area-header">
+          <div class="area-info">
+            <h4 class="area-name">{{ getDisplayAreaName(area) }} </h4>
+            <p class="area-details">
+              {{ area.totalMeasurements }} จุดวัด | วันที่ล่าสุด: {{ area.lastMeasurementDate }}
+            </p>
+          </div>
+        </div>
+        
+        <div class="area-averages">
+          <div class="avg-grid">
+            <div class="avg-item">
+              <span class="avg-label">อุณหภูมิ</span>
+              <span class="avg-value">{{ area.averages.temperature }}°C</span>
+            </div>
+            <div class="avg-item">
+              <span class="avg-label">ความชื้น</span>
+              <span class="avg-value">{{ area.averages.moisture }}%</span>
+            </div>
+            <div class="avg-item">
+              <span class="avg-label">N</span>
+              <span class="avg-value">{{ area.averages.nitrogen }}</span>
+            </div>
+            <div class="avg-item">
+              <span class="avg-label">P</span>
+              <span class="avg-value">{{ area.averages.phosphorus }}</span>
+            </div>
+            <div class="avg-item">
+              <span class="avg-label">K</span>
+              <span class="avg-value">{{ area.averages.potassium }}</span>
+            </div>
+            <div class="avg-item">
+              <span class="avg-label">pH</span>
+              <span class="avg-value">{{ area.averages.ph }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-actions">
+          <button class="detail-btn" (click)="viewAreaDetails(area)">
+            ดูรายละเอียด
+          </button>
+          <button class="stats-btn" (click)="showAreaStatistics(area)">
+            สถิติ
+          </button>
+        </div>
       </div>
 
-      <div *ngIf="!history.length" class="empty">
+      <div *ngIf="!areaGroups.length" class="empty">
         ไม่พบข้อมูลการวัดค่า
+      </div>
+    </div>
+
+    <!-- รายละเอียดพื้นที่ที่เลือก -->
+    <div *ngIf="!isLoading && showAreaDetails && selectedArea" class="area-details-view">
+      <div class="area-detail-header">
+        <button class="back-to-list" (click)="backToAreaList()">
+          <i class="fas fa-arrow-left"></i> กลับ
+        </button>
+        <h3>{{ selectedArea.areaName }}</h3>
+        <p>{{ selectedArea.totalMeasurements }} จุดวัด</p>
+      </div>
+
+      <!-- ค่าเฉลี่ยของพื้นที่ -->
+      <div class="area-summary">
+        <h4>ค่าเฉลี่ยของพื้นที่</h4>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span class="summary-label">อุณหภูมิ</span>
+            <span class="summary-value temperature">{{ selectedArea.averages.temperature }}°C</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">ความชื้น</span>
+            <span class="summary-value moisture">{{ selectedArea.averages.moisture }}%</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">ไนโตรเจน</span>
+            <span class="summary-value nitrogen">{{ selectedArea.averages.nitrogen }} mg/kg</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">ฟอสฟอรัส</span>
+            <span class="summary-value phosphorus">{{ selectedArea.averages.phosphorus }} mg/kg</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">โพแทสเซียม</span>
+            <span class="summary-value potassium">{{ selectedArea.averages.potassium }} mg/kg</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">ค่า pH</span>
+            <span class="summary-value ph">{{ selectedArea.averages.ph }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- รายการจุดวัดในพื้นที่ -->
+      <div class="measurements-list">
+        <h4>รายการจุดวัด</h4>
+        <div class="measurement-item" *ngFor="let measurement of selectedArea.measurements">
+          <div class="measurement-info">
+            <div class="measurement-point">จุดที่ {{ measurement.measurementPoint || 'ไม่ระบุ' }}</div>
+            <div class="measurement-location">{{ measurement.location }}</div>
+            <div class="measurement-date">{{ measurement.date }}</div>
+          </div>
+          <button class="view-detail-btn" (click)="viewMeasurementDetail(measurement)">
+            ดูรายละเอียด
+          </button>
+        </div>
       </div>
     </div>
 

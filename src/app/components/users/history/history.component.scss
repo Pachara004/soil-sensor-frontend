@@ -1,159 +1,561 @@
+/* Main Container */
 .measure-container {
   width: 100vw;
   height: 100vh;
-  background-color: #013828;
+  background: linear-gradient(135deg, #013828 0%, #0a4d3a 100%);
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .card {
-  width: 750px;
-  height: 550px;
+  width: min(800px, 95vw);
+  max-height: 90vh;
   background: white;
   border-radius: 20px;
   border: 4px solid #00aaff;
   padding: 20px;
   position: relative;
   box-sizing: border-box;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
-/* ไอคอนบนสุด */
+/* Header Section */
 .chip-icon {
   width: 40px;
   position: absolute;
   top: 10px;
   left: calc(50% - 20px);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
+
 .back {
   position: absolute;
   left: 20px;
   top: 20px;
   font-size: 24px;
   cursor: pointer;
+  color: #013828;
+  transition: color 0.3s ease;
+  z-index: 10;
+}
+
+.back:hover {
+  color: #00aaff;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-top: 50px;
+  margin-bottom: 20px;
 }
 
 .user-id {
-  background-color: #d9d9d9;
-  padding: 10px 20px;
-  border-radius: 10px;
+  background: linear-gradient(135deg, #e6f3ff 0%, #d9d9d9 100%);
+  padding: 12px 24px;
+  border-radius: 12px;
   font-weight: bold;
-  margin-left: 50px; /* Add margin to avoid overlap with .back */
-}
-.user-icon {
-  position: absolute;
-  right: 30px;
-  top: 40px;
-  text-align: center;
   font-size: 14px;
-  color: #000;
+  color: #013828;
+  border: 1px solid #00aaff;
+  margin-left: 50px;
+}
+
+.user-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  font-size: 12px;
+  color: #013828;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.user-icon:hover {
+  transform: translateY(-2px);
 }
 
 .user-icon img {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #00aaff;
+  margin-bottom: 4px;
+}
+
+.user-icon .text {
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* Section Styling */
+.section {
+  margin: 20px 0;
 }
 
 .subtitle {
-  font-size: 14px;
-  color: #333;
+  font-size: 16px;
+  color: #013828;
+  font-weight: 600;
+  margin-bottom: 10px;
 }
 
-.device-id {
-  background-color: #d9d9d9;
-  border-radius: 15px;
-  padding: 10px;
-  font-size: 18px;
-  margin-top: 10px;
+.device-box {
+  background: linear-gradient(135deg, #f0f8ff 0%, #e6e6e6 100%);
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #00aaff;
+  box-shadow: 0 2px 8px rgba(0, 170, 255, 0.1);
 }
 
 .label-orange {
   color: #e37932;
+  font-weight: 600;
 }
 
+/* Loading */
+.loading {
+  text-align: center;
+  padding: 40px 20px;
+  color: #013828;
+}
+
+.loading p {
+  margin-top: 15px;
+  font-size: 14px;
+  color: #666;
+}
+
+/* Area List */
 .history-list {
   margin-top: 30px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.history-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.history-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.history-list::-webkit-scrollbar-thumb {
+  background: #00aaff;
+  border-radius: 3px;
+}
+
+.area-title {
+  color: #013828;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.area-item {
+  background: linear-gradient(135deg, #f9fffe 0%, #f0f8f0 100%);
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 2px solid #e0f4e0;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.area-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  border-color: #00aaff;
+}
+
+.area-header {
+  margin-bottom: 15px;
+}
+
+.area-name {
+  color: #013828;
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: bold;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.area-details {
+  color: #666;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Average Values Grid */
+.area-averages {
+  margin: 15px 0;
+}
+
+.avg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 10px;
+}
+
+.avg-item {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-}
-
-.history-item {
-  background-color: #d9d9d9;
-  border-radius: 15px;
-  display: flex;
-  justify-content: space-between; /* ซ้าย-ขวา */
   align-items: center;
-  padding: 15px 20px;
-  flex-wrap: wrap; /* กันซ้อน */
+  background: white;
+  padding: 12px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
 }
 
-.history-name {
+.avg-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.avg-label {
+  color: #666;
+  font-size: 11px;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.avg-value {
   font-weight: bold;
-  font-size: 16px;
+  font-size: 13px;
 }
 
-.view-btn {
-  background-color: #ffc9d4;
+/* Color coding for different values */
+.avg-item:nth-child(1) .avg-value { color: #ff6b35; } /* Temperature */
+.avg-item:nth-child(2) .avg-value { color: #4dabf7; } /* Moisture */
+.avg-item:nth-child(3) .avg-value { color: #69db7c; } /* Nitrogen */
+.avg-item:nth-child(4) .avg-value { color: #ffd43b; } /* Phosphorus */
+.avg-item:nth-child(5) .avg-value { color: #ff8cc8; } /* Potassium */
+.avg-item:nth-child(6) .avg-value { color: #845ef7; } /* pH */
+
+/* Action Buttons */
+.area-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.detail-btn, .stats-btn {
+  flex: 1;
+  padding: 10px 16px;
   border: none;
-  padding: 8px 20px;
-  border-radius: 20px;
-  font-weight: bold;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-
-  &:hover {
-    background-color: #fbb9c7;
-  }
+  transition: all 0.3s ease;
 }
 
-/* ป้องกันปุ่มชนขอบ */
-@media (max-width: 600px) {
-  .history-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-
-  .view-btn {
-    align-self: flex-end;
-  }
+.detail-btn {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
 }
 
-/* ติดต่อ Admin */
+.detail-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.stats-btn {
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+.stats-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+}
+
+/* Area Details View */
+.area-details-view {
+  padding: 0;
+  max-height: 450px;
+  overflow-y: auto;
+}
+
+.area-detail-header {
+  background: linear-gradient(135deg, #013828 0%, #0a4d3a 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  text-align: center;
+  position: relative;
+}
+
+.back-to-list {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+}
+
+.back-to-list:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.area-detail-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.area-detail-header p {
+  margin: 5px 0 0 0;
+  opacity: 0.9;
+  font-size: 14px;
+}
+
+/* Area Summary */
+.area-summary {
+  background: linear-gradient(135deg, #f0f8f0 0%, #e8f5e8 100%);
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 1px solid #d4edda;
+}
+
+.area-summary h4 {
+  color: #013828;
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.summary-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.summary-label {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+}
+
+.summary-value {
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.summary-value.temperature { color: #ff6b35; }
+.summary-value.moisture { color: #4dabf7; }
+.summary-value.nitrogen { color: #69db7c; }
+.summary-value.phosphorus { color: #ffd43b; }
+.summary-value.potassium { color: #ff8cc8; }
+.summary-value.ph { color: #845ef7; }
+
+/* Measurements List */
+.measurements-list {
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.measurements-list h4 {
+  color: #013828;
+  margin-bottom: 15px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.measurement-item {
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.measurement-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #00aaff;
+}
+
+.measurement-info {
+  flex: 1;
+}
+
+.measurement-point {
+  font-weight: bold;
+  color: #013828;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.measurement-location {
+  color: #666;
+  font-size: 12px;
+  margin: 2px 0;
+}
+
+.measurement-date {
+  color: #999;
+  font-size: 11px;
+}
+
+.view-detail-btn {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3);
+}
+
+.view-detail-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(76, 175, 80, 0.4);
+}
+
+/* Empty State */
+.empty {
+  text-align: center;
+  color: #999;
+  padding: 40px 20px;
+  font-style: italic;
+  font-size: 16px;
+  background: linear-gradient(135deg, #f9f9f9 0%, #f0f0f0 100%);
+  border-radius: 12px;
+  border: 2px dashed #ddd;
+}
+
+/* Admin Contact */
 .admin {
   position: absolute;
   bottom: 20px;
   right: 20px;
-  margin-top: 40px;
-  margin-left: auto;
   text-align: center;
-  font-size: 14px;
+  font-size: 12px;
+  color: #013828;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.admin:hover {
+  transform: translateY(-2px);
+  color: #00aaff;
 }
 
 .admin img {
   width: 30px;
   height: 30px;
+  border-radius: 50%;
+  border: 2px solid #00aaff;
+  margin-bottom: 4px;
+  transition: all 0.3s ease;
 }
 
-.device-box {
-  background: #e6e6e6;
-  padding: 10px 15px;
-  border-radius: 10px;
-  width: fit-content;
-  margin-top: 15px;
-  font-size: 18px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.admin:hover img {
+  box-shadow: 0 4px 12px rgba(0, 170, 255, 0.3);
 }
 
-.device-box .chip-icon {
-  width: 25px;
-  height: 25px;
+/* Responsive Design */
+@media (max-width: 768px) {
+  .card {
+    width: 95vw;
+    height: 90vh;
+    padding: 15px;
+  }
+
+  .user-id {
+    margin-left: 30px;
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+
+  .area-name {
+    font-size: 16px;
+  }
+
+  .avg-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .area-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .measurement-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .view-detail-btn {
+    align-self: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .avg-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .user-id {
+    margin-left: 10px;
+    font-size: 11px;
+  }
 }
