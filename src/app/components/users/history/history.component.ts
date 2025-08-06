@@ -69,7 +69,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
   showAreaDetails: boolean = false;
   selectedArea: AreaGroup | null = null;
   isLoading = false;
-  
+
   // Map related properties
   map: Map | undefined;
   @ViewChild('mapContainer') private mapContainer!: ElementRef<HTMLElement>;
@@ -226,7 +226,6 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private async groupByArea() {
-    // Using object-based approach instead of Map for ES5 compatibility
     const areaMap: { [key: string]: Measurement[] } = {};
     
     this.history.forEach(measurement => {
@@ -242,10 +241,8 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       areaMap[groupKey].push(measurement);
     });
 
-    // Convert to array of entries for processing
     const areaEntries = Object.keys(areaMap).map(key => [key, areaMap[key]] as [string, Measurement[]]);
 
-    // Load area polygon bounds from Firebase
     const areaGroupsWithPolygons = await Promise.all(
       areaEntries.map(async ([areaId, measurements]: [string, Measurement[]]) => {
         const sortedMeasurements = measurements.sort((a: Measurement, b: Measurement) => 
@@ -255,7 +252,6 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
         const averages = this.calculateAverages(measurements);
         const areaName = this.getAreaName(areaId, measurements);
         
-        // Load polygon bounds if available
         let polygonBounds: [number, number][] | undefined;
         try {
           if (areaId !== 'no-area' && !areaId.startsWith('area_')) {
@@ -327,6 +323,85 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     };
   }
 
+  // เพิ่มฟังก์ชันแนะนำการปรับปรุงดิน
+  recommendSoilImprovement(area: AreaGroup): string[] {
+    const recommendations: string[] = [];
+    const { temperature, moisture, nitrogen, phosphorus, potassium, ph } = area.averages;
+
+    // pH recommendations
+    if (ph < 5.5) {
+      recommendations.push('ดินมีสภาพกรดจัด แนะนำให้ใส่ปูนขาวเพื่อเพิ่มค่า pH');
+    } else if (ph > 7.5) {
+      recommendations.push('ดินมีสภาพด่าง แนะนำให้ใส่กำมะถันเพื่อลดค่า pH');
+    }
+
+    // Nitrogen recommendations
+    if (nitrogen < 20) {
+      recommendations.push('ดินขาดไนโตรเจน แนะนำให้ใส่ปุ๋ยยูเรียหรือปุ๋ยอินทรีย์');
+    } else if (nitrogen > 40) {
+      recommendations.push('ไนโตรเจนในดินสูงเกินไป ควรลดการใช้ปุ๋ยไนโตรเจน');
+    }
+
+    // Phosphorus recommendations
+    if (phosphorus < 15) {
+      recommendations.push('ดินขาดฟอสฟอรัส แนะนำให้ใส่ปุ๋ยซูเปอร์ฟอสเฟต');
+    } else if (phosphorus > 30) {
+      recommendations.push('ฟอสฟอรัสในดินสูงเกินไป ควรควบคุมการใช้ปุ๋ยฟอสฟอรัส');
+    }
+
+    // Potassium recommendations
+    if (potassium < 100) {
+      recommendations.push('ดินขาดโพแทสเซียม แนะนำให้ใส่ปุ๋ยโพแทสเซียมคลอไรด์');
+    } else if (potassium > 200) {
+      recommendations.push('โพแทสเซียมในดินสูงเกินไป ควรลดการใช้ปุ๋ยโพแทสเซียม');
+    }
+
+    // Moisture recommendations
+    if (moisture < 20) {
+      recommendations.push('ดินแห้งเกินไป แนะนำให้เพิ่มการชลประทานหรือสารอินทรีย์');
+    } else if (moisture > 50) {
+      recommendations.push('ดินชื้นเกินไป แนะนำให้ปรับปรุงระบบระบายน้ำ');
+    }
+
+    // Temperature recommendations
+    if (temperature < 15) {
+      recommendations.push('อุณหภูมิต่ำเกินไป แนะนำให้ปลูกพืชเมืองหนาวหรือใช้โรงเรือน');
+    } else if (temperature > 30) {
+      recommendations.push('อุณหภูมิสูงเกินไป แนะนำให้ปลูกพืชเมืองร้อน');
+    }
+
+    return recommendations.length > 0 ? recommendations : ['ดินอยู่ในสภาพเหมาะสมสำหรับการเพาะปลูกทั่วไป'];
+  }
+
+  // เพิ่มฟังก์ชันแนะนำพืชที่เหมาะสม
+  recommendCrops(area: AreaGroup): string[] {
+    const crops: string[] = [];
+    const { temperature, moisture, ph } = area.averages;
+
+    // pH-based crop recommendations
+    if (ph >= 5.5 && ph <= 7.0) {
+      crops.push('ข้าวโพด', 'ถั่วเหลือง', 'ผักกาดหอม', 'มะเขือเทศ');
+    } else if (ph < 5.5) {
+      crops.push('มันสำปะหลัง', 'สับปะรด', 'ชา');
+    } else if (ph > 7.0) {
+      crops.push('หน่อไม้ฝรั่ง', 'บีทรูท');
+    }
+
+    // Moisture-based crop recommendations
+    if (moisture > 50) {
+      crops.push('ข้าว', 'บัว', 'ผักบุ้ง');
+    }
+
+    // Temperature-based crop recommendations
+    if (temperature > 30) {
+      crops.push('ข้าว', 'มะม่วง', 'ทุเรียน');
+    } else if (temperature < 15) {
+      crops.push('ผักกาดหอม', 'สตรอว์เบอร์รี่');
+    }
+
+    return crops.length > 0 ? [...new Set(crops)] : ['ไม่มีพืชแนะนำสำหรับสภาพดินนี้'];
+  }
+
   getDisplayAreaName(area: AreaGroup): string {
     if (!area.areaName || 
         area.areaName === 'Unknown Location' || 
@@ -382,7 +457,6 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     this.showAreaDetails = false;
     this.selectedArea = null;
     
-    // Clean up map when changing device
     if (this.map) {
       this.map.remove();
       this.map = undefined;
@@ -393,7 +467,6 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     this.selectedArea = area;
     this.showAreaDetails = true;
     
-    // Initialize map after DOM updates
     setTimeout(() => {
       this.initializeAreaMap();
     }, 100);
@@ -405,12 +478,10 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    // Clean up existing map
     if (this.map) {
       this.map.remove();
     }
 
-    // Find measurements with valid coordinates
     const validMeasurements = this.selectedArea.measurements.filter(m => 
       m.lat !== undefined && m.lng !== undefined && 
       !isNaN(m.lat!) && !isNaN(m.lng!)
@@ -418,7 +489,6 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
 
     if (validMeasurements.length === 0) {
       console.log('No valid coordinates found for area');
-      // Show a message in the map container
       this.mapContainer.nativeElement.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #f5f5f5; color: #666;">
           <p>ไม่พบข้อมูลตำแหน่งของจุดวัดในพื้นที่นี้</p>
@@ -427,7 +497,6 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    // Calculate center and bounds
     const lats = validMeasurements.map(m => m.lat!);
     const lngs = validMeasurements.map(m => m.lng!);
     
@@ -435,7 +504,6 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     const centerLng = lngs.reduce((a, b) => a + b) / lngs.length;
 
     try {
-      // Initialize map
       this.map = new Map({
         container: this.mapContainer.nativeElement,
         style: 'satellite',
@@ -476,7 +544,6 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     );
 
     validMeasurements.forEach((measurement, index) => {
-      // Create custom marker element
       const markerElement = document.createElement('div');
       markerElement.style.backgroundColor = '#FF4444';
       markerElement.style.color = 'white';
@@ -493,14 +560,12 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       markerElement.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
       markerElement.textContent = (measurement.measurementPoint || (index + 1)).toString();
 
-      // Create marker
       const marker = new Marker({ 
         element: markerElement 
       })
         .setLngLat([measurement.lng!, measurement.lat!])
         .addTo(this.map!);
 
-      // Add click event to show measurement details
       markerElement.addEventListener('click', () => {
         this.showMeasurementPopup(measurement);
       });
@@ -512,10 +577,9 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    // Create polygon coordinates (close the polygon)
     const polygonCoords = [
-      ...this.selectedArea.polygonBounds.map(p => [p[1], p[0]]), // Convert [lat, lng] to [lng, lat]
-      [this.selectedArea.polygonBounds[0][1], this.selectedArea.polygonBounds[0][0]] // Close polygon
+      ...this.selectedArea.polygonBounds.map(p => [p[1], p[0]]),
+      [this.selectedArea.polygonBounds[0][1], this.selectedArea.polygonBounds[0][0]]
     ];
 
     const geoJsonData = {
@@ -527,13 +591,11 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     };
 
-    // Add polygon source
     this.map.addSource('area-polygon', {
       type: 'geojson',
       data: geoJsonData
     });
 
-    // Add fill layer
     this.map.addLayer({
       id: 'area-polygon-fill',
       type: 'fill',
@@ -544,7 +606,6 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     });
 
-    // Add outline layer
     this.map.addLayer({
       id: 'area-polygon-line',
       type: 'line',
@@ -570,8 +631,8 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     const lngs = validMeasurements.map(m => m.lng!);
 
     const bounds = new LngLatBounds(
-      [Math.min(...lngs), Math.min(...lats)], // southwest
-      [Math.max(...lngs), Math.max(...lats)]  // northeast
+      [Math.min(...lngs), Math.min(...lats)],
+      [Math.max(...lngs), Math.max(...lats)]
     );
 
     this.map.fitBounds(bounds, { 
@@ -608,7 +669,6 @@ pH: ${measurement.ph}
     this.showAreaDetails = false;
     this.selectedArea = null;
     
-    // Clean up map when going back
     if (this.map) {
       this.map.remove();
       this.map = undefined;
