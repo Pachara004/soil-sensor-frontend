@@ -1,11 +1,38 @@
 <div class="device-detail-container">
-  <button (click)="goBack()" class="back-btn">ย้อนกลับ</button>
-
-  <h2>ข้อมูลอุปกรณ์</h2>
-
   <div class="device-detail-card">
-    <div><strong>ชื่ออุปกรณ์:</strong> {{ device.name }}</div>
-    <div><strong>ผู้ใช้:</strong> {{ device.user }}</div>
-    <!-- เพิ่ม field อื่นถ้ามี -->
+    <button class="back-btn" (click)="goBack()">ย้อนกลับ</button>
+
+    <div class="device-info">
+      <h2>ข้อมูลอุปกรณ์</h2>
+      <p><strong>ชื่ออุปกรณ์:</strong> {{ device.name || 'ไม่ระบุ' }}</p>
+      <p><strong>ผู้ใช้:</strong> {{ device.user || 'ไม่ระบุ' }}</p>
+    </div>
+
+    <div class="measurements-section">
+      <h3>ประวัติการวัด</h3>
+      <div *ngIf="isLoading" class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <span style="margin-left: 10px;">กำลังโหลดข้อมูล...</span>
+      </div>
+      <div *ngIf="!isLoading && measurements.length === 0" class="no-data">
+        <p>ไม่พบข้อมูลการวัด</p>
+      </div>
+      <div *ngIf="!isLoading && measurements.length > 0" class="measurement-list">
+        <div *ngFor="let measurement of measurements" class="measurement-item">
+          <div class="measurement-info">
+            <p class="measurement-point">จุดที่: {{ measurement.measurementPoint || 'ไม่ระบุ' }}</p>
+            <p>วันที่: {{ measurement.date }}</p>
+            <p>ตำแหน่ง: {{ measurement.location }}</p>
+          </div>
+          <button class="view-btn" (click)="showMeasurementPopup(measurement)">ดูรายละเอียด</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="map-section">
+      <h3>แผนที่จุดวัด</h3>
+      <div id="mapContainer"></div>
+      <p style="margin-top: 10px; font-size: 14px; color: #666;">คลิกที่จุดสีแดงเพื่อดูรายละเอียดการวัด</p>
+    </div>
   </div>
 </div>

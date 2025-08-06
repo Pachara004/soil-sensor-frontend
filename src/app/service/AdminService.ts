@@ -33,4 +33,43 @@ export class AdminService {
   }
   return [];
 }
+async updateUser(username: string, updateData: any): Promise<void> {
+  try {
+    const userRef = ref(this.db, `users/${username}`);
+    await update(userRef, updateData);
+  } catch (error) {
+    console.error('Error updating user:', error);
+    throw error;
+  }
+}
+
+async deleteUser(username: string): Promise<void> {
+  try {
+    // ลบผู้ใช้จาก users node
+    const userRef = ref(this.db, `users/${username}`);
+    await remove(userRef);
+    
+    // ค้นหาและลบอุปกรณ์ที่เชื่อมโยงกับผู้ใช้นี้
+    const devicesRef = ref(this.db, 'devices');
+    const devicesSnapshot = await get(devicesRef);
+    
+    if (devicesSnapshot.exists()) {
+      const devices = devicesSnapshot.val();
+      const deletePromises: Promise<void>[] = [];
+      
+      Object.keys(devices).forEach(deviceKey => {
+        if (devices[deviceKey].user === username) {
+          const deviceRef = ref(this.db, `devices/${deviceKey}`);
+          deletePromises.push(remove(deviceRef));
+        }
+      });
+      
+      // ลบอุปกรณ์ทั้งหมดที่เชื่อมโยง
+      await Promise.all(deletePromises);
+    }
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    throw error;
+  }
+}
 }

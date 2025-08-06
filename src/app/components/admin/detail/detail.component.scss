@@ -1,21 +1,269 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 .device-detail-container {
-  background: #013828;
+  background: linear-gradient(135deg, #013828 0%, #024731 100%);
   min-height: 100vh;
   color: #fff;
-  padding: 40px;
+  padding: clamp(20px, 3vw, 40px);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: auto;
 }
 
 .device-detail-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
   color: #333;
-  padding: 20px;
-  border-radius: 10px;
+  padding: clamp(15px, 2vw, 20px);
+  border-radius: 15px;
+  width: min(800px, 90vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .back-btn {
-  background: #ccc;
+  background: linear-gradient(45deg, #6c757d, #868e96);
   border: none;
-  padding: 8px 20px;
-  border-radius: 5px;
+  padding: clamp(8px, 1.5vw, 10px) clamp(15px, 2vw, 20px);
+  border-radius: 8px;
   cursor: pointer;
+  color: white;
+  font-size: clamp(12px, 1.8vw, 14px);
+  font-weight: 600;
+  transition: all 0.3s ease;
+  margin-bottom: 20px;
+}
+
+.back-btn:hover {
+  background: linear-gradient(45deg, #5a6268, #747b81);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.device-info {
+  margin-bottom: clamp(20px, 3vw, 30px);
+}
+
+.device-info h2 {
+  font-size: clamp(18px, 2.5vw, 22px);
+  font-weight: 700;
+  margin-bottom: 15px;
+}
+
+.device-info p {
+  font-size: clamp(14px, 2vw, 16px);
+  margin: 5px 0;
+  color: #333;
+}
+
+.measurements-section {
+  margin-top: clamp(20px, 3vw, 30px);
+}
+
+.measurements-section h3 {
+  font-size: clamp(16px, 2.2vw, 18px);
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.measurement-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  background: white;
+  -webkit-overflow-scrolling: touch;
+}
+
+.measurement-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.measurement-list::-webkit-scrollbar-thumb {
+  background: #4facfe;
+  border-radius: 4px;
+}
+
+.measurement-list::-webkit-scrollbar-track {
+  background: #f0f0f0;
+}
+
+.measurement-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: clamp(10px, 1.5vw, 15px) clamp(15px, 2vw, 20px);
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.3s ease;
+}
+
+.measurement-item:hover {
+  background-color: #f8f9fa;
+}
+
+.measurement-item:last-child {
+  border-bottom: none;
+}
+
+.measurement-info {
+  flex: 1;
+}
+
+.measurement-info p {
+  font-size: clamp(12px, 1.8vw, 14px);
+  margin: 3px 0;
+  color: #333;
+}
+
+.measurement-info .measurement-point {
+  font-weight: 600;
+  color: #333;
+}
+
+.view-btn {
+  background: #007bff;
+  border: none;
+  color: white;
+  padding: clamp(6px, 1vw, 8px) clamp(12px, 2vw, 16px);
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: clamp(10px, 1.5vw, 12px);
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.view-btn:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0, 123, 255, 0.3);
+}
+
+.map-section {
+  margin-top: clamp(20px, 3vw, 30px);
+}
+
+.map-section h3 {
+  font-size: clamp(16px, 2.2vw, 18px);
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+#mapContainer {
+  height: clamp(300px, 40vh, 400px);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100px;
+  color: #333;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .device-detail-container {
+    background: linear-gradient(135deg, #013828 0%, #022d24 100%);
+  }
+
+  .device-detail-card {
+    background: rgba(51, 51, 51, 0.9);
+    color: #e0e0e0;
+  }
+
+  .device-info h2, .measurements-section h3, .map-section h3 {
+    color: #e0e0e0;
+  }
+
+  .device-info p, .measurement-info p {
+    color: #e0e0e0;
+  }
+
+  .measurement-list {
+    background: rgba(51, 51, 51, 0.8);
+    border-color: #444;
+  }
+
+  .measurement-item:hover {
+    background-color: #3a3a3a;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .device-detail-container {
+    padding: clamp(15px, 2vw, 20px);
+  }
+
+  .device-detail-card {
+    width: 95vw;
+    max-height: 85vh;
+    padding: clamp(12px, 1.5vw, 15px);
+  }
+
+  .measurement-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .view-btn {
+    width: 100%;
+    margin-top: 10px;
+    text-align: center;
+  }
+
+  #mapContainer {
+    height: clamp(250px, 35vh, 300px);
+  }
+}
+
+@media (max-width: 480px) {
+  .device-detail-container {
+    padding: 10px;
+  }
+
+  .device-detail-card {
+    border-radius: 10px;
+  }
+
+  .back-btn {
+    padding: clamp(6px, 1vw, 8px) clamp(12px, 1.5vw, 15px);
+    font-size: clamp(10px, 1.5vw, 12px);
+  }
+
+  .device-info h2 {
+    font-size: clamp(16px, 2.2vw, 18px);
+  }
+
+  .measurements-section h3, .map-section h3 {
+    font-size: clamp(14px, 2vw, 16px);
+  }
+
+  .measurement-list {
+    max-height: 250px;
+  }
+}
+
+@media (max-width: 320px) {
+  .device-detail-card {
+    padding: 10px;
+    max-height: 80vh;
+  }
+
+  #mapContainer {
+    height: clamp(200px, 30vh, 250px);
+  }
 }

@@ -11,50 +11,142 @@
         <div class="text">ข้อมูลผู้ใช้</div>
       </div>
       <div class="icon-box" (click)="goToReports()" title="แจ้งเตือน Reports">
-  <img src="https://cdn-icons-png.flaticon.com/512/565/565340.png" alt="Reports" />
-  <div class="text">ข้อความ</div>
+        <img src="https://cdn-icons-png.flaticon.com/512/565/565340.png" alt="Reports" />
+        <div class="text">ข้อความ</div>
 
-  <!-- Badge -->
-  <span class="badge" *ngIf="unreadCount > 0">
-    {{ unreadCount > 99 ? '99+' : unreadCount }}
-  </span>
-</div>
-
+        <!-- Badge -->
+        <span class="badge" *ngIf="unreadCount > 0">
+          {{ unreadCount > 99 ? '99+' : unreadCount }}
+        </span>
+      </div>
     </div>
 
     <h2 class="admin-name">Admin : {{ adminName }}</h2>
 
-    <div class="device-section">
-      <h3>อุปกรณ์ในระบบ</h3>
-      <div class="device-list">
-        <div class="device-item" *ngFor="let device of devices">
-          <div class="device-info">
-            <div class="device-name">{{ device.name }}</div>
-            <div class="device-user">ผู้ใช้: {{ device.user }}</div>
+    <!-- Section แสดงจำนวน User ในระบบ -->
+    <div class="user-stats-section">
+      <div class="stats-box">
+        <div class="stats-icon">👥</div>
+        <div class="stats-content">
+          <div class="stats-number">{{ totalUsers }}</div>
+          <div class="stats-label">ผู้ใช้ทั้งหมดในระบบ</div>
+        </div>
+        <button class="view-all-users-btn" (click)="toggleUsersList()">
+          {{ showUsersList ? 'ซ่อนรายการ' : 'ดูรายการทั้งหมด' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- รายการ User ทั้งหมด -->
+    <div class="users-section" *ngIf="showUsersList">
+      <h3>รายการผู้ใช้ทั้งหมด</h3>
+      <div class="users-list">
+        <div class="user-item" *ngFor="let user of allUsersDisplay">
+          <div class="user-info">
+            <div class="user-name">{{ user.username }}</div>
+            <div class="user-email" *ngIf="user.email">อีเมล: {{ user.email }}</div>
+            <div class="user-type">ประเภท: {{ user.type || 'user' }}</div>
+            <div class="user-created" *ngIf="user.createdAt">
+              สร้างเมื่อ: {{ formatDate(user.createdAt) }}
+            </div>
           </div>
-          <button class="view-btn" (click)="viewDevice(device)">ดูข้อมูล</button>
-          <button class="view-btn" (click)="deleteDevice(device.name)">ลบ</button>
+          <div class="user-actions">
+            <button class="edit-btn" (click)="editUser(user)">แก้ไข</button>
+            <button class="delete-user-btn" (click)="deleteUser(user.username)">ลบ</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="add-device-form">
-  <input placeholder="ชื่ออุปกรณ์" [(ngModel)]="newDeviceName" />
-  
-  <div class="user-input-box">
-    <input placeholder="ผู้ใช้"
-           [(ngModel)]="newDeviceUser"
-           (input)="onUserInput()" />
+    <!-- Modal แก้ไขข้อมูล User -->
+    <div class="modal-overlay" *ngIf="showEditModal" (click)="closeEditModal()">
+      <div class="edit-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>แก้ไขข้อมูลผู้ใช้</h3>
+          <button class="close-btn" (click)="closeEditModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>ชื่อผู้ใช้:</label>
+            <input [(ngModel)]="editingUser.username" readonly />
+          </div>
+          <div class="form-group" *ngIf="editingUser.email !== undefined">
+            <label>อีเมล:</label>
+            <input [(ngModel)]="editingUser.email" type="email" />
+          </div>
+          <div class="form-group">
+            <label>รหัสผ่านใหม่ (เว้นว่างหากไม่ต้องการเปลี่ยน):</label>
+            <input [(ngModel)]="newPassword" type="password" placeholder="รหัสผ่านใหม่" />
+          </div>
+          <div class="form-group">
+            <label>ประเภทผู้ใช้:</label>
+            <select [(ngModel)]="editingUser.type">
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="save-btn" (click)="saveUserChanges()">บันทึก</button>
+          <button class="cancel-btn" (click)="closeEditModal()">ยกเลิก</button>
+        </div>
+      </div>
+    </div>
 
-    <!-- แสดงผลลัพธ์ -->
-    <ul class="suggest-list" *ngIf="filteredUsers.length">
-      <li *ngFor="let u of filteredUsers" (click)="selectUser(u.username)">
-        {{ u.username }}
-      </li>
-    </ul>
+   <div class="device-stats-section">
+  <div class="stats-box device-stats">
+    <div class="stats-icon">📱</div>
+    <div class="stats-content">
+      <div class="stats-number">{{ devices.length }}</div>
+      <div class="stats-label">อุปกรณ์ทั้งหมดในระบบ</div>
+    </div>
+    <button class="view-all-devices-btn" (click)="toggleDevicesList()">
+      {{ showDevicesList ? 'ซ่อนรายการ' : 'ดูรายการทั้งหมด' }}
+    </button>
+  </div>
+</div>
+
+<!-- Device Section with Toggle (includes both list and add form) -->
+<div class="device-section" *ngIf="showDevicesList">
+  <h3>รายการอุปกรณ์ทั้งหมด</h3>
+  <div class="device-list">
+    <div class="device-item" *ngFor="let device of devices">
+      <div class="device-info">
+        <div class="device-name">{{ device.name }}</div>
+        <div class="device-user">ผู้ใช้: {{ device.user }}</div>
+      </div>
+      <div class="device-actions">
+        <button class="view-btn" (click)="viewDevice(device)">ดูข้อมูล</button>
+        <button class="delete-btn" (click)="deleteDevice(device.name)">ลบ</button>
+      </div>
+    </div>
   </div>
 
-  <button class="save-btn" (click)="addDevice()">เพิ่มอุปกรณ์</button>
+  <!-- Add Device Form - Inside Toggle Section -->
+  <div class="add-device-form">
+    <div class="form-header">
+      <h4>เพิ่มอุปกรณ์ใหม่</h4>
+    </div>
+    
+    <div class="form-inputs">
+      <input placeholder="ชื่ออุปกรณ์" [(ngModel)]="newDeviceName" />
+      
+      <div class="user-input-box">
+        <input placeholder="ผู้ใช้"
+               [(ngModel)]="newDeviceUser"
+               (input)="onUserInput()" />
+
+        <!-- แสดงผลลัพธ์ -->
+        <ul class="suggest-list" *ngIf="filteredUsers.length">
+          <li *ngFor="let u of filteredUsers" (click)="selectUser(u.username)">
+            {{ u.username }}
+          </li>
+        </ul>
+      </div>
+
+      <button class="save-btn" (click)="addDevice()">เพิ่มอุปกรณ์</button>
+    </div>
+  </div>
 </div>
 
   </div>

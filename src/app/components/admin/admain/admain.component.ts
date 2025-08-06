@@ -4,6 +4,7 @@ import { AdminService } from '../../../service/AdminService';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Database, ref, onValue, update } from '@angular/fire/database';
+
 @Component({
   selector: 'app-admain',
   standalone: true,
@@ -17,8 +18,15 @@ export class AdmainComponent implements OnInit {
   newDeviceName = '';
   newDeviceUser = '';
   allUsers: any[] = [];
+  allUsersDisplay: any[] = []; // สำหรับแสดงใน UI
   filteredUsers: any[] = [];
   unreadCount: number = 0;
+  totalUsers: number = 0;
+  showUsersList: boolean = false;
+  showEditModal: boolean = false;
+  showDevicesList: boolean = false;
+  editingUser: any = {};
+  newPassword: string = '';
 
   constructor(
     private adminService: AdminService,
@@ -44,7 +52,8 @@ export class AdmainComponent implements OnInit {
       return;
     }
     await this.loadDevices();
-    this.allUsers = await this.adminService.getAllUsers();
+    await this.loadAllUsers();
+    
     const reportsRef = ref(this.db, 'reports');
     onValue(reportsRef, (snapshot) => {
       let count = 0;
@@ -60,6 +69,92 @@ export class AdmainComponent implements OnInit {
   async loadDevices() {
     this.devices = await this.adminService.getDevices();
   }
+
+  async loadAllUsers() {
+    // โหลดผู้ใช้ทั้งหมดและกรองเฉพาะ type = 'user'
+    this.allUsers = await this.adminService.getAllUsers();
+    this.allUsersDisplay = this.allUsers.filter(user => 
+      user.type === 'user' || !user.type // รวม user ที่ไม่มี type กำหนดด้วย
+    );
+    this.totalUsers = this.allUsersDisplay.length;
+  }
+
+  toggleUsersList() {
+    this.showUsersList = !this.showUsersList;
+    if (this.showUsersList) {
+      this.loadAllUsers(); // รีเฟรชข้อมูลเมื่อเปิดรายการ
+    }
+  }
+
+  editUser(user: any) {
+    this.editingUser = { ...user }; // สำเนาข้อมูล
+    this.newPassword = '';
+    this.showEditModal = true;
+  }
+
+  closeEditModal() {
+    this.showEditModal = false;
+    this.editingUser = {};
+    this.newPassword = '';
+  }
+
+  async saveUserChanges() {
+    try {
+      // เตรียมข้อมูลที่จะอัปเดต
+      const updateData: any = {
+        username: this.editingUser.username,
+        type: this.editingUser.type || 'user'
+      };
+
+      // ถ้ามีอีเมล
+      if (this.editingUser.email !== undefined) {
+        updateData.email = this.editingUser.email;
+      }
+
+      // ถ้ามีการกรอกรหัสผ่านใหม่
+      if (this.newPassword.trim()) {
+        updateData.password = this.newPassword;
+      }
+
+      await this.adminService.updateUser(this.editingUser.username, updateData);
+      alert('อัปเดตข้อมูลผู้ใช้สำเร็จ!');
+      this.closeEditModal();
+      await this.loadAllUsers(); // รีโหลดข้อมูล
+    } catch (error) {
+      console.error('เกิดข้อผิดพลาดในการอัปเดตผู้ใช้:', error);
+      alert('เกิดข้อผิดพลาดในการอัปเดตข้อมูล');
+    }
+  }
+
+  async deleteUser(username: string) {
+    if (confirm(`ต้องการลบผู้ใช้ ${username} หรือไม่?`)) {
+      try {
+        await this.adminService.deleteUser(username);
+        alert('ลบผู้ใช้สำเร็จ!');
+        await this.loadAllUsers();
+      } catch (error) {
+        console.error('เกิดข้อผิดพลาดในการลบผู้ใช้:', error);
+        alert('เกิดข้อผิดพลาดในการลบผู้ใช้');
+      }
+    }
+  }
+
+  formatDate(dateString: string): string {
+    if (!dateString) return 'ไม่ระบุ';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'ไม่ระบุ';
+    }
+  }
+
   onUserInput() {
     const query = this.newDeviceUser.toLowerCase();
     this.filteredUsers = this.allUsers.filter(u =>
@@ -68,34 +163,41 @@ export class AdmainComponent implements OnInit {
   }
 
   selectUser(username: string) {
-  this.newDeviceUser = username;
-  this.filteredUsers = [];
+    this.newDeviceUser = username;
+    this.filteredUsers = [];
   }
+
   viewDevice(device: any) {
-      // เก็บข้อมูลลง localStorage หรือ NavigationExtras
-      localStorage.setItem('selectedDevice', JSON.stringify(device));
-      this.router.navigate(['/device-detail']);
+    // เก็บข้อมูลลง localStorage หรือ NavigationExtras
+    localStorage.setItem('selectedDevice', JSON.stringify(device));
+    this.router.navigate(['/device-detail']);
   }
 
   async addDevice() {
-  if (!this.newDeviceName || !this.newDeviceUser) {
-    alert('กรุณากรอกชื่ออุปกรณ์และผู้ใช้');
-    return;
+    if (!this.newDeviceName || !this.newDeviceUser) {
+      alert('กรุณากรอกชื่ออุปกรณ์และผู้ใช้');
+      return;
+    }
+
+    await this.adminService.addDevice(this.newDeviceName, this.newDeviceUser);
+    alert('เพิ่มอุปกรณ์สำเร็จ!');
+    this.newDeviceName = '';
+    this.newDeviceUser = '';
+    await this.loadDevices();
   }
-
-  await this.adminService.addDevice(this.newDeviceName, this.newDeviceUser);
-  alert('เพิ่มอุปกรณ์สำเร็จ!');
-  this.newDeviceName = '';
-  this.newDeviceUser = '';
-  await this.loadDevices();
-}
-
 
   async deleteDevice(deviceName: string) {
     if (confirm(`ลบอุปกรณ์ ${deviceName} ?`)) {
       await this.adminService.deleteDevice(deviceName);
       alert('ลบสำเร็จ');
       await this.loadDevices();
+    }
+  }
+  // เพิ่ม method นี้ใน AdmainComponent class
+  toggleDevicesList() {
+    this.showDevicesList = !this.showDevicesList;
+    if (this.showDevicesList) {
+      this.loadDevices(); // รีเฟรชข้อมูลเมื่อเปิดรายการ
     }
   }
 
@@ -122,5 +224,4 @@ export class AdmainComponent implements OnInit {
 
     this.router.navigate(['/mail']); // หรือ path กล่องข้อความ
   }
-
 }
