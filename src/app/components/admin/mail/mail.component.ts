@@ -1,22 +1,21 @@
 import { Component, OnInit } from '@angular/core';
 import { Database, ref, onValue, remove } from '@angular/fire/database';
-import { CommonModule, Location } from '@angular/common';
+import { CommonModule, Location, DatePipe } from '@angular/common';
 
 @Component({
   selector: 'app-mail',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, DatePipe],
   templateUrl: './mail.component.html',
   styleUrl: './mail.component.scss',
 })
 export class MailComponent implements OnInit {
   reports: any[] = [];
+  selectedReport: any = null;
 
-  constructor
-  (
+  constructor(
     private db: Database,
-    private location: Location,
-
+    private location: Location
   ) {}
 
   ngOnInit(): void {
@@ -35,7 +34,7 @@ export class MailComponent implements OnInit {
         });
       }
 
-      // เรียงล่าสุดอยู่บน
+      // Sort by latest timestamp
       this.reports.sort((a, b) => {
         return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
       });
@@ -44,11 +43,28 @@ export class MailComponent implements OnInit {
 
   async deleteReport(key: string) {
     if (confirm('ต้องการลบเรื่องนี้จริงหรือไม่?')) {
-      const reportRef = ref(this.db, `reports/${key}`);
-      await remove(reportRef);
-      alert('ลบสำเร็จ');
+      try {
+        const reportRef = ref(this.db, `reports/${key}`);
+        await remove(reportRef);
+        alert('ลบสำเร็จ');
+        if (this.selectedReport && this.selectedReport.key === key) {
+          this.selectedReport = null;
+        }
+      } catch (error) {
+        console.error('Error deleting report:', error);
+        alert('เกิดข้อผิดพลาดในการลบ');
+      }
     }
   }
+
+  openReportModal(report: any) {
+    this.selectedReport = report;
+  }
+
+  closeReportModal() {
+    this.selectedReport = null;
+  }
+
   goBack() {
     this.location.back();
   }

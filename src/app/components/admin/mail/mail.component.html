@@ -1,29 +1,45 @@
 <div class="mail-container">
   <div class="card">
-    <!-- ไอคอนบนสุด -->
-     <!-- ปุ่มย้อนกลับ -->
-    <div class="back" (click)="goBack()">
-      <i class="fas fa-arrow-left"></i>
-    </div>
-    <img
-      src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png"
-      class="chip-icon"
-      alt="chip"
-    />
-
+    <button class="back-btn" (click)="goBack()">
+      <i class="fas fa-arrow-left"></i> กลับ
+    </button>
+    <img class="chip-icon" src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png" alt="Soil Sensor Icon">
     <h2 class="mail-title">กล่องข้อความผู้ใช้</h2>
 
     <div class="mail-list">
-      <div class="mail-item" *ngFor="let report of reports">
+      <div *ngFor="let report of reports" class="mail-item">
         <div class="mail-info">
           <div class="subject">{{ report.subject }}</div>
           <div class="meta">
-            <span class="user">ผู้ใช้: {{ report.username }}</span>
-            <span class="time">{{ report.timestamp | date:'short' }}</span>
+            ผู้ใช้: {{ report.username }} | {{ report.timestamp | date:'short' }}
           </div>
-          <p class="message">{{ report.message }}</p>
+          <div class="message">{{ report.message | slice:0:100 }}{{ report.message.length > 100 ? '...' : '' }}</div>
         </div>
-        <button class="delete-btn" (click)="deleteReport(report.key)">ลบ</button>
+        <div class="mail-actions">
+          <button class="view-btn" (click)="openReportModal(report)">ดูรายละเอียด</button>
+          <button class="delete-btn" (click)="deleteReport(report.key)">ลบ</button>
+        </div>
+      </div>
+      <div *ngIf="reports.length === 0" class="no-data">
+        <p>ไม่พบข้อความ</p>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="selectedReport" class="modal-overlay" (click)="closeReportModal()">
+    <div class="report-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ selectedReport.subject }}</h3>
+        <button class="close-btn" (click)="closeReportModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <p><strong>ผู้ใช้:</strong> {{ selectedReport.username }}</p>
+        <p><strong>วันที่:</strong> {{ selectedReport.timestamp | date:'medium' }}</p>
+        <p><strong>ข้อความ:</strong> {{ selectedReport.message }}</p>
+      </div>
+      <div class="modal-footer">
+        <button class="delete-btn" (click)="deleteReport(selectedReport.key)">ลบ</button>
+        <button class="close-btn" (click)="closeReportModal()">ปิด</button>
       </div>
     </div>
   </div>

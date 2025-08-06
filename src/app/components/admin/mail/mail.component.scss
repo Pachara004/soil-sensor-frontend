@@ -1,104 +1,432 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 .mail-container {
-  background-color: #013828;
+  background: linear-gradient(135deg, #013828 0%, #024731 100%);
   width: 100vw;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: clamp(20px, 3vw, 40px);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: auto;
 }
 
 .card {
-  background-color: white;
-  width: 1000px;
-  max-width: 90%;
-  border-radius: 30px;
-  padding: 40px;
+  background: rgba(255, 255, 255, 0.95);
+  width: min(1000px, 90vw);
+  max-height: 90vh;
+  border-radius: 20px;
+  padding: clamp(20px, 3vw, 30px);
   box-sizing: border-box;
   position: relative;
   text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.5s ease-in-out;
+  overflow-y: auto;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .chip-icon {
-  width: 50px;
+  width: clamp(40px, 5vw, 50px);
   position: absolute;
-  top: 20px;
-  left: calc(50% - 25px);
+  top: clamp(15px, 2vw, 20px);
+  left: calc(50% - clamp(20px, 2.5vw, 25px));
+  transition: transform 0.3s ease;
+}
+
+.chip-icon:hover {
+  transform: scale(1.1);
+}
+
+.back-btn {
+  position: absolute;
+  top: clamp(15px, 2vw, 20px);
+  left: clamp(15px, 2vw, 20px);
+  background: linear-gradient(45deg, #6c757d, #868e96);
+  border: none;
+  padding: clamp(8px, 1.5vw, 10px) clamp(15px, 2vw, 20px);
+  border-radius: 8px;
+  cursor: pointer;
+  color: white;
+  font-size: clamp(12px, 1.8vw, 14px);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.back-btn i {
+  font-size: clamp(14px, 2vw, 16px);
+}
+
+.back-btn:hover {
+  background: linear-gradient(45deg, #5a6268, #747b81);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .mail-title {
-  margin-top: 80px;
-  font-weight: bold;
+  margin-top: clamp(60px, 8vw, 80px);
+  font-weight: 700;
+  font-size: clamp(18px, 2.5vw, 22px);
+  color: #333;
 }
 
 .mail-list {
-  margin-top: 30px;
+  margin-top: clamp(20px, 3vw, 30px);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: clamp(15px, 2vw, 20px);
+  max-height: 60vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mail-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.mail-list::-webkit-scrollbar-thumb {
+  background: #4facfe;
+  border-radius: 4px;
+}
+
+.mail-list::-webkit-scrollbar-track {
+  background: #f0f0f0;
 }
 
 .mail-item {
-  background-color: #d9d9d9;
+  background: #f0f0f0;
   border-radius: 15px;
-  padding: 20px;
+  padding: clamp(15px, 2vw, 20px);
   text-align: left;
   position: relative;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease;
 }
 
 .mail-info .subject {
-  font-weight: bold;
-  font-size: 18px;
+  font-weight: 600;
+  font-size: clamp(16px, 2.2vw, 18px);
+  color: #333;
+  margin-bottom: 8px;
 }
 
 .mail-info .meta {
-  font-size: 14px;
-  color: #333;
+  font-size: clamp(12px, 1.8vw, 14px);
+  color: #666;
   margin: 5px 0;
 }
 
 .mail-info .message {
   margin: 10px 0 0 0;
+  font-size: clamp(12px, 1.8vw, 14px);
+  color: #333;
+  line-height: 1.5;
+}
+
+.mail-actions {
+  position: absolute;
+  top: clamp(15px, 2vw, 20px);
+  right: clamp(15px, 2vw, 20px);
+  display: flex;
+  gap: 10px;
+}
+
+.view-btn {
+  background: linear-gradient(45deg, #007bff, #4facfe);
+  border: none;
+  color: white;
+  padding: clamp(6px, 1vw, 8px) clamp(12px, 2vw, 16px);
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: clamp(10px, 1.5vw, 12px);
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.view-btn:hover {
+  background: linear-gradient(45deg, #0056b3, #3a8df5);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0, 123, 255, 0.3);
 }
 
 .delete-btn {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background-color: #ff4d4d;
+  background: linear-gradient(45deg, #ff4d4d, #ff6666);
   border: none;
   color: white;
+  padding: clamp(6px, 1vw, 8px) clamp(12px, 2vw, 16px);
   border-radius: 20px;
-  padding: 5px 15px;
-  font-weight: bold;
+  font-weight: 600;
   cursor: pointer;
-
-  &:hover {
-    background-color: #cc0000;
-  }
+  transition: all 0.3s ease;
 }
 
-@media (max-width: 600px) {
+.delete-btn:hover {
+  background: linear-gradient(45deg, #cc0000, #e60000);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(255, 77, 77, 0.3);
+}
+
+.no-data {
+  text-align: center;
+  color: #666;
+  font-size: clamp(14px, 2vw, 16px);
+  padding: 20px;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+  overflow: auto;
+  padding: clamp(10px, 2vw, 20px);
+}
+
+.report-modal {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 15px;
+  width: min(600px, 90vw);
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  animation: modalSlideIn 0.3s ease-out;
+  -webkit-overflow-scrolling: touch;
+}
+
+.report-modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.report-modal::-webkit-scrollbar-thumb {
+  background: #4facfe;
+  border-radius: 4px;
+}
+
+.report-modal::-webkit-scrollbar-track {
+  background: #f0f0f0;
+}
+
+@keyframes modalSlideIn {
+  from { opacity: 0; transform: translateY(-30px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: clamp(15px, 2vw, 20px) clamp(20px, 3vw, 25px);
+  border-bottom: 1px solid #e9ecef;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: clamp(16px, 2.2vw, 20px);
+  font-weight: 600;
+}
+
+.modal-header .close-btn {
+  background: none;
+  border: none;
+  font-size: clamp(20px, 3vw, 24px);
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.modal-header .close-btn:hover {
+  background: #f8f9fa;
+  color: #333;
+}
+
+.modal-body {
+  padding: clamp(20px, 3vw, 25px);
+}
+
+.modal-body p {
+  font-size: clamp(12px, 1.8vw, 14px);
+  color: #333;
+  margin: 10px 0;
+  line-height: 1.5;
+}
+
+.modal-body p strong {
+  font-weight: 600;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: clamp(15px, 2vw, 20px) clamp(20px, 3vw, 25px);
+  border-top: 1px solid #e9ecef;
+  background: #f8f9fa;
+  border-radius: 0 0 15px 15px;
+}
+
+.modal-footer .delete-btn {
+  background: linear-gradient(45deg, #ff4d4d, #ff6666);
+  padding: clamp(10px, 1.5vw, 12px) clamp(20px, 3vw, 24px);
+  border-radius: 8px;
+}
+
+.modal-footer .close-btn {
+  background: linear-gradient(45deg, #6c757d, #868e96);
+  border: none;
+  color: white;
+  padding: clamp(10px, 1.5vw, 12px) clamp(20px, 3vw, 24px);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.modal-footer .close-btn:hover {
+  background: linear-gradient(45deg, #5a6268, #747b81);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .mail-container {
+    background: linear-gradient(135deg, #013828 0%, #022d24 100%);
+  }
+
   .card {
-    padding: 20px;
+    background: rgba(51, 51, 51, 0.9);
+    color: #e0e0e0;
+  }
+
+  .mail-title, .modal-header h3 {
+    color: #e0e0e0;
   }
 
   .mail-item {
-    padding: 15px;
+    background: rgba(51, 51, 51, 0.8);
+    border-color: #444;
   }
 
-  .delete-btn {
-    top: 10px;
-    right: 10px;
+  .mail-info .subject, .mail-info .meta, .mail-info .message, .modal-body p {
+    color: #e0e0e0;
+  }
+
+  .mail-list::-webkit-scrollbar-track {
+    background: #3a3a3a;
+  }
+
+  .report-modal {
+    background: rgba(51, 51, 51, 0.9);
+  }
+
+  .modal-body p strong {
+    color: #e0e0e0;
+  }
+
+  .modal-footer {
+    background: #3a3a3a;
+    border-top-color: #555;
   }
 }
-.back {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  cursor: pointer;
 
-  i {
-    font-size: 20px;
-    color: #000;
+/* Responsive Design */
+@media (max-width: 768px) {
+  .mail-container {
+    padding: clamp(15px, 2vw, 20px);
+  }
+
+  .card {
+    width: 95vw;
+    max-height: 85vh;
+    padding: clamp(12px, 1.5vw, 15px);
+  }
+
+  .mail-item {
+    padding: clamp(12px, 1.5vw, 15px);
+  }
+
+  .mail-actions {
+    top: clamp(10px, 1.5vw, 15px);
+    right: clamp(10px, 1.5vw, 15px);
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .view-btn, .delete-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .report-modal {
+    width: 95vw;
+    max-height: 80vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .mail-container {
+    padding: 10px;
+  }
+
+  .card {
+    border-radius: 10px;
+  }
+
+  .back-btn {
+    padding: clamp(6px, 1vw, 8px) clamp(12px, 1.5vw, 15px);
+    font-size: clamp(10px, 1.5vw, 12px);
+  }
+
+  .mail-title {
+    font-size: clamp(16px, 2.2vw, 18px);
+    margin-top: clamp(50px, 7vw, 60px);
+  }
+
+  .mail-list {
+    max-height: 50vh;
+  }
+
+  .mail-info .subject {
+    font-size: clamp(14px, 2vw, 16px);
+  }
+
+  .mail-info .meta, .mail-info .message {
+    font-size: clamp(10px, 1.5vw, 12px);
+  }
+}
+
+@media (max-width: 320px) {
+  .card {
+    padding: 10px;
+    max-height: 80vh;
+  }
+
+  .report-modal {
+    width: 98vw;
+    max-height: 75vh;
   }
 }
