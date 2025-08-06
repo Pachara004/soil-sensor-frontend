@@ -62,7 +62,6 @@
   font-weight: bold;
   font-size: 14px;
   color: #013828;
-  border: 1px solid #00aaff;
   margin-left: 50px;
 }
 
@@ -85,7 +84,6 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 2px solid #00aaff;
   margin-bottom: 4px;
 }
 
@@ -114,7 +112,6 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  border: 1px solid #00aaff;
   box-shadow: 0 2px 8px rgba(0, 170, 255, 0.1);
 }
 
@@ -179,7 +176,6 @@
 .area-item:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-  border-color: #00aaff;
 }
 
 .area-header {
@@ -422,7 +418,7 @@
 .measurement-item:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border-color: #00aaff;
+
 }
 
 .measurement-info {
