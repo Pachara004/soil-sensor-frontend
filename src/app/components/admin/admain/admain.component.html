@@ -5,7 +5,7 @@
     <div class="top-right-icons">
       <div class="icon-box" (click)="goToUsers()">
         <img src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png" alt="Users">
-        <div class="text">ข้อมูลผู้ใช้</div>
+          <div class="text">ข้อมูลผู้ใช้</div>
       </div>
 
       <div class="icon-box" (click)="goToReports()">
@@ -97,6 +97,25 @@
         </button>
       </div>
     </div>
+
+    <!-- 🔥 NEW: รายการ “คำขอผูกอุปกรณ์” (จาก devices/{id}/claim) -->
+    <div class="device-section" *ngIf="pendingClaims.length > 0">
+      <h3>คำขอผูกอุปกรณ์ที่รออนุมัติ</h3>
+      <div class="device-list">
+        <div class="device-item" *ngFor="let c of pendingClaims">
+          <div class="device-info">
+            <div class="device-name">Device ID: {{ c.deviceId }}</div>
+            <div class="device-user">ผู้ขอ: {{ c.username }}</div>
+            <div class="device-time">เวลา: {{ c.ts | date:'short' }}</div>
+          </div>
+          <div class="device-actions">
+            <button class="view-btn" (click)="approveClaim(c.deviceId)">อนุมัติ</button>
+            <button class="delete-btn" (click)="rejectClaim(c.deviceId)">ปฏิเสธ</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- /NEW -->
 
     <div class="device-section" *ngIf="showDevicesList">
       <h3>รายการอุปกรณ์ทั้งหมด</h3>

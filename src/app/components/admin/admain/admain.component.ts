@@ -53,6 +53,9 @@ export class AdmainComponent implements OnInit, OnDestroy {
 
   private searchSubject = new Subject<string>();
 
+  // 🔥 NEW: เก็บคำขอผูกอุปกรณ์ที่รออนุมัติ
+  pendingClaims: { deviceId: string; username: string; ts: number }[] = [];
+
   constructor(
     private adminService: AdminService,
     private router: Router,
@@ -91,6 +94,29 @@ export class AdmainComponent implements OnInit, OnDestroy {
         if (!child.val().read) count++;
       });
       this.unreadCount = count;
+      this.cdr.detectChanges();
+    });
+
+    // 🔥 NEW: subscribe อุปกรณ์ทั้งหมด เพื่อดึงรายการ claim แบบ realtime
+    const devicesRef = ref(this.db, 'devices');
+    onValue(devicesRef, (snap) => {
+      const list: { deviceId: string; username: string; ts: number }[] = [];
+      if (snap.exists()) {
+        const obj = snap.val() || {};
+        Object.keys(obj).forEach((deviceId) => {
+          const d = obj[deviceId] || {};
+          if (d.claim && d.claim.username) {
+            list.push({
+              deviceId,
+              username: d.claim.username,
+              ts: d.claim.ts || 0
+            });
+          }
+        });
+      }
+      // เรียงเวลาล่าสุดก่อน
+      list.sort((a,b) => b.ts - a.ts);
+      this.pendingClaims = list;
       this.cdr.detectChanges();
     });
   }
@@ -264,7 +290,7 @@ export class AdmainComponent implements OnInit, OnDestroy {
     if (!isNonAdmin(user)) return;
     this.editingUser = { ...user };
     this.newPassword = '';
-    this.showEditModal = true;
+       this.showEditModal = true;
     this.cdr.detectChanges();
   }
 
@@ -338,61 +364,64 @@ export class AdmainComponent implements OnInit, OnDestroy {
     await this.loadDevices();
   }
 
-  // 🆕 ผูกอุปกรณ์ที่ถูก ESP32 สร้างไว้แล้ว (มี deviceId แล้ว) เข้ากับผู้ใช้
-  async addHardwareDevice() {
-    const deviceId = (this.hwDeviceId || '').trim();
-    const owner = (this.hwDeviceUser || '').trim();
-    const name = (this.hwDeviceName || '').trim();
+  // 🆕 อนุมัติ claim → set user + enabled + name (จาก meta) แล้วลบ claim จาก devices/{id}
+  async approveClaim(deviceId: string) {
+    try {
+      const devRef = ref(this.db, `devices/${deviceId}`);
+      const snap = await get(devRef);
+      if (!snap.exists()) { alert('ไม่พบอุปกรณ์'); return; }
 
-    if (!deviceId || !owner) {
-      alert('กรุณากรอก Device ID และ Username ของผู้ใช้');
-      return;
+      const dev = snap.val() || {};
+      if (!dev.claim || !dev.claim.username) { alert('ไม่พบคำขอในอุปกรณ์นี้'); return; }
+
+      // ดึงชื่อจาก meta ถ้ามี
+      const metaName = dev.meta && dev.meta.deviceName ? String(dev.meta.deviceName) : '';
+      const finalName = metaName || deviceId;
+
+      // เขียนกลับเข้า entity เดิม "devices/{deviceId}"
+      await update(devRef, {
+        user: dev.claim.username,  // owner ใน devices
+        enabled: true,
+        name: finalName,           // ให้ AdminService.getDevices() เห็นชื่อชัด
+        claim: null,
+        // sync meta.userName ด้วย (เผื่อ ESP ใช้อ่าน)
+        meta: {
+          ...(dev.meta || {}),
+          userName: dev.claim.username,
+          deviceName: finalName,
+          registeredAt: (dev.meta && dev.meta.registeredAt) ? dev.meta.registeredAt : Date.now()
+        }
+      });
+
+      // ผูก device เข้า user (users/{username}/devices/{deviceId} = true) เพื่อให้หน้า user เห็น
+      await set(ref(this.db, `users/${dev.claim.username}/devices/${deviceId}`), true);
+
+      // รีเฟรช list อุปกรณ์หน้า Admin ให้เห็นตัวที่เพิ่งอนุมัติทันที
+      await this.loadDevices();
+
+      alert(`อนุมัติสำเร็จ → ผูกกับผู้ใช้ ${dev.claim.username}`);
+    } catch (e) {
+      console.error(e);
+      alert('อนุมัติไม่สำเร็จ');
     }
+  }
 
-    // ตรวจสอบว่า owner มีอยู่จริงและไม่ใช่ admin
-    const userRef = ref(this.db, `users/${owner}`);
-    const userSnap = await get(userRef);
-    if (!userSnap.exists()) {
-      alert(`ไม่พบผู้ใช้ "${owner}" ในระบบ`);
-      return;
+  // 🆕 ปฏิเสธ claim → ลบ claim ออก
+  async rejectClaim(deviceId: string) {
+    try {
+      const devRef = ref(this.db, `devices/${deviceId}`);
+      const snap = await get(devRef);
+      if (!snap.exists()) { alert('ไม่พบอุปกรณ์'); return; }
+
+      const dev = snap.val() || {};
+      if (!dev.claim) { alert('ไม่พบคำขอในอุปกรณ์นี้'); return; }
+
+      await update(devRef, { claim: null });
+      alert('ปฏิเสธคำขอแล้ว');
+    } catch (e) {
+      console.error(e);
+      alert('ปฏิเสธไม่สำเร็จ');
     }
-    const userData = userSnap.val() || {};
-    if (((userData.type || 'user') + '').toLowerCase() === 'admin') {
-      alert('ไม่สามารถผูกอุปกรณ์ให้กับแอดมินได้');
-      return;
-    }
-
-    // อ่าน meta อุปกรณ์ที่ ESP32 เคยเขียนไว้ (ถ้ามี)
-    const metaRef = ref(this.db, `devices/${deviceId}/meta`);
-    const metaSnap = await get(metaRef);
-
-    // ถ้ามี meta และมีผู้ใช้ผูกอยู่แล้ว ให้กันไว้ก่อน
-    if (metaSnap.exists()) {
-      const meta = metaSnap.val() || {};
-      if (meta.userName && meta.userName !== owner) {
-        alert(`อุปกรณ์นี้ถูกผูกกับผู้ใช้ "${meta.userName}" อยู่แล้ว`);
-        return;
-      }
-    }
-
-    // อัปเดต/สร้าง meta (ไม่ต้องเพิ่มตารางใหม่)
-    await update(metaRef, {
-      deviceName: name || deviceId,
-      userName: owner,
-      registeredAt: Date.now()
-    });
-
-    // ผูกอุปกรณ์เข้ากับผู้ใช้
-    await set(ref(this.db, `users/${owner}/devices/${deviceId}`), true);
-
-    alert('ผูกอุปกรณ์จาก ESP32 เข้ากับผู้ใช้เรียบร้อย!');
-    // รีเฟรชรายการอุปกรณ์
-    await this.loadDevices();
-
-    // ล้างค่า input
-    this.hwDeviceId = '';
-    this.hwDeviceName = '';
-    this.hwDeviceUser = '';
   }
 
   async deleteDevice(deviceName: string) {

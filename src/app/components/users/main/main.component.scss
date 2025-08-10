@@ -456,3 +456,120 @@
     color: white;
   }
 }
+/* === Bind/Claim Device Box === */
+.claim-device-box {
+  background: #f5f9ff;
+  border: 2px solid #00aaff;
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 18px;
+  box-shadow: 0 6px 16px rgba(0, 170, 255, 0.12);
+  animation: fadeIn 0.35s ease-in-out;
+}
+
+.claim-title {
+  font-weight: 800;
+  color: #0a6ebd;
+  font-size: clamp(14px, 2vw, 18px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+
+  &::before {
+    content: "🔗";
+    font-size: 18px;
+  }
+}
+
+.claim-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.claim-input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  font-size: clamp(12px, 1.6vw, 14px);
+  outline: none;
+  transition: all 0.25s ease;
+  background: linear-gradient(145deg, #ffffff, #eef6ff);
+
+  &:focus {
+    border-color: #00aaff;
+    box-shadow: 0 0 0 3px rgba(0, 170, 255, 0.18);
+  }
+}
+
+.claim-btn {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 800;
+  letter-spacing: .2px;
+  color: #fff;
+  background: linear-gradient(135deg, #00aaff, #0088cc);
+  transition: all 0.25s ease;
+  min-width: 110px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(0, 170, 255, 0.35);
+    background: linear-gradient(135deg, #00b4ff, #0a6ebd);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    filter: grayscale(0.15);
+    opacity: 0.75;
+  }
+
+  .spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255,255,255,0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+    display: inline-block;
+  }
+}
+
+.claim-status {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  &.ok   { background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,.5); }
+  &.warn { background: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,.5); }
+  &.err  { background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,.5); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive detail */
+@media (max-width: 480px) {
+  .claim-row { flex-direction: column; align-items: stretch; }
+  .claim-btn { width: 100%; }
+}

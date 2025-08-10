@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Database, ref, get, child, onValue } from '@angular/fire/database';
+import { Database, ref, get, child, onValue, update, set } from '@angular/fire/database';
 import { interval, Subscription } from 'rxjs';
 
 interface Device {
@@ -25,6 +25,12 @@ export class MainComponent implements OnInit {
   isLoading = false;
   currentTime: string = '';
   private clockSubscription: Subscription | null = null;
+
+  // ===== NEW: ฟิลด์สำหรับการ "ขอผูกอุปกรณ์" =====
+  claimDeviceId: string = '';
+  lastClaimMessage: string = '';
+  lastClaimType: 'ok' | 'warn' | 'err' | '' = '';
+  requestingClaim = false;
 
   constructor(
     private router: Router,
@@ -66,6 +72,7 @@ export class MainComponent implements OnInit {
       this.clockSubscription.unsubscribe();
     }
   }
+
   private updateTime() {
     const now = new Date();
     const hours = now.getHours().toString().padStart(2, '0');
@@ -73,6 +80,7 @@ export class MainComponent implements OnInit {
     const seconds = now.getSeconds().toString().padStart(2, '0');
     this.currentTime = `${hours}:${minutes}:${seconds}`;
   }
+
   async loadDevices() {
     this.isLoading = true;
     this.devices = []; // รีเซ็ตก่อน
@@ -90,8 +98,8 @@ export class MainComponent implements OnInit {
         
         if (typeof userDevicesData === 'object' && userDevicesData !== null) {
           this.devices = Object.entries(userDevicesData).map(([key, value]: [string, any]) => ({
-            name: value.name || key,
-            status: value.status || 'offline'
+            name: (value as any).name || key,
+            status: (value as any).status || 'offline'
           }));
         }
       }
@@ -133,19 +141,19 @@ export class MainComponent implements OnInit {
       if (this.devices.length === 0) {
         console.log('Searching in userDevices node...');
         
-        const userDevicesRef = ref(this.db, `userDevices/${this.userID}`);
-        const userDevicesSnapshot = await get(userDevicesRef);
+        const userDevicesRef2 = ref(this.db, `userDevices/${this.userID}`);
+        const userDevicesSnapshot2 = await get(userDevicesRef2);
         
-        if (userDevicesSnapshot.exists()) {
-          const userData = userDevicesSnapshot.val();
+        if (userDevicesSnapshot2.exists()) {
+          const userData = userDevicesSnapshot2.val();
           console.log('UserDevices data:', userData);
           
           if (Array.isArray(userData)) {
             this.devices = userData.map((d: any) => ({ name: d.name, status: d.status || 'offline' }));
           } else if (typeof userData === 'object') {
             this.devices = Object.entries(userData).map(([key, value]: [string, any]) => ({
-              name: value.name || key,
-              status: value.status || 'offline'
+              name: (value as any).name || key,
+              status: (value as any).status || 'offline'
             }));
           }
         }
@@ -219,5 +227,89 @@ export class MainComponent implements OnInit {
 
   goToContactAdmin() {
     this.router.navigate(['/reports']);
+  }
+
+  // ===== NEW: ผู้ใช้ "ขอผูกอุปกรณ์" โดยไม่เพิ่มตารางใหม่ =====
+  async requestDeviceClaim() {
+    const rawId = (this.claimDeviceId || '').trim();
+    if (!rawId) {
+      this.lastClaimType = 'warn';
+      this.lastClaimMessage = 'กรุณากรอก Device ID ก่อน';
+      return;
+    }
+    if (!this.userID) {
+      this.lastClaimType = 'err';
+      this.lastClaimMessage = 'กรุณาเข้าสู่ระบบใหม่';
+      return;
+    }
+
+    const deviceId = rawId.toLowerCase(); // normalize
+    const username = this.userID;
+
+    try {
+      this.requestingClaim = true;
+      this.lastClaimMessage = '';
+      this.lastClaimType = '';
+
+      const devRef = ref(this.db, `devices/${deviceId}`);
+      const snap = await get(devRef);
+
+      if (snap.exists()) {
+        const dev = snap.val() || {};
+        const meta = (dev.meta || {}) as any;
+
+        // ถ้ามีการผูกไว้แล้ว
+        const alreadyBound =
+          !!meta.userName ||
+          !!dev.user ||
+          dev.enabled === true;
+
+        if (alreadyBound) {
+          this.lastClaimType = 'err';
+          this.lastClaimMessage = 'อุปกรณ์นี้ถูกผูกกับผู้ใช้คนอื่นแล้ว';
+          return;
+        }
+
+        // มีคำขอค้างอยู่?
+        if (dev.claim && dev.claim.username) {
+          if (dev.claim.username === username) {
+            const since = new Date(dev.claim.ts || Date.now()).toLocaleString('th-TH');
+            this.lastClaimType = 'warn';
+            this.lastClaimMessage = `คุณได้ส่งคำขอนี้แล้ว (ตั้งแต่ ${since}) กรุณารอผู้ดูแลอนุมัติ`;
+            return;
+          } else {
+            this.lastClaimType = 'err';
+            this.lastClaimMessage = 'มีผู้ใช้อื่นกำลังขอผูกอุปกรณ์นี้อยู่';
+            return;
+          }
+        }
+
+        // เขียนคำขอใหม่ลงไป
+        await update(devRef, {
+          enabled: false,
+          user: null,
+          claim: { username, ts: Date.now() }
+        });
+
+      } else {
+        // ยังไม่มี node → สร้าง stub + claim (ไม่สร้าง “ตาราง” ใหม่)
+        await set(devRef, {
+          enabled: false,
+          user: null,
+          claim: { username, ts: Date.now() }
+        });
+      }
+
+      this.lastClaimType = 'ok';
+      this.lastClaimMessage = `ส่งคำขอสำเร็จ! กรุณารอแอดมินอนุมัติ (อุปกรณ์: ${deviceId})`;
+      this.claimDeviceId = '';
+
+    } catch (err) {
+      console.error('requestDeviceClaim error:', err);
+      this.lastClaimType = 'err';
+      this.lastClaimMessage = 'ส่งคำขอไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+    } finally {
+      this.requestingClaim = false;
+    }
   }
 }

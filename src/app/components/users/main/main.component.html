@@ -31,7 +31,6 @@
       {{ currentTime }}
     </div>
 
-
     <!-- ปุ่มข้อมูลผู้ใช้ -->
     <div class="user-icon" (click)="goToProfile()" style="cursor: pointer;">
       <img src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png" alt="user" />
@@ -48,6 +47,44 @@
     <div class="admin" (click)="goToContactAdmin()">
       <img src="https://cdn-icons-png.flaticon.com/512/9703/9703596.png" alt="admin" />
       <div>ติดต่อ Admin</div>
+    </div>
+
+    <!-- 🔥 NEW: แบบฟอร์ม “ขอผูกอุปกรณ์” -->
+    <div class="claim-device-box">
+    <div class="claim-title">ขอผูกอุปกรณ์ของฉัน</div>
+
+      <div class="claim-row">
+        <input
+          class="claim-input"
+          type="text"
+          [(ngModel)]="claimDeviceId"
+          (keyup.enter)="requestDeviceClaim()"
+          placeholder="ใส่ Device ID เช่น esp32-soil-01"
+          aria-label="Device ID"
+        />
+
+        <button
+          class="claim-btn"
+          [disabled]="requestingClaim || !claimDeviceId.trim()"
+          (click)="requestDeviceClaim()"
+          aria-label="ส่งคำขอผูกอุปกรณ์"
+        >
+          <span *ngIf="!requestingClaim">ส่งคำขอ</span>
+          <span *ngIf="requestingClaim" class="spinner"></span>
+        </button>
+      </div>
+
+      <div class="claim-status" *ngIf="lastClaimMessage">
+        <span
+          class="status-dot"
+          [ngClass]="{
+            'ok': lastClaimType==='ok',
+            'warn': lastClaimType==='warn',
+            'err': lastClaimType==='err'
+          }"
+        ></span>
+        {{ lastClaimMessage }}
+      </div>
     </div>
   </div>
 </div>
