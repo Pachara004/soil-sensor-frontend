@@ -85,6 +85,7 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
 /* ช่องผู้ใช้ */
 .user-box {
   background: #e6e6e6;
@@ -94,6 +95,19 @@
   max-width: calc(100% - 100px);
   margin-top: 40px;
   font-size: clamp(16px, 2.5vw, 20px);
+  font-weight: bold;
+  word-wrap: break-word;
+}
+
+/* ช่องเวลา */
+.time-box {
+  background: #e6e6e6;
+  padding: 10px 15px;
+  border-radius: 10px;
+  width: fit-content;
+  max-width: calc(100% - 100px);
+  margin-top: 15px;
+  font-size: clamp(14px, 2vw, 18px);
   font-weight: bold;
   word-wrap: break-word;
 }
@@ -299,7 +313,7 @@
     font-size: 12px;
   }
   
-  .user-box, .device-box {
+  .user-box, .device-box, .time-box {
     max-width: calc(100% - 80px);
   }
   
@@ -348,15 +362,13 @@
     left: calc(50% - 17.5px);
   }
   
-  .user-box {
+  .user-box, .device-box, .time-box {
     margin-top: 35px;
     padding: 8px 12px;
     max-width: calc(100% - 60px);
   }
   
   .device-box {
-    padding: 8px 12px;
-    max-width: calc(100% - 60px);
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
@@ -402,7 +414,7 @@
     min-height: 400px;
   }
   
-  .user-box, .device-box {
+  .user-box, .device-box, .time-box {
     max-width: calc(100% - 40px);
   }
   
@@ -434,7 +446,7 @@
     border-color: #0088cc;
   }
   
-  .user-box, .device-box {
+  .user-box, .device-box, .time-box {
     background: #333333;
     color: white;
   }

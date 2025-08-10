@@ -1,50 +1,38 @@
 <div class="measure-container">
   <div class="card">
-    <!-- ปุ่มย้อนกลับ -->
-    <div class="back" (click)="goBack()">
-      <i class="fas fa-arrow-left"></i>
-    </div>
-
-    <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png"
-         class="chip-icon" alt="chip" />
+    <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png" alt="Chip Icon" class="chip-icon">
+    <span class="material-icons back" (click)="goBack()">arrow_back</span>
 
     <div class="header">
-      <div class="user-id">User : {{ username }}</div>
-
-      <div class="user-icon" (click)="goToProfile()" style="cursor: pointer;">
-        <img src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png" alt="user" />
-        <div class="text">ข้อมูลผู้ใช้</div>
+      <div class="user-id">User: {{ username }}</div>
+      <div class="user-icon" (click)="goToProfile()">
+        <img src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png" alt="User Icon">
+        <span class="text">ข้อมูลผู้ใช้</span>
       </div>
     </div>
 
     <div class="section">
-      <p class="subtitle">ประวัติการวัดค่า</p>
+      <div class="subtitle">ประวัติการวัดค่า</div>
       <div class="device-box">
-        <span class="label-orange">ชื่ออุปกรณ์ :</span>
-        <strong>{{ deviceId }}</strong>
+        <span>ชื่ออุปกรณ์:</span>
+        <select [(ngModel)]="deviceId" (ngModelChange)="onDeviceChange()">
+          <option *ngFor="let device of devices" [value]="device">{{ device }}</option>
+        </select>
       </div>
     </div>
 
-    <!-- Loading -->
     <div *ngIf="isLoading" class="loading">
-      <mat-spinner diameter="40"></mat-spinner>
+      <mat-spinner></mat-spinner>
       <p>กำลังโหลดข้อมูล...</p>
     </div>
 
-    <!-- รายการพื้นที่ -->
     <div *ngIf="!isLoading && !showAreaDetails" class="history-list">
-      <h3 class="area-title">รายการพื้นที่การวัด</h3>
-      
-      <div class="area-item" *ngFor="let area of areaGroups">
+      <div class="area-title">รายการพื้นที่การวัด</div>
+      <div *ngFor="let area of areaGroups" class="area-item">
         <div class="area-header">
-          <div class="area-info">
-            <h4 class="area-name">{{ getDisplayAreaName(area) }} </h4>
-            <p class="area-details">
-              {{ area.totalMeasurements }} จุดวัด | วันที่ล่าสุด: {{ area.lastMeasurementDate }}
-            </p>
-          </div>
+          <h3 class="area-name">{{ getDisplayAreaName(area) }}</h3>
+          <p class="area-details">{{ area.totalMeasurements }} จุดวัด | วันที่ล่าสุด: {{ area.lastMeasurementDate }}</p>
         </div>
-        
         <div class="area-averages">
           <div class="avg-grid">
             <div class="avg-item">
@@ -73,23 +61,14 @@
             </div>
           </div>
         </div>
-
         <div class="area-actions">
-          <button class="detail-btn" (click)="viewAreaDetails(area)">
-            ดูรายละเอียด
-          </button>
-          <button class="stats-btn" (click)="showAreaStatistics(area)">
-            สถิติ
-          </button>
+          <button class="detail-btn" (click)="viewAreaDetails(area)">ดูรายละเอียด</button>
+          <button class="stats-btn" (click)="showAreaStatistics(area)">สถิติ</button>
         </div>
       </div>
-
-      <div *ngIf="!areaGroups.length" class="empty">
-        ไม่พบข้อมูลการวัดค่า
-      </div>
+      <div *ngIf="areaGroups.length === 0" class="empty">ไม่พบข้อมูลการวัดค่า</div>
     </div>
 
-    <!-- รายละเอียดพื้นที่ที่เลือก -->
     <div *ngIf="!isLoading && showAreaDetails && selectedArea" class="area-details-view">
       <div class="area-detail-header">
         <button class="back-to-list" (click)="backToAreaList()">
@@ -99,14 +78,12 @@
         <p>{{ selectedArea.totalMeasurements }} จุดวัด</p>
       </div>
 
-      <!-- แผนที่แสดงจุดวัดในพื้นที่ -->
-      <div class="area-map-container">
+      <div class="area-summary">
         <h4>แผนที่พื้นที่วัด</h4>
-        <div #mapContainer class="area-map" style="width: 100%; height: 350px; border-radius: 8px; overflow: hidden; margin-bottom: 10px;"></div>
-        <p class="map-note" style="font-size: 12px; color: #666; text-align: center; margin: 0;">คลิกที่จุดสีแดงเพื่อดูรายละเอียดการวัด</p>
+        <div #mapContainer style="height: 300px; width: 100%; border-radius: 12px;"></div>
+        <p style="text-align: center; margin-top: 10px;">คลิกที่จุดสีแดงเพื่อดูรายละเอียดการวัด</p>
       </div>
 
-      <!-- ค่าเฉลี่ยของพื้นที่ -->
       <div class="area-summary">
         <h4>ค่าเฉลี่ยของพื้นที่</h4>
         <div class="summary-grid">
@@ -137,24 +114,35 @@
         </div>
       </div>
 
-      <!-- รายการจุดวัดในพื้นที่ -->
+      <div class="area-summary recommendation-section">
+        <h4>คำแนะนำการปรับปรุงดิน</h4>
+        <p class="recommendation-text">{{ recommendSoilImprovement(selectedArea).message }}</p>
+        <h4>สูตรปุ๋ยที่แนะนำ</h4>
+        <div class="summary-grid">
+          <div *ngFor="let fertilizer of recommendSoilImprovement(selectedArea).fertilizers" class="summary-item fertilizer-item">
+            <span class="summary-label">{{ fertilizer.formula }}</span>
+            <span class="summary-value">{{ fertilizer.amount }} - {{ fertilizer.description }}</span>
+          </div>
+        </div>
+        <h4>พืชที่เหมาะสม</h4>
+        <p class="crop-text">{{ recommendCrops(selectedArea).join(', ') }}</p>
+      </div>
+
       <div class="measurements-list">
         <h4>รายการจุดวัด</h4>
-        <div class="measurement-item" *ngFor="let measurement of selectedArea.measurements">
+        <div *ngFor="let measurement of selectedArea.measurements" class="measurement-item">
           <div class="measurement-info">
             <div class="measurement-point">จุดที่ {{ measurement.measurementPoint || 'ไม่ระบุ' }}</div>
             <div class="measurement-location">{{ measurement.location }}</div>
             <div class="measurement-date">{{ measurement.date }}</div>
           </div>
-          <button class="view-detail-btn" (click)="viewMeasurementDetail(measurement)">
-            ดูรายละเอียด
-          </button>
+          <button class="view-detail-btn" (click)="viewMeasurementDetail(measurement)">ดูรายละเอียด</button>
         </div>
       </div>
     </div>
 
     <div class="admin" (click)="goToContactAdmin()">
-      <img src="https://cdn-icons-png.flaticon.com/512/9703/9703596.png" alt="admin" />
+      <img src="https://cdn-icons-png.flaticon.com/512/9703/9703596.png" alt="Admin Icon">
       <div>ติดต่อ Admin</div>
     </div>
   </div>

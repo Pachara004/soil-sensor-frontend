@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Database, ref, get, child, onValue } from '@angular/fire/database';
+import { interval, Subscription } from 'rxjs';
 
 interface Device {
   name: string;
@@ -22,6 +23,8 @@ export class MainComponent implements OnInit {
   devices: Device[] = [];
   selectedDevice: Device | null = null;
   isLoading = false;
+  currentTime: string = '';
+  private clockSubscription: Subscription | null = null;
 
   constructor(
     private router: Router,
@@ -45,12 +48,31 @@ export class MainComponent implements OnInit {
         this.selectedDevice = null;
         localStorage.removeItem('selectedDevice'); // ลบข้อมูลเก่าออก
       }
+      // Initialize real-time clock
+      this.updateTime();
+      this.clockSubscription = interval(1000).subscribe(() => {
+        this.updateTime();
+      });
+
     } else {
       alert('กรุณาล็อกอินก่อน');
       this.router.navigate(['/']);
     }
   }
 
+  ngOnDestroy() {
+    // Clean up clock subscription
+    if (this.clockSubscription) {
+      this.clockSubscription.unsubscribe();
+    }
+  }
+  private updateTime() {
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const seconds = now.getSeconds().toString().padStart(2, '0');
+    this.currentTime = `${hours}:${minutes}:${seconds}`;
+  }
   async loadDevices() {
     this.isLoading = true;
     this.devices = []; // รีเซ็ตก่อน

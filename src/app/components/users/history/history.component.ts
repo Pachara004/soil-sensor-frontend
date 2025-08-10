@@ -52,6 +52,12 @@ interface UserData {
   devices?: { [key: string]: boolean };
 }
 
+interface FertilizerRecommendation {
+  formula: string;
+  amount: string;
+  description: string;
+}
+
 @Component({
   selector: 'app-history',
   standalone: true,
@@ -98,9 +104,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  ngAfterViewInit() {
-    // Map will be initialized when area details are viewed
-  }
+  ngAfterViewInit() {}
 
   ngOnDestroy() {
     if (this.map) {
@@ -142,7 +146,6 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
         if (data) {
           this.history = Object.entries(data).map(([key, value]: [string, any]) => {
             let areaName = this.createMeaningfulAreaName(value, key);
-
             return {
               id: key,
               location: value.location || 'ไม่ระบุสถานที่',
@@ -161,7 +164,6 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
               ...value
             };
           });
-          
           this.groupByArea();
         } else {
           this.history = [];
@@ -179,29 +181,18 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private createMeaningfulAreaName(value: any, measurementId: string): string {
-    if (value['customLocationName'] && 
-        value['customLocationName'] !== 'Unknown Location' && 
-        value['customLocationName'].trim() !== '') {
+    if (value['customLocationName'] && value['customLocationName'] !== 'Unknown Location' && value['customLocationName'].trim() !== '') {
       return value['customLocationName'];
     }
-
-    if (value['autoLocationName'] && 
-        value['autoLocationName'] !== 'Unknown Location' && 
-        value['autoLocationName'].trim() !== '') {
+    if (value['autoLocationName'] && value['autoLocationName'] !== 'Unknown Location' && value['autoLocationName'].trim() !== '') {
       return value['autoLocationName'];
     }
-
-    if (value.location && 
-        value.location !== 'ไม่ระบุสถานที่' && 
-        value.location !== 'Unknown Location' && 
-        value.location.trim() !== '') {
-      
+    if (value.location && value.location !== 'ไม่ระบุสถานที่' && value.location !== 'Unknown Location' && value.location.trim() !== '') {
       const locationName = value.location.split(' (')[0].trim();
       if (locationName && locationName !== 'Unknown Location') {
         return locationName;
       }
     }
-
     if (value.areaId && value.areaId !== 'no-area') {
       if (value.areaId.includes('_')) {
         const parts = value.areaId.split('_');
@@ -210,31 +201,22 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       }
       return `พื้นที่ ${value.areaId}`;
     }
-
     if (value.date) {
       const date = new Date(value.date);
-      const dateStr = date.toLocaleDateString('th-TH', {
-        day: '2-digit',
-        month: '2-digit',
-        year: '2-digit'
-      });
+      const dateStr = date.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' });
       return `พื้นที่ ${dateStr}`;
     }
-
     const shortId = measurementId.substring(0, 6);
     return `พื้นที่ ${shortId}`;
   }
 
   private async groupByArea() {
     const areaMap: { [key: string]: Measurement[] } = {};
-    
     this.history.forEach(measurement => {
       let groupKey = measurement.areaId || 'no-area';
-      
       if (groupKey === 'no-area' && measurement['derivedAreaName']) {
         groupKey = `area_${measurement['derivedAreaName']}`;
       }
-
       if (!areaMap[groupKey]) {
         areaMap[groupKey] = [];
       }
@@ -323,42 +305,48 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     };
   }
 
-  // เพิ่มฟังก์ชันแนะนำการปรับปรุงดิน
-  recommendSoilImprovement(area: AreaGroup): string[] {
+  recommendSoilImprovement(area: AreaGroup): { message: string, fertilizers: FertilizerRecommendation[] } {
     const recommendations: string[] = [];
+    const fertilizers: FertilizerRecommendation[] = [];
     const { temperature, moisture, nitrogen, phosphorus, potassium, ph } = area.averages;
 
     // pH recommendations
     if (ph < 5.5) {
-      recommendations.push('ดินมีสภาพกรดจัด แนะนำให้ใส่ปูนขาวเพื่อเพิ่มค่า pH');
+      recommendations.push('ดินมีสภาพกรดจัด แนะนำให้ใส่ปูนขาว 1–2 ตัน/ไร่ เพื่อเพิ่มค่า pH');
+      fertilizers.push({ formula: 'ปูนขาว', amount: '1–2 ตัน/ไร่', description: 'ปรับ pH ดินให้เหมาะสม' });
     } else if (ph > 7.5) {
-      recommendations.push('ดินมีสภาพด่าง แนะนำให้ใส่กำมะถันเพื่อลดค่า pH');
+      recommendations.push('ดินมีสภาพด่าง แนะนำให้ใส่กำมะถัน 50–100 กก./ไร่ เพื่อลดค่า pH');
+      fertilizers.push({ formula: 'กำมะถัน', amount: '50–100 กก./ไร่', description: 'ลด pH ดิน' });
     }
 
     // Nitrogen recommendations
     if (nitrogen < 20) {
-      recommendations.push('ดินขาดไนโตรเจน แนะนำให้ใส่ปุ๋ยยูเรียหรือปุ๋ยอินทรีย์');
+      recommendations.push('ดินขาดไนโตรเจน แนะนำให้ใส่ปุ๋ยยูเรีย (46-0-0) หรือปุ๋ยอินทรีย์');
+      fertilizers.push({ formula: '46-0-0', amount: '20–30 กก./ไร่', description: 'เพิ่มไนโตรเจนในดิน' });
     } else if (nitrogen > 40) {
       recommendations.push('ไนโตรเจนในดินสูงเกินไป ควรลดการใช้ปุ๋ยไนโตรเจน');
     }
 
     // Phosphorus recommendations
     if (phosphorus < 15) {
-      recommendations.push('ดินขาดฟอสฟอรัส แนะนำให้ใส่ปุ๋ยซูเปอร์ฟอสเฟต');
+      recommendations.push('ดินขาดฟอสฟอรัส แนะนำให้ใส่ปุ๋ยซูเปอร์ฟอสเฟต (0-20-0)');
+      fertilizers.push({ formula: '0-20-0', amount: '20–30 กก./ไร่', description: 'เพิ่มฟอสฟอรัสในดิน' });
     } else if (phosphorus > 30) {
       recommendations.push('ฟอสฟอรัสในดินสูงเกินไป ควรควบคุมการใช้ปุ๋ยฟอสฟอรัส');
     }
 
     // Potassium recommendations
     if (potassium < 100) {
-      recommendations.push('ดินขาดโพแทสเซียม แนะนำให้ใส่ปุ๋ยโพแทสเซียมคลอไรด์');
+      recommendations.push('ดินขาดโพแทสเซียม แนะนำให้ใส่ปุ๋ยโพแทสเซียมคลอไรด์ (0-0-60)');
+      fertilizers.push({ formula: '0-0-60', amount: '15–25 กก./ไร่', description: 'เพิ่มโพแทสเซียมในดิน' });
     } else if (potassium > 200) {
       recommendations.push('โพแทสเซียมในดินสูงเกินไป ควรลดการใช้ปุ๋ยโพแทสเซียม');
     }
 
     // Moisture recommendations
     if (moisture < 20) {
-      recommendations.push('ดินแห้งเกินไป แนะนำให้เพิ่มการชลประทานหรือสารอินทรีย์');
+      recommendations.push('ดินแห้งเกินไป แนะนำให้เพิ่มการชลประทานหรือสารอินทรีย์ เช่น ปุ๋ยคอก 2–3 ตัน/ไร่');
+      fertilizers.push({ formula: 'ปุ๋ยคอก', amount: '2–3 ตัน/ไร่', description: 'เพิ่มความชื้นและสารอินทรีย์' });
     } else if (moisture > 50) {
       recommendations.push('ดินชื้นเกินไป แนะนำให้ปรับปรุงระบบระบายน้ำ');
     }
@@ -370,15 +358,22 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       recommendations.push('อุณหภูมิสูงเกินไป แนะนำให้ปลูกพืชเมืองร้อน');
     }
 
-    return recommendations.length > 0 ? recommendations : ['ดินอยู่ในสภาพเหมาะสมสำหรับการเพาะปลูกทั่วไป'];
+    // Recommend combined fertilizer if multiple nutrients are deficient
+    if (nitrogen < 20 && phosphorus < 15 && potassium < 100) {
+      fertilizers.push({ formula: '15-15-15', amount: '20–30 กก./ไร่', description: 'เพิ่ม N, P, K พร้อมกัน' });
+      recommendations.push('ดินขาด N, P, K แนะนำให้ใช้ปุ๋ยสูตร 15-15-15');
+    }
+
+    return {
+      message: recommendations.length > 0 ? recommendations.join('\n') : 'ดินอยู่ในสภาพเหมาะสมสำหรับการเพาะปลูกทั่วไป',
+      fertilizers
+    };
   }
 
-  // เพิ่มฟังก์ชันแนะนำพืชที่เหมาะสม
   recommendCrops(area: AreaGroup): string[] {
     const crops: string[] = [];
     const { temperature, moisture, ph } = area.averages;
 
-    // pH-based crop recommendations
     if (ph >= 5.5 && ph <= 7.0) {
       crops.push('ข้าวโพด', 'ถั่วเหลือง', 'ผักกาดหอม', 'มะเขือเทศ');
     } else if (ph < 5.5) {
@@ -387,12 +382,10 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       crops.push('หน่อไม้ฝรั่ง', 'บีทรูท');
     }
 
-    // Moisture-based crop recommendations
     if (moisture > 50) {
       crops.push('ข้าว', 'บัว', 'ผักบุ้ง');
     }
 
-    // Temperature-based crop recommendations
     if (temperature > 30) {
       crops.push('ข้าว', 'มะม่วง', 'ทุเรียน');
     } else if (temperature < 15) {
@@ -403,10 +396,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getDisplayAreaName(area: AreaGroup): string {
-    if (!area.areaName || 
-        area.areaName === 'Unknown Location' || 
-        area.areaName.trim() === '') {
-      
+    if (!area.areaName || area.areaName === 'Unknown Location' || area.areaName.trim() === '') {
       if (area.areaId && area.areaId !== 'no-area') {
         if (area.areaId.includes('_')) {
           const parts = area.areaId.split('_');
@@ -415,19 +405,13 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
         }
         return `พื้นที่ ${area.areaId.substring(0, 8)}`;
       }
-      
       if (area.lastMeasurementDate) {
         const date = new Date(area.lastMeasurementDate);
-        const dateStr = date.toLocaleDateString('th-TH', {
-          day: '2-digit',
-          month: '2-digit'
-        });
+        const dateStr = date.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit' });
         return `พื้นที่ ${dateStr}`;
       }
-      
       return `พื้นที่ที่ ${area.totalMeasurements}`;
     }
-    
     return area.areaName;
   }
 
@@ -435,19 +419,15 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     if (areaId === 'no-area') {
       return 'ไม่มีการกำหนดพื้นที่';
     }
-
     const firstMeasurement = measurements[0];
-    
     if (firstMeasurement && firstMeasurement['derivedAreaName']) {
       return firstMeasurement['derivedAreaName'];
     }
-
     if (areaId.includes('_')) {
       const parts = areaId.split('_');
       const lastPart = parts[parts.length - 1];
       return `พื้นที่ ${lastPart}`;
     }
-
     return `พื้นที่ ${areaId.substring(0, 8)}`;
   }
 
@@ -456,7 +436,6 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loadHistory();
     this.showAreaDetails = false;
     this.selectedArea = null;
-    
     if (this.map) {
       this.map.remove();
       this.map = undefined;
@@ -466,7 +445,6 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
   viewAreaDetails(area: AreaGroup) {
     this.selectedArea = area;
     this.showAreaDetails = true;
-    
     setTimeout(() => {
       this.initializeAreaMap();
     }, 100);
@@ -477,16 +455,13 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       console.log('Map container or selected area not available');
       return;
     }
-
     if (this.map) {
       this.map.remove();
     }
-
     const validMeasurements = this.selectedArea.measurements.filter(m => 
       m.lat !== undefined && m.lng !== undefined && 
       !isNaN(m.lat!) && !isNaN(m.lng!)
     );
-
     if (validMeasurements.length === 0) {
       console.log('No valid coordinates found for area');
       this.mapContainer.nativeElement.innerHTML = `
@@ -496,10 +471,8 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       `;
       return;
     }
-
     const lats = validMeasurements.map(m => m.lat!);
     const lngs = validMeasurements.map(m => m.lng!);
-    
     const centerLat = lats.reduce((a, b) => a + b) / lats.length;
     const centerLng = lngs.reduce((a, b) => a + b) / lngs.length;
 
@@ -510,13 +483,11 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
         center: [centerLng, centerLat],
         zoom: 16
       });
-
       this.map.on('load', () => {
         this.addMeasurementMarkers();
         this.drawAreaPolygon();
         this.fitMapToBounds();
       });
-
       this.map.on('error', (error) => {
         console.error('Map error:', error);
         this.mapContainer.nativeElement.innerHTML = `
@@ -537,12 +508,10 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private addMeasurementMarkers() {
     if (!this.map || !this.selectedArea) return;
-
     const validMeasurements = this.selectedArea.measurements.filter(m => 
       m.lat !== undefined && m.lng !== undefined && 
       !isNaN(m.lat!) && !isNaN(m.lng!)
     );
-
     validMeasurements.forEach((measurement, index) => {
       const markerElement = document.createElement('div');
       markerElement.style.backgroundColor = '#FF4444';
@@ -560,9 +529,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       markerElement.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
       markerElement.textContent = (measurement.measurementPoint || (index + 1)).toString();
 
-      const marker = new Marker({ 
-        element: markerElement 
-      })
+      const marker = new Marker({ element: markerElement })
         .setLngLat([measurement.lng!, measurement.lat!])
         .addTo(this.map!);
 
@@ -576,12 +543,10 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!this.map || !this.selectedArea?.polygonBounds || this.selectedArea.polygonBounds.length < 3) {
       return;
     }
-
     const polygonCoords = [
       ...this.selectedArea.polygonBounds.map(p => [p[1], p[0]]),
       [this.selectedArea.polygonBounds[0][1], this.selectedArea.polygonBounds[0][0]]
     ];
-
     const geoJsonData = {
       type: 'Feature' as const,
       properties: {},
@@ -590,12 +555,10 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
         coordinates: [polygonCoords]
       }
     };
-
     this.map.addSource('area-polygon', {
       type: 'geojson',
       data: geoJsonData
     });
-
     this.map.addLayer({
       id: 'area-polygon-fill',
       type: 'fill',
@@ -605,7 +568,6 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
         'fill-opacity': 0.2
       }
     });
-
     this.map.addLayer({
       id: 'area-polygon-line',
       type: 'line',
@@ -619,26 +581,18 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private fitMapToBounds() {
     if (!this.map || !this.selectedArea) return;
-
     const validMeasurements = this.selectedArea.measurements.filter(m => 
       m.lat !== undefined && m.lng !== undefined && 
       !isNaN(m.lat!) && !isNaN(m.lng!)
     );
-
     if (validMeasurements.length === 0) return;
-
     const lats = validMeasurements.map(m => m.lat!);
     const lngs = validMeasurements.map(m => m.lng!);
-
     const bounds = new LngLatBounds(
       [Math.min(...lngs), Math.min(...lats)],
       [Math.max(...lngs), Math.max(...lats)]
     );
-
-    this.map.fitBounds(bounds, { 
-      padding: 50,
-      maxZoom: 18
-    });
+    this.map.fitBounds(bounds, { padding: 50, maxZoom: 18 });
   }
 
   private showMeasurementPopup(measurement: Measurement) {
@@ -650,17 +604,12 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
 ฟอสฟอรัส: ${measurement.phosphorus} mg/kg
 โพแทสเซียม: ${measurement.potassium} mg/kg
 pH: ${measurement.ph}
-
 ตำแหน่ง: ${measurement.location}`;
-
     alert(details);
   }
 
   viewMeasurementDetail(item: Measurement) {
-    const measurementData = {
-      ...item,
-      deviceId: this.deviceId
-    };
+    const measurementData = { ...item, deviceId: this.deviceId };
     localStorage.setItem('selectedMeasurement', JSON.stringify(measurementData));
     this.router.navigate(['/history-detail']);
   }
@@ -668,7 +617,6 @@ pH: ${measurement.ph}
   backToAreaList() {
     this.showAreaDetails = false;
     this.selectedArea = null;
-    
     if (this.map) {
       this.map.remove();
       this.map = undefined;
@@ -680,7 +628,6 @@ pH: ${measurement.ph}
     const message = `สถิติพื้นที่: ${area.areaName}
       จำนวนจุดวัด: ${area.totalMeasurements} จุด
       วันที่วัดล่าสุด: ${area.lastMeasurementDate}
-
       ค่าเฉลี่ย:
       • อุณหภูมิ: ${stats.temperature}°C
       • ความชื้น: ${stats.moisture}%
@@ -688,7 +635,6 @@ pH: ${measurement.ph}
       • ฟอสฟอรัส: ${stats.phosphorus} mg/kg
       • โพแทสเซียม: ${stats.potassium} mg/kg
       • ค่า pH: ${stats.ph}`;
-
     alert(message);
   }
 
