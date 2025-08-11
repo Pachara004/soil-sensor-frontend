@@ -290,7 +290,7 @@ export class AdmainComponent implements OnInit, OnDestroy {
     if (!isNonAdmin(user)) return;
     this.editingUser = { ...user };
     this.newPassword = '';
-       this.showEditModal = true;
+    this.showEditModal = true;
     this.cdr.detectChanges();
   }
 
@@ -364,7 +364,7 @@ export class AdmainComponent implements OnInit, OnDestroy {
     await this.loadDevices();
   }
 
-  // 🆕 อนุมัติ claim → set user + enabled + name (จาก meta) แล้วลบ claim จาก devices/{id}
+  // 🆕 อนุมัติ claim → set user + enabled แล้วลบ claim (และซิงก์ meta + ชื่อ)
   async approveClaim(deviceId: string) {
     try {
       const devRef = ref(this.db, `devices/${deviceId}`);
@@ -374,32 +374,34 @@ export class AdmainComponent implements OnInit, OnDestroy {
       const dev = snap.val() || {};
       if (!dev.claim || !dev.claim.username) { alert('ไม่พบคำขอในอุปกรณ์นี้'); return; }
 
-      // ดึงชื่อจาก meta ถ้ามี
-      const metaName = dev.meta && dev.meta.deviceName ? String(dev.meta.deviceName) : '';
-      const finalName = metaName || deviceId;
+      const username = dev.claim.username;
+      const now = Date.now();
 
-      // เขียนกลับเข้า entity เดิม "devices/{deviceId}"
+      // ✅ อัปเดตโหนดหลัก + meta ให้ครบ เพื่อให้ ESP32 อ่านเจอ enabled=true ได้แน่
       await update(devRef, {
-        user: dev.claim.username,  // owner ใน devices
+        user: username,
         enabled: true,
-        name: finalName,           // ให้ AdminService.getDevices() เห็นชื่อชัด
-        claim: null,
-        // sync meta.userName ด้วย (เผื่อ ESP ใช้อ่าน)
+        name: deviceId,
+        status: dev.status || 'offline',
+        updatedAt: now,
         meta: {
           ...(dev.meta || {}),
-          userName: dev.claim.username,
-          deviceName: finalName,
-          registeredAt: (dev.meta && dev.meta.registeredAt) ? dev.meta.registeredAt : Date.now()
-        }
+          userName: username,
+          deviceName: deviceId,
+          enabled: true,
+          registeredAt: dev.meta?.registeredAt || now,
+          updatedAt: now
+        },
+        claim: null
       });
 
-      // ผูก device เข้า user (users/{username}/devices/{deviceId} = true) เพื่อให้หน้า user เห็น
-      await set(ref(this.db, `users/${dev.claim.username}/devices/${deviceId}`), true);
+      // ผูก device เข้ากับผู้ใช้ (จะโชว์หน้า user)
+      await set(ref(this.db, `users/${username}/devices/${deviceId}`), true);
 
-      // รีเฟรช list อุปกรณ์หน้า Admin ให้เห็นตัวที่เพิ่งอนุมัติทันที
+      alert(`อนุมัติสำเร็จ → ผูกกับผู้ใช้ ${username}`);
+      // รีโหลดรายการอุปกรณ์ เพื่อแสดงทรัพย์ล่าสุด
       await this.loadDevices();
-
-      alert(`อนุมัติสำเร็จ → ผูกกับผู้ใช้ ${dev.claim.username}`);
+      this.cdr.detectChanges();
     } catch (e) {
       console.error(e);
       alert('อนุมัติไม่สำเร็จ');
@@ -416,7 +418,7 @@ export class AdmainComponent implements OnInit, OnDestroy {
       const dev = snap.val() || {};
       if (!dev.claim) { alert('ไม่พบคำขอในอุปกรณ์นี้'); return; }
 
-      await update(devRef, { claim: null });
+      await update(devRef, { claim: null, updatedAt: Date.now() });
       alert('ปฏิเสธคำขอแล้ว');
     } catch (e) {
       console.error(e);
