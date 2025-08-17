@@ -15,32 +15,33 @@ body, html {
 }
 
 .profile-card {
-  width: 700px;
+  width: 600px;
   background-color: white;
   border-radius: 30px;
   padding: 40px;
   border: 4px solid #00aaff;
   position: relative;
   text-align: center;
-  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  box-shadow: 0 0 20px rgba(0,170,255,0.3);
+  animation: subtle-float 6s ease-in-out infinite;
 }
 
-  .back {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    font-size: 20px;
-    cursor: pointer;
-    color: #002e24;
-    padding: 8px;
-    border-radius: 50%;
-    transition: all 0.3s ease;
-  
-    &:hover {
-      background-color: #f0f0f0;
-      transform: scale(1.1);
-    }
+.back {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 20px;
+  cursor: pointer;
+  color: #002e24;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background-color: #f0f0f0;
+    transform: scale(1.1);
   }
+}
 
 .icon {
   width: 50px;
@@ -48,92 +49,291 @@ body, html {
 }
 
 .user-id {
-  background-color: #d9d9d9;
-  padding: 10px;
-  margin-bottom: 10px;
-  font-weight: bold;
-  border-radius: 10px;
+  background: linear-gradient(135deg, #424242);
+  color: white;
+  padding: 12px 20px;
+  margin: 0 auto 15px auto;
+  font-weight: 600;
+  border-radius: 20px;
   width: fit-content;
-  margin: 0 auto;
+  font-size: 16px;
+  box-shadow: 0 4px 15px rgba(0,170,255,0.3);
+  letter-spacing: 0.5px;
 }
 
 .title {
   margin: 10px 0;
   font-size: 18px;
   font-weight: bold;
+  color: #002e24;
 }
 
 .info-row {
-  margin-bottom: 15px;
-}
+  margin-bottom: 20px;
+  position: relative;
 
-.info-row .label {
-  font-weight: bold;
-  margin-bottom: 5px;
-}
+  .label {
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #002e24;
+    text-align: left;
+    padding-left: 15px;
+    position: relative;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 
-.info-row input.value {
-  width: 60%;
-  padding: 2px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-  font-size: 16px;
-}
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 4px;
+      height: 20px;
+      background: linear-gradient(45deg, #00aaff, #0088cc);
+      border-radius: 2px;
+    }
+  }
 
+  input.value {
+    width: 60%;
+    padding: 12px 18px;
+    border-radius: 15px;
+    border: 2px solid #e9ecef;
+    font-size: 16px;
+    font-weight: 500;
+    color: #2c3e50;
+    transition: all 0.3s ease;
+    background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+    position: relative;
+    overflow: hidden;
 
-.label {
-  font-weight: bold;
-  margin-bottom: 5px;
+    &:focus {
+      outline: none;
+      border-color: #00aaff;
+      box-shadow: 0 0 15px rgba(0,170,255,0.3);
+      transform: translateY(-1px);
+    }
+
+    &:hover:not(:focus) {
+      border-color: #00aaff;
+      box-shadow: 0 4px 15px rgba(0,170,255,0.15);
+    }
+
+    &[readonly] {
+      background: linear-gradient(145deg, #e0e0e0, #d0d0d0);
+      cursor: not-allowed;
+      color: #666;
+      
+      &:hover {
+        border-color: #ccc;
+        box-shadow: none;
+      }
+    }
+  }
+
+  // Different border colors for different input fields
+  &:nth-child(1) input.value {
+    border-left: 4px solid #fc8181;
+  }
+
+  &:nth-child(2) input.value {
+    border-left: 4px solid #68d391;
+  }
+
+  &:nth-child(3) input.value {
+    border-left: 4px solid #f6ad55;
+  }
+
+  &:nth-child(4) input.value {
+    border-left: 4px solid #63b3ed;
+  }
+
+  &:nth-child(5) input.value {
+    border-left: 4px solid #b794f6;
+  }
 }
 
 .value {
   width: 50%;
   height: 40px;
-  background-color: #d9d9d9;
+  background: linear-gradient(145deg, #f8f9fa, #e9ecef);
   border-radius: 15px;
-}
+  border: 2px solid #e9ecef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  font-weight: 500;
+  color: #2c3e50;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #00aaff, #0088cc, #00aaff);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,170,255,0.15);
+    border-color: #00aaff;
+
+    &::before {
+      opacity: 1;
+    }
+  }
+
+  &[readonly] {
+    background: linear-gradient(145deg, #e0e0e0, #d0d0d0);
+    cursor: not-allowed;
+    color: #666;
+    
+    &:hover {
+      transform: none;
+      border-color: #ccc;
+      box-shadow: none;
+      
+      &::before {
+        opacity: 0;
+      }
+    }
+  }
+}
 
 .button-group {
   margin-top: 30px;
 }
 
 .edit-button {
-  background-color: #1eec16;
+  background: linear-gradient(135deg, #1eec16, #15c412);
+  color: white;
   border: none;
-  padding: 10px 30px;
-  border-radius: 15px;
-  font-weight: bold;
+  padding: 12px 30px;
+  border-radius: 25px;
+  font-weight: 600;
   cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(30,236,22,0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(30,236,22,0.4);
+    background: linear-gradient(135deg, #15c412, #12a10f);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
 }
 
-/* ติดต่อ Admin */
 .admin {
   position: absolute;
   bottom: 20px;
   right: 20px;
   text-align: center;
   font-size: 14px;
+  color: #002e24;
+
+  img {
+    width: 30px;
+    height: 30px;
+    transition: transform 0.3s ease;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+
+    &:hover {
+      transform: scale(1.1);
+    }
+  }
+
+  div {
+    margin-top: 4px;
+    font-weight: 500;
+  }
 }
 
-.admin img {
-  width: 30px;
-  height: 30px;
-}
-/* ติดต่อ Admin */
-.admin {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
-  text-align: center;
-  font-size: 14px;
+// Subtle animation for the entire card
+@keyframes subtle-float {
+  0%, 100% { 
+    transform: translateY(0px); 
+  }
+  50% { 
+    transform: translateY(-5px); 
+  }
 }
 
-.admin img {
-  width: 30px;
-  height: 30px;
+// Media queries for responsiveness
+@media screen and (max-width: 768px) {
+  .profile-card {
+    width: 90vw;
+    padding: 30px;
+  }
+  
+  .info-row input.value {
+    width: 80%;
+  }
+  
+  .value {
+    width: 70%;
+  }
 }
-.value[readonly] {
-  background-color: #e0e0e0; /* เทาอ่อน */
-  cursor: not-allowed;
+
+@media screen and (max-width: 480px) {
+  .profile-card {
+    padding: 20px;
+    border-radius: 20px;
+  }
+  
+  .back {
+    top: 15px;
+    left: 15px;
+    font-size: 18px;
+    padding: 6px;
+  }
+  
+  .info-row {
+    .label {
+      padding-left: 12px;
+      font-size: 12px;
+    }
+    
+    input.value {
+      width: 90%;
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+  }
+  
+  .value {
+    width: 85%;
+    height: 35px;
+  }
+  
+  .edit-button {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+  
+  .admin {
+    bottom: 15px;
+    right: 15px;
+    font-size: 12px;
+    
+    img {
+      width: 25px;
+      height: 25px;
+    }
+  }
 }
