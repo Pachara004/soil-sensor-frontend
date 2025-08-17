@@ -302,81 +302,93 @@ export class MainComponent implements OnInit, OnDestroy {
 
   goToContactAdmin() { this.router.navigate(['/reports']); }
 
-  // ===== ขอผูกอุปกรณ์ =====
-  async requestDeviceClaim() {
-    const rawId = (this.claimDeviceId || '').trim();
-    if (!rawId) {
-      this.lastClaimType = 'warn';
-      this.lastClaimMessage = 'กรุณากรอก Device ID ก่อน';
-      return;
-    }
-    if (!this.userID) {
-      this.lastClaimType = 'err';
-      this.lastClaimMessage = 'กรุณาเข้าสู่ระบบใหม่';
-      return;
-    }
+  // ===== ผูกอุปกรณ์ทันที (ไม่ต้องส่งคำขอ) =====
+async requestDeviceClaim() {
+  const rawId = (this.claimDeviceId || '').trim();
+  if (!rawId) {
+    this.lastClaimType = 'warn';
+    this.lastClaimMessage = 'กรุณากรอก Device ID ก่อน';
+    return;
+  }
+  if (!this.userID) {
+    this.lastClaimType = 'err';
+    this.lastClaimMessage = 'กรุณาเข้าสู่ระบบใหม่';
+    return;
+  }
 
-    const deviceId = rawId.toLowerCase();
-    const username = this.userID;
+  const deviceId = rawId.toLowerCase();
+  const username = this.userID;
 
-    try {
-      this.requestingClaim = true;
-      this.lastClaimMessage = '';
-      this.lastClaimType = '';
+  try {
+    this.requestingClaim = true;
+    this.lastClaimMessage = '';
+    this.lastClaimType = '';
 
-      const devRef = ref(this.db, `devices/${deviceId}`);
-      const snap = await get(devRef);
+    const devRef = ref(this.db, `devices/${deviceId}`);
+    const devSnap = await get(devRef);
 
-      if (snap.exists()) {
-        const dev = snap.val() || {};
-        const meta = (dev.meta || {}) as any;
+    // ถ้ามีอยู่แล้ว: ตรวจสอบว่าถูกผูกกับใคร
+    if (devSnap.exists()) {
+      const dev = devSnap.val() || {};
+      const meta = (dev.meta || {}) as any;
 
-        const alreadyBound =
-          !!meta.userName ||
-          !!dev.user ||
-          dev.enabled === true;
+      // 1) ผูกกับคนอื่นอยู่แล้ว → ไม่อนุญาต (ป้องกันการแย่งอุปกรณ์)
+      const boundToSomeoneElse =
+        (dev.user && dev.user !== username) ||
+        (meta.userName && meta.userName !== username) ||
+        dev.enabled === true && dev.user && dev.user !== username;
 
-        if (alreadyBound) {
-          this.lastClaimType = 'err';
-          this.lastClaimMessage = 'อุปกรณ์นี้ถูกผูกกับผู้ใช้คนอื่นแล้ว';
-          return;
-        }
-
-        if (dev.claim && dev.claim.username) {
-          if (dev.claim.username === username) {
-            const since = new Date(dev.claim.ts || Date.now()).toLocaleString('th-TH');
-            this.lastClaimType = 'warn';
-            this.lastClaimMessage = `คุณได้ส่งคำขอนี้แล้ว (ตั้งแต่ ${since}) กรุณารอผู้ดูแลอนุมัติ`;
-            return;
-          } else {
-            this.lastClaimType = 'err';
-            this.lastClaimMessage = 'มีผู้ใช้อื่นกำลังขอผูกอุปกรณ์นี้อยู่';
-            return;
-          }
-        }
-
-        await update(devRef, {
-          enabled: false,
-          user: null,
-          claim: { username, ts: Date.now() }
-        });
-      } else {
-        await set(devRef, {
-          enabled: false,
-          user: null,
-          claim: { username, ts: Date.now() }
-        });
+      if (boundToSomeoneElse) {
+        this.lastClaimType = 'err';
+        this.lastClaimMessage = 'อุปกรณ์นี้ถูกผูกกับผู้ใช้อื่นอยู่แล้ว';
+        return;
       }
 
-      this.lastClaimType = 'ok';
-      this.lastClaimMessage = `ส่งคำขอสำเร็จ! กรุณารอแอดมินอนุมัติ (อุปกรณ์: ${deviceId})`;
-      this.claimDeviceId = '';
-    } catch (err) {
-      console.error('requestDeviceClaim error:', err);
-      this.lastClaimType = 'err';
-      this.lastClaimMessage = 'ส่งคำขอไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
-    } finally {
-      this.requestingClaim = false;
+      // 2) ถ้าเคยเป็นของเราอยู่แล้ว → อัปเดตสถานะให้ถูกต้อง
+      await update(devRef, {
+        enabled: true,
+        user: username,
+        meta: { ...(meta || {}), userName: username },
+        claim: null, // ล้างคำขอเก่าออก
+      });
+    } else {
+      // ไม่มีในฐานข้อมูล → สร้างใหม่แล้วผูกให้เราเลย
+      await set(devRef, {
+        enabled: true,
+        user: username,
+        name: deviceId, // ตั้งชื่อเบื้องต้นเป็น ID (ปรับภายหลังได้)
+        meta: { userName: username },
+        claim: null,
+      });
     }
+
+    // เขียน mapping ที่ฝั่งผู้ใช้ด้วย (ให้แอปรู้ว่ามีอุปกรณ์นี้)
+    const userDevRef = ref(this.db, `users/${username}/devices/${deviceId}`);
+    await update(userDevRef, {
+      name: deviceId,
+      status: 'offline',    // เริ่มต้นให้ offline ไปก่อน รอ live monitor อัปเดต
+      boundAt: Date.now(),
+    });
+
+    // รีโหลดรายการอุปกรณ์ + ตั้งให้เลือกตัวที่เพิ่งผูก
+    await this.loadDevices();
+    this.selectedDeviceId = deviceId;
+    this.selectedDevice = this.devices.find(d => d.id === deviceId) || null;
+    if (this.selectedDevice) {
+      localStorage.setItem('selectedDeviceId', deviceId);
+      this.startLiveMonitor(deviceId);
+    }
+
+    this.lastClaimType = 'ok';
+    this.lastClaimMessage = `ผูกอุปกรณ์สำเร็จ! (อุปกรณ์: ${deviceId})`;
+    this.claimDeviceId = '';
+  } catch (err) {
+    console.error('bind device error:', err);
+    this.lastClaimType = 'err';
+    this.lastClaimMessage = 'ผูกอุปกรณ์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+  } finally {
+    this.requestingClaim = false;
   }
+}
+
 }

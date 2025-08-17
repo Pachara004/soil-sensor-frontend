@@ -84,8 +84,8 @@
     </div>
 
     <!-- แบบฟอร์ม “ขอผูกอุปกรณ์” -->
-    <div class="claim-device-box">
-      <div class="claim-title">ขอผูกอุปกรณ์ของฉัน</div>
+    <div class="claim-device-box" role="group" aria-labelledby="claim-title">
+      <div id="claim-title" class="claim-title">เพิ่มอุปกรณ์ของฉัน</div>
 
       <div class="claim-row">
         <input
@@ -95,19 +95,23 @@
           (keyup.enter)="requestDeviceClaim()"
           placeholder="ใส่ Device ID เช่น esp32-soil-01"
           aria-label="Device ID"
+          aria-describedby="claim-help"
         />
 
         <button
           class="claim-btn"
           [disabled]="requestingClaim || !claimDeviceId.trim()"
           (click)="requestDeviceClaim()"
-          aria-label="ส่งคำขอผูกอุปกรณ์"
+          aria-label="เพิ่มอุปกรณ์"
         >
-          <span *ngIf="!requestingClaim">ส่งคำขอ</span>
-          <span *ngIf="requestingClaim" class="spinner"></span>
+          <span *ngIf="!requestingClaim">เพิ่ม</span>
+          <span *ngIf="requestingClaim" class="spinner" aria-hidden="true"></span>
         </button>
       </div>
 
+      <small id="claim-help" class="claim-help">
+        พิมพ์ Device ID แล้วกด Enter หรือคลิก “เพิ่ม” เพื่อผูกให้บัญชีของคุณทันที
+      </small>
       <div class="claim-status" *ngIf="lastClaimMessage">
         <span
           class="status-dot"
