@@ -428,9 +428,32 @@ export class AdmainComponent implements OnInit, OnDestroy {
 
   async deleteDevice(deviceName: string) {
     if (confirm(`ลบอุปกรณ์ ${deviceName} ?`)) {
-      await this.adminService.deleteDevice(deviceName);
-      alert('ลบสำเร็จ');
-      await this.loadDevices();
+      try {
+        // หาข้อมูลอุปกรณ์ก่อนลบ เพื่อดูว่าผูกกับผู้ใช้คนไหน
+        const deviceRef = ref(this.db, `devices/${deviceName}`);
+        const deviceSnap = await get(deviceRef);
+        
+        let deviceUser = null;
+        if (deviceSnap.exists()) {
+          const deviceData = deviceSnap.val();
+          deviceUser = deviceData.user;
+        }
+
+        // ลบอุปกรณ์จากหลัก
+        await this.adminService.deleteDevice(deviceName);
+        
+        // ถ้ามีผู้ใช้ที่ผูกกับอุปกรณ์นี้ ให้ลบออกจาก users/{username}/devices/{deviceName} ด้วย
+        if (deviceUser) {
+          const userDeviceRef = ref(this.db, `users/${deviceUser}/devices/${deviceName}`);
+          await set(userDeviceRef, null);
+        }
+        
+        alert('ลบอุปกรณ์สำเร็จ (ทั้งจากระบบและจากผู้ใช้)');
+        await this.loadDevices();
+      } catch (error) {
+        console.error('เกิดข้อผิดพลาดในการลบอุปกรณ์:', error);
+        alert('เกิดข้อผิดพลาดในการลบอุปกรณ์');
+      }
     }
   }
 

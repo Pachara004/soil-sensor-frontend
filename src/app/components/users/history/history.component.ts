@@ -210,60 +210,77 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     return `พื้นที่ ${shortId}`;
   }
 
-  private async groupByArea() {
-    const areaMap: { [key: string]: Measurement[] } = {};
-    this.history.forEach(measurement => {
-      let groupKey = measurement.areaId || 'no-area';
-      if (groupKey === 'no-area' && measurement['derivedAreaName']) {
-        groupKey = `area_${measurement['derivedAreaName']}`;
+private async groupByArea() {
+  const areaMap: { [key: string]: Measurement[] } = {};
+  
+  this.history.forEach(measurement => {
+    let groupKey = measurement.areaId || 'no-area';
+    
+    // Extract main area ID (remove sub-area suffixes)
+    if (groupKey !== 'no-area') {
+      // If areaId contains hyphen followed by letters/numbers (like -OY1AK), remove it
+      // Keep only the main numeric part
+      const mainAreaMatch = groupKey.match(/^(\d+)/);
+      if (mainAreaMatch) {
+        groupKey = mainAreaMatch[1]; // Use only the numeric part
       }
-      if (!areaMap[groupKey]) {
-        areaMap[groupKey] = [];
-      }
-      areaMap[groupKey].push(measurement);
-    });
+    }
+    
+    // If still no proper area, use derived name grouping
+    if (groupKey === 'no-area' && measurement['derivedAreaName']) {
+      groupKey = `area_${measurement['derivedAreaName']}`;
+    }
+    
+    if (!areaMap[groupKey]) {
+      areaMap[groupKey] = [];
+    }
+    areaMap[groupKey].push(measurement);
+  });
 
-    const areaEntries = Object.keys(areaMap).map(key => [key, areaMap[key]] as [string, Measurement[]]);
+  const areaEntries = Object.keys(areaMap).map(key => [key, areaMap[key]] as [string, Measurement[]]);
 
-    const areaGroupsWithPolygons = await Promise.all(
-      areaEntries.map(async ([areaId, measurements]: [string, Measurement[]]) => {
-        const sortedMeasurements = measurements.sort((a: Measurement, b: Measurement) => 
-          new Date(b.date).getTime() - new Date(a.date).getTime()
-        );
+  const areaGroupsWithPolygons = await Promise.all(
+    areaEntries.map(async ([areaId, measurements]: [string, Measurement[]]) => {
+      const sortedMeasurements = measurements.sort((a: Measurement, b: Measurement) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
 
-        const averages = this.calculateAverages(measurements);
-        const areaName = this.getAreaName(areaId, measurements);
-        
-        let polygonBounds: [number, number][] | undefined;
-        try {
-          if (areaId !== 'no-area' && !areaId.startsWith('area_')) {
-            const areaRef = ref(this.db, `areas/${areaId}`);
-            const areaSnap = await get(areaRef);
-            if (areaSnap.exists()) {
-              const areaData = Object.values(areaSnap.val())[0] as any;
-              polygonBounds = areaData.polygonBounds;
-            }
+      const averages = this.calculateAverages(measurements);
+      const areaName = this.getAreaName(areaId, measurements);
+      
+      let polygonBounds: [number, number][] | undefined;
+      try {
+        if (areaId !== 'no-area' && !areaId.startsWith('area_')) {
+          const areaRef = ref(this.db, `areas/${areaId}`);
+          const areaSnap = await get(areaRef);
+          if (areaSnap.exists()) {
+            const areaData = Object.values(areaSnap.val())[0] as any;
+            polygonBounds = areaData.polygonBounds;
           }
-        } catch (error) {
-          console.error('Error loading polygon bounds:', error);
         }
+      } catch (error) {
+        console.error('Error loading polygon bounds:', error);
+      }
 
-        return {
-          areaId,
-          areaName,
-          measurements: sortedMeasurements,
-          totalMeasurements: measurements.length,
-          averages,
-          lastMeasurementDate: sortedMeasurements[0]?.date || '',
-          polygonBounds
-        };
-      })
-    );
+      return {
+        areaId,
+        areaName,
+        measurements: sortedMeasurements,
+        totalMeasurements: measurements.length,
+        averages,
+        lastMeasurementDate: sortedMeasurements[0]?.date || '',
+        polygonBounds
+      };
+    })
+  );
 
-    this.areaGroups = areaGroupsWithPolygons.sort((a: AreaGroup, b: AreaGroup) => 
+  // Show only areas with multiple measurement points (2 or more)
+  this.areaGroups = areaGroupsWithPolygons
+    .filter(area => area.totalMeasurements > 1)
+    .sort((a: AreaGroup, b: AreaGroup) => 
       new Date(b.lastMeasurementDate).getTime() - new Date(a.lastMeasurementDate).getTime()
     );
-  }
+}
 
   private calculateAverages(measurements: Measurement[]) {
     if (measurements.length === 0) {
