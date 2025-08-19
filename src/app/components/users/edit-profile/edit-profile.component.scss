@@ -7,15 +7,18 @@ body, html {
 
 .profile-container {
   width: 100vw;
-  height: 100vh;
+  min-height: 100vh;
   background-color: #013828;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .profile-card {
-  width: 600px;
+  width: 100%;
+  max-width: 600px;
   background-color: white;
   border-radius: 30px;
   padding: 40px;
@@ -24,6 +27,7 @@ body, html {
   text-align: center;
   box-shadow: 0 0 20px rgba(0,170,255,0.3);
   animation: subtle-float 6s ease-in-out infinite;
+  box-sizing: border-box;
 }
 
 .back {
@@ -62,7 +66,7 @@ body, html {
 }
 
 .title {
-  margin: 10px 0;
+  margin: 10px 0 20px 0;
   font-size: 18px;
   font-weight: bold;
   color: #002e24;
@@ -97,7 +101,8 @@ body, html {
   }
 
   input.value {
-    width: 60%;
+    width: 100%;
+    max-width: 400px;
     padding: 12px 18px;
     border-radius: 15px;
     border: 2px solid #e9ecef;
@@ -108,6 +113,7 @@ body, html {
     background: linear-gradient(145deg, #f8f9fa, #e9ecef);
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
 
     &:focus {
       outline: none;
@@ -125,7 +131,7 @@ body, html {
       background: linear-gradient(145deg, #e0e0e0, #d0d0d0);
       cursor: not-allowed;
       color: #666;
-      
+
       &:hover {
         border-color: #ccc;
         box-shadow: none;
@@ -134,79 +140,24 @@ body, html {
   }
 
   // Different border colors for different input fields
-  &:nth-child(1) input.value {
+  &:nth-child(3) input.value {
     border-left: 4px solid #fc8181;
   }
 
-  &:nth-child(2) input.value {
+  &:nth-child(4) input.value {
     border-left: 4px solid #68d391;
   }
 
-  &:nth-child(3) input.value {
+  &:nth-child(5) input.value {
     border-left: 4px solid #f6ad55;
   }
 
-  &:nth-child(4) input.value {
+  &:nth-child(6) input.value {
     border-left: 4px solid #63b3ed;
   }
 
-  &:nth-child(5) input.value {
+  &:nth-child(7) input.value {
     border-left: 4px solid #b794f6;
-  }
-}
-
-.value {
-  width: 50%;
-  height: 40px;
-  background: linear-gradient(145deg, #f8f9fa, #e9ecef);
-  border-radius: 15px;
-  border: 2px solid #e9ecef;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto;
-  font-weight: 500;
-  color: #2c3e50;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #00aaff, #0088cc, #00aaff);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,170,255,0.15);
-    border-color: #00aaff;
-
-    &::before {
-      opacity: 1;
-    }
-  }
-
-  &[readonly] {
-    background: linear-gradient(145deg, #e0e0e0, #d0d0d0);
-    cursor: not-allowed;
-    color: #666;
-    
-    &:hover {
-      transform: none;
-      border-color: #ccc;
-      box-shadow: none;
-      
-      &::before {
-        opacity: 0;
-      }
-    }
   }
 }
 
@@ -246,6 +197,7 @@ body, html {
   text-align: center;
   font-size: 14px;
   color: #002e24;
+  cursor: pointer;
 
   img {
     width: 30px;
@@ -266,74 +218,145 @@ body, html {
 
 // Subtle animation for the entire card
 @keyframes subtle-float {
-  0%, 100% { 
-    transform: translateY(0px); 
+  0%, 100% {
+    transform: translateY(0px);
   }
-  50% { 
-    transform: translateY(-5px); 
+  50% {
+    transform: translateY(-5px);
   }
 }
 
 // Media queries for responsiveness
 @media screen and (max-width: 768px) {
+  .profile-container {
+    padding: 15px;
+  }
+
   .profile-card {
-    width: 90vw;
-    padding: 30px;
+    width: 100%;
+    padding: 30px 25px;
+    border-radius: 25px;
+    max-width: none;
   }
-  
-  .info-row input.value {
-    width: 80%;
+
+  .info-row {
+    margin-bottom: 18px;
+
+    input.value {
+      width: 100%;
+      max-width: none;
+    }
   }
-  
-  .value {
-    width: 70%;
+
+  .user-id {
+    font-size: 14px;
+    padding: 10px 16px;
+  }
+
+  .title {
+    font-size: 16px;
   }
 }
 
 @media screen and (max-width: 480px) {
-  .profile-card {
-    padding: 20px;
-    border-radius: 20px;
+  .profile-container {
+    padding: 10px;
+    min-height: 100vh;
+    align-items: flex-start;
+    padding-top: 20px;
   }
-  
+
+  .profile-card {
+    width: 100%;
+    padding: 25px 20px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    animation: none; // ปิด animation เพื่อประสิทธิภาพบนมือถือ
+  }
+
   .back {
     top: 15px;
     left: 15px;
     font-size: 18px;
     padding: 6px;
   }
-  
+
+  .user-id {
+    font-size: 12px;
+    padding: 8px 12px;
+    margin-bottom: 20px;
+  }
+
+  .title {
+    font-size: 16px;
+    margin: 10px 0 15px 0;
+  }
+
   .info-row {
+    margin-bottom: 15px;
+
     .label {
-      padding-left: 12px;
+      padding-left: 10px;
       font-size: 12px;
+      margin-bottom: 6px;
+
+      &::before {
+        width: 3px;
+        height: 15px;
+      }
     }
-    
+
     input.value {
-      width: 90%;
+      width: 100%;
       padding: 10px 12px;
       font-size: 14px;
+      border-radius: 12px;
     }
   }
-  
-  .value {
-    width: 85%;
-    height: 35px;
+
+  .button-group {
+    margin-top: 25px;
   }
-  
+
   .edit-button {
-    padding: 10px 20px;
+    padding: 12px 25px;
     font-size: 14px;
+    border-radius: 20px;
   }
-  
+
   .admin {
-    bottom: 15px;
-    right: 15px;
+    position: relative;
+    bottom: auto;
+    right: auto;
+    margin-top: 20px;
     font-size: 12px;
-    
+
     img {
       width: 25px;
       height: 25px;
     }
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .profile-card {
+    padding: 20px 15px;
+  }
+
+  .info-row {
+    .label {
+      font-size: 11px;
+      padding-left: 8px;
+    }
+
+    input.value {
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+  }
+
+  .edit-button {
+    padding: 10px 20px;
+    font-size: 13px;
   }
 }
