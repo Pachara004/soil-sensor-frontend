@@ -1,5 +1,5 @@
 import { Component, ViewChildren, QueryList, ElementRef } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router } from '@angular/router';
 import {
   Auth,
   createUserWithEmailAndPassword,
@@ -17,11 +17,14 @@ import { firstValueFrom } from 'rxjs';
   selector: 'app-register',
   standalone: true,
   imports: [FormsModule, CommonModule],
-  templateUrl: './register.component.html',
-  styleUrl: './register.component.scss',
+  templateUrl: './adregister.component.html',
+  styleUrls: ['./adregister.component.scss'], // <-- แก้เป็น styleUrls
 })
-export class RegisterComponent {
+export class AdregisterComponent {
   @ViewChildren('otpInput') otpInputs!: QueryList<ElementRef>;
+
+  // หน้านี้เป็น admin เสมอ
+  private readonly userType: 'admin' = 'admin';
 
   step = 1;
   email = '';
@@ -44,22 +47,13 @@ export class RegisterComponent {
   passwordStrength = { width: 0, class: '', text: '' };
 
   otpInputsArray = Array(6).fill('');
-  userType: 'user' | 'admin' = 'user';
 
   constructor(
     private auth: Auth,
     private router: Router,
     private database: Database,
-    private route: ActivatedRoute,
     private http: HttpClient
   ) {}
-  ngOnInit() {
-    // วิธีหลัก: อ่านจาก route data
-    this.userType =
-      (this.route.snapshot.data['type'] as 'user' | 'admin') ??
-      // วิธีสำรอง: เช็คจาก URL
-      (this.router.url.includes('adregister') ? 'admin' : 'user');
-  }
 
   goBack() {
     if (this.step > 1) {
@@ -79,14 +73,12 @@ export class RegisterComponent {
     this.generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
     try {
-      // ตัวเลือกการส่ง OTP
-      const useRealEmail = true; // เปลี่ยนเป็น true เพื่อส่ง email จริง
+      const useRealEmail = true;
 
       if (useRealEmail) {
         await this.sendOtpEmail(this.email, this.generatedOtp);
         alert('OTP ถูกส่งไปยังอีเมลของคุณแล้ว');
       } else {
-        // ระบบจำลองสำหรับการทดสอบ
         console.log('OTP สำหรับ', this.email, ':', this.generatedOtp);
         alert(
           `OTP สำหรับการทดสอบ: ${this.generatedOtp}\n(ในการใช้งานจริงจะส่งไปยังอีเมล)`
@@ -104,14 +96,13 @@ export class RegisterComponent {
   }
 
   private async sendOtpEmail(email: string, otp: string): Promise<void> {
-    // วิธีที่ 1: ใช้ EmailJS (แนะนำสำหรับการทดสอบ)
-    const useEmailJS = true; // เปลี่ยนเป็น true และใส่ข้อมูล EmailJS
+    const useEmailJS = true;
 
     if (useEmailJS) {
       const emailJSData = {
-        service_id: 'service_y6enw8s', // Service ID ที่คุณสร้าง
-        template_id: 'template_ztt7b87', // แทนที่ด้วย Template ID ที่สร้างใหม่
-        user_id: '8ypHiGBky5C_KnLx8', // แทนที่ด้วย Public Key จาก Account > API Keys
+        service_id: 'service_y6enw8s',
+        template_id: 'template_ztt7b87',
+        user_id: '8ypHiGBky5C_KnLx8',
         template_params: {
           to_email: email,
           to_name: 'ผู้สมัครใหม่',
@@ -121,41 +112,32 @@ export class RegisterComponent {
       };
 
       try {
-        // เพิ่ม responseType: 'text' เพื่อบอก Angular ว่าจะได้รับ response เป็น text
         const response = await firstValueFrom(
           this.http.post(
             'https://api.emailjs.com/api/v1.0/email/send',
             emailJSData,
             {
-              responseType: 'text', // <-- นี่คือส่วนที่สำคัญ
+              responseType: 'text',
             }
           )
         );
-
         console.log('EmailJS Response:', response);
-        return; // สำเร็จ
+        return;
       } catch (error: any) {
         console.error('EmailJS Error Details:', error);
-
-        // ตรวจสอบว่าเป็น error จริงๆ หรือแค่ response format ผิด
         if (error.status === 200) {
-          // ถ้า status เป็น 200 แสดงว่าส่งสำเร็จแล้ว
           console.log('Email sent successfully despite error format');
           return;
         }
-
-        // ถ้าเป็น error จริงๆ ให้ throw ต่อไป
         throw new Error(`EmailJS failed: ${error.message || 'Unknown error'}`);
       }
     }
 
-    // วิธีที่ 2: ใช้ Firebase Cloud Functions
-    const useCloudFunction = false; // เปลี่ยนเป็น true และสร้าง Cloud Function
-
+    const useCloudFunction = false;
     if (useCloudFunction) {
       const cloudFunctionUrl =
         'https://YOUR_REGION-YOUR_PROJECT.cloudfunctions.net/sendOtpEmail';
-      const response = await firstValueFrom(
+      await firstValueFrom(
         this.http.post(cloudFunctionUrl, {
           email: email,
           otp: otp,
@@ -164,12 +146,10 @@ export class RegisterComponent {
       return;
     }
 
-    // วิธีที่ 3: ใช้ Backend API ของคุณเอง
-    const useCustomAPI = false; // เปลี่ยนเป็น true และใส่ URL ของ API
-
+    const useCustomAPI = false;
     if (useCustomAPI) {
       const apiUrl = 'https://your-backend-api.com/send-otp';
-      const response = await firstValueFrom(
+      await firstValueFrom(
         this.http.post(apiUrl, {
           email: email,
           otp: otp,
@@ -178,7 +158,6 @@ export class RegisterComponent {
       return;
     }
 
-    // หากไม่ได้เปิดใช้งานวิธีใดเลย จะ throw error
     throw new Error('No email service configured');
   }
 
@@ -320,14 +299,10 @@ export class RegisterComponent {
   }
 
   async register() {
-    if (!this.validateForm()) {
-      return;
-    }
+    if (!this.validateForm()) return;
 
     this.isRegistering = true;
-
     try {
-      // สร้างบัญชี Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(
         this.auth,
         this.email,
@@ -335,25 +310,23 @@ export class RegisterComponent {
       );
       const user = userCredential.user;
 
-      // บันทึกข้อมูลใน Realtime Database
       await set(ref(this.database, `users/${this.username}`), {
         uid: user.uid,
         email: this.email,
         username: this.username,
         fullName: this.fullName,
         phoneNumber: this.phoneNumber.replace(/\D/g, ''),
-        type: this.userType,
-        isAdmin: this.userType === 'admin',
+        type: this.userType, // 'admin'
+        isAdmin: true,
+        provider: 'password',
         createdAt: Date.now(),
         emailVerified: false,
-        provider: 'password',
       });
 
-      // ส่งอีเมลยืนยัน
       await sendEmailVerification(user);
 
-      alert('สมัครสำเร็จ! กรุณายืนยันอีเมลของคุณ');
-      this.router.navigate(['/']);
+      alert('สมัครแอดมินสำเร็จ! (กรุณายืนยันอีเมลด้วยหากระบบกำหนด)');
+      this.router.navigate(['/adminmain']);
     } catch (error: any) {
       console.error('Registration error:', error);
       if (error.code === 'auth/email-already-in-use') {
@@ -396,7 +369,6 @@ export class RegisterComponent {
       const result = await signInWithPopup(this.auth, provider);
       const user = result.user;
 
-      // บันทึกข้อมูลพื้นฐานจาก Google
       const username = user.email?.split('@')[0] || 'user' + Date.now();
 
       await set(ref(this.database, `users/${username}`), {
@@ -405,14 +377,14 @@ export class RegisterComponent {
         username,
         fullName: user.displayName || '',
         phoneNumber: '',
-        type: this.userType, // <-- สำคัญ
-        isAdmin: this.userType === 'admin', // <-- สำคัญ
+        type: this.userType, // 'admin'
+        isAdmin: true,
+        provider: 'google',
         createdAt: Date.now(),
         emailVerified: user.emailVerified,
-        provider: 'google',
       });
 
-      this.router.navigate(['/main']);
+      this.router.navigate(['/adminmain']);
     } catch (err: any) {
       console.error('Google sign-in error:', err);
       alert('Google Sign-in ล้มเหลว');

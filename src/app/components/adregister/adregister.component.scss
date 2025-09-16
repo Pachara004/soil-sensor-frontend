@@ -1,0 +1,499 @@
+.container {
+  background: linear-gradient(135deg, #002e24 0%, #004d40 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.card {
+  background-color: white;
+  border-radius: 30px;
+  padding: 40px;
+  width: 100%;
+  border: 4px solid #00aaff;
+  max-width: 450px;
+  box-shadow: 0px 15px 35px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+  position: relative;
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: translateY(-5px);
+  }
+}
+
+.back {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 20px;
+  cursor: pointer;
+  color: #002e24;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background-color: #f0f0f0;
+    transform: scale(1.1);
+  }
+}
+
+.logo {
+  text-align: center;
+  margin-bottom: 30px;
+
+  img {
+    width: 80px;
+    height: auto;
+    transition: transform 0.3s ease;
+
+    &:hover {
+      transform: scale(1.05);
+    }
+  }
+}
+
+// Progress Bar
+.progress-container {
+  margin-bottom: 30px;
+
+  .progress-bar {
+    width: 100%;
+    height: 8px;
+    background-color: #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 10px;
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00aaff, #0088cc);
+      transition: width 0.5s ease;
+      border-radius: 10px;
+    }
+  }
+
+  .progress-text {
+    text-align: center;
+    font-size: 14px;
+    color: #666;
+    font-weight: 500;
+  }
+}
+
+// Step Container
+.step-container {
+  animation: slideIn 0.4s ease;
+
+  h3 {
+    text-align: center;
+    color: #002e24;
+    margin-bottom: 20px;
+    font-size: 24px;
+    font-weight: 600;
+  }
+
+  .step-description {
+    text-align: center;
+    color: #666;
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+}
+
+// Form Elements
+label {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+  margin-top: 16px;
+  transition: color 0.3s ease;
+}
+
+input[type="email"],
+input[type="text"],
+input[type="tel"],
+input[type="password"] {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 16px;
+  color: #333;
+  background-color: #f5f7fa;
+  border: 2px solid #d1d5db;
+  border-radius: 12px;
+  outline: none;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: #00aaff;
+    box-shadow: 0 0 12px rgba(0, 170, 255, 0.3);
+    background-color: #fff;
+  }
+
+  &::placeholder {
+    color: #6b7280;
+    font-style: italic;
+  }
+
+  &:hover {
+    border-color: #00aaff;
+  }
+
+  &:invalid:not(:placeholder-shown) {
+    border-color: #ef4444;
+  }
+}
+
+// Password Container
+.password-container {
+  position: relative;
+
+  .password-toggle {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #666;
+    transition: color 0.3s ease;
+
+    &:hover {
+      color: #00aaff;
+    }
+  }
+}
+
+// Password Strength
+.password-strength {
+  margin-top: 10px;
+
+  .strength-bar {
+    width: 100%;
+    height: 6px;
+    background-color: #e0e0e0;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 5px;
+
+    .strength-fill {
+      height: 100%;
+      transition: width 0.3s ease;
+      border-radius: 3px;
+
+      &.weak {
+        background-color: #ef4444;
+      }
+
+      &.medium {
+        background-color: #f59e0b;
+      }
+
+      &.strong {
+        background-color: #10b981;
+      }
+    }
+  }
+
+  span {
+    font-size: 12px;
+    font-weight: 500;
+
+    &.weak {
+      color: #ef4444;
+    }
+
+    &.medium {
+      color: #f59e0b;
+    }
+
+    &.strong {
+      color: #10b981;
+    }
+  }
+}
+
+// OTP Boxes
+.otp-boxes {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 20px 0;
+
+  input {
+    width: 45px;
+    height: 50px;
+    font-size: 22px;
+    font-weight: bold;
+    text-align: center;
+    border-radius: 12px;
+    border: 2px solid #d1d5db;
+    background-color: #f5f7fa;
+    color: #333;
+    transition: all 0.3s ease;
+
+    &:focus {
+      border-color: #00aaff;
+      box-shadow: 0 0 12px rgba(0, 170, 255, 0.3);
+      background-color: white;
+    }
+  }
+}
+
+// Resend Container
+.resend-container {
+  text-align: center;
+  margin: 15px 0;
+
+  span {
+    color: #666;
+    font-size: 14px;
+  }
+}
+
+// Username Status
+.username-status {
+  margin-top: 5px;
+  margin-bottom: 10px;
+
+  .error {
+    color: #ef4444;
+    font-size: 14px;
+    animation: shake 0.5s ease;
+  }
+
+  .success {
+    color: #10b981;
+    font-size: 14px;
+  }
+}
+
+// Error Messages
+.error {
+  color: #ef4444;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  margin: 10px 0;
+  padding: 12px;
+  background-color: #fef2f2;
+  border-radius: 10px;
+  border-left: 4px solid #ef4444;
+  animation: fadeIn 0.3s ease;
+}
+
+// Buttons
+.primary-btn, .otp-btn, .confirm-btn {
+  background: linear-gradient(135deg, #00aaff 0%, #0088cc 100%);
+  color: white;
+  font-weight: bold;
+  padding: 16px 0;
+  width: 100%;
+  border: none;
+  border-radius: 25px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 20px;
+  position: relative;
+  overflow: hidden;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #0099ee 0%, #0077bb 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 170, 255, 0.4);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.5s;
+  }
+
+  &:hover:not(:disabled)::before {
+    left: 100%;
+  }
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #00aaff;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 14px;
+
+  &:hover {
+    color: #0088cc;
+  }
+}
+
+// Divider
+.divider {
+  text-align: center;
+  margin: 25px 0;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: #e0e0e0;
+  }
+
+  span {
+    background-color: white;
+    padding: 0 15px;
+    color: #666;
+    font-size: 14px;
+    position: relative;
+    z-index: 1;
+  }
+}
+
+// Google Button
+.google-btn {
+  background-color: #fff;
+  border: 2px solid #4285F4;
+  color: #4285F4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 25px;
+  width: 100%;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background-color: #f8f9ff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+  }
+
+  img {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+// Animations
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes shake {
+  0%, 20%, 40%, 60%, 80% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+}
+
+// Responsive Design
+@media (max-width: 480px) {
+  .container {
+    padding: 10px;
+  }
+
+  .card {
+    padding: 30px 20px;
+    border-radius: 20px;
+  }
+
+  .logo img {
+    width: 60px;
+  }
+
+  .step-container h3 {
+    font-size: 20px;
+  }
+
+  label {
+    font-size: 14px;
+  }
+
+  input[type="email"],
+  input[type="text"],
+  input[type="tel"],
+  input[type="password"] {
+    font-size: 14px;
+    padding: 12px 14px;
+  }
+
+  .otp-boxes input {
+    width: 35px;
+    height: 40px;
+    font-size: 18px;
+  }
+
+  .primary-btn, .otp-btn, .confirm-btn {
+    font-size: 14px;
+    padding: 14px 0;
+  }
+
+  .progress-text {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .card {
+    padding: 25px 15px;
+  }
+
+  .otp-boxes {
+    gap: 8px;
+
+    input {
+      width: 30px;
+      height: 35px;
+      font-size: 16px;
+    }
+  }
+}

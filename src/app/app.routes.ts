@@ -12,21 +12,22 @@ import { AdmainComponent } from './components/admin/admain/admain.component';
 import { DetailComponent } from './components/admin/detail/detail.component';
 import { MailComponent } from './components/admin/mail/mail.component';
 import { HistoryDetailComponent } from './components/users/history-detail/history-detail.component';
-
+import { AdregisterComponent } from './components/adregister/adregister.component';
 
 export const routes: Routes = [
-    { path: '', component: LoginComponent },
-    { path: 'login', component: LoginComponent },
-    { path: 'register', component: RegisterComponent },
-    { path: 'main', component: MainComponent},
-    { path: 'profile',  component: ProfileComponent},
-    { path: 'edit-profile', component: EditProfileComponent},
-    { path: 'measure', component: MeasureComponent},
-    { path: 'forgotpass', component: ForgotpassComponent},
-    { path: 'reports', component: ReportsComponent},
-    { path: 'history', component: HistoryComponent },
-    { path: 'adminmain', component: AdmainComponent },
-    { path: 'device-detail', component: DetailComponent }, 
-    { path: 'mail', component: MailComponent},
-    { path: 'history-detail', component: HistoryDetailComponent},
+  { path: '', component: LoginComponent },
+  { path: 'login', component: LoginComponent },
+  { path: 'register', component: RegisterComponent },
+  { path: 'main', component: MainComponent },
+  { path: 'profile', component: ProfileComponent },
+  { path: 'edit-profile', component: EditProfileComponent },
+  { path: 'measure', component: MeasureComponent },
+  { path: 'forgotpass', component: ForgotpassComponent },
+  { path: 'reports', component: ReportsComponent },
+  { path: 'history', component: HistoryComponent },
+  { path: 'adminmain', component: AdmainComponent },
+  { path: 'device-detail', component: DetailComponent },
+  { path: 'mail', component: MailComponent },
+  { path: 'history-detail', component: HistoryDetailComponent },
+  { path: 'adregister', component: AdregisterComponent },
 ];
