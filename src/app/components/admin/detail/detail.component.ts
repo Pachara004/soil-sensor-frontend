@@ -1,15 +1,23 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  AfterViewInit,
+  OnDestroy,
+  ViewChild,
+  ElementRef,
+} from '@angular/core';
 import { Router } from '@angular/router';
-import { Database, ref, onValue } from '@angular/fire/database';
+import { HttpClient } from '@angular/common/http';
+import { Constants } from '../../../config/constants'; // ปรับ path ตามโครงสร้าง
 import { Map, Marker, LngLatBounds, config } from '@maptiler/sdk';
 import '@maptiler/sdk/dist/maptiler-sdk.css';
-import { environment } from '../../../service/environment';
+import { environment } from '../../../service/environment'; // ใช้ path มาตรฐานของ Angular
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatSpinner } from '@angular/material/progress-spinner';
 
 interface Measurement {
-  id: string;
+  id: number;
   location: string;
   date: string;
   temperature?: number;
@@ -29,7 +37,7 @@ interface Measurement {
   standalone: true,
   imports: [CommonModule, FormsModule, MatSpinner],
   templateUrl: './detail.component.html',
-  styleUrl: './detail.component.scss'
+  styleUrl: './detail.component.scss',
 })
 export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
   device: any = null;
@@ -37,9 +45,15 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
   isLoading = false;
   map: Map | undefined;
   @ViewChild('mapContainer') private mapContainer!: ElementRef<HTMLElement>;
+  private apiUrl: string;
 
-  constructor(private router: Router, private db: Database) {
+  constructor(
+    private router: Router,
+    private http: HttpClient,
+    private constants: Constants // Inject Constants
+  ) {
     config.apiKey = environment.mapTilerApiKey;
+    this.apiUrl = this.constants.API_ENDPOINT; // ใช้ instance ของ Constants
   }
 
   ngOnInit(): void {
@@ -63,124 +77,43 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  loadMeasurements() {
+  async loadMeasurements() {
     if (!this.device?.id) return;
     this.isLoading = true;
-    const measurementRef = ref(this.db, `measurements/${this.device.id}`);
-    onValue(
-      measurementRef,
-      snapshot => {
-        const data = snapshot.val();
-        if (data) {
-          this.measurements = Object.entries(data).map(([key, value]: [string, any]) => ({
-            id: key,
-            location: value.location || 'ไม่ระบุสถานที่',
-            date: value.date || new Date().toISOString().split('T')[0],
-            temperature: value.temperature || 0,
-            moisture: value.moisture || 0,
-            nitrogen: value.nitrogen || 0,
-            phosphorus: value.phosphorus || 0,
-            potassium: value.potassium || 0,
-            ph: value.ph || 0,
-            lat: value.lat,
-            lng: value.lng,
-            measurementPoint: value.measurementPoint
-          }));
-        } else {
-          this.measurements = [];
-        }
-        this.isLoading = false;
-        if (this.map) {
-          this.addMeasurementMarkers();
-          this.fitMapToBounds();
-        }
-      },
-      error => {
-        console.error('ข้อผิดพลาดในการโหลดการวัด:', error);
-        this.measurements = [];
-        this.isLoading = false;
-      }
-    );
+    try {
+      const response = await this.http
+        .get<Measurement[]>(`${this.apiUrl}/api/measurements/${this.device.id}`)
+        .toPromise();
+      this.measurements = response || [];
+      this.isLoading = false;
+      this.initializeMap();
+      this.fitMapToBounds();
+    } catch (error) {
+      console.error('Error loading measurements:', error);
+      alert('เกิดข้อผิดพลาดในการโหลดข้อมูลวัด');
+      this.isLoading = false;
+    }
   }
 
   initializeMap() {
-    if (!this.mapContainer) {
-      console.log('Map container not available');
-      return;
-    }
-
-    try {
-      this.map = new Map({
-        container: this.mapContainer.nativeElement,
-        style: 'satellite',
-        center: [100.5018, 13.7563], // Default center (Bangkok, Thailand)
-        zoom: 10
-      });
-
-      this.map.on('load', () => {
-        this.addMeasurementMarkers();
-        this.fitMapToBounds();
-      });
-
-      this.map.on('error', (error) => {
-        console.error('Map error:', error);
-        this.mapContainer.nativeElement.innerHTML = `
-          <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #f5f5f5; color: #666;">
-            <p>ไม่สามารถโหลดแผนที่ได้</p>
-          </div>
-        `;
-      });
-    } catch (error) {
-      console.error('Error initializing map:', error);
-      this.mapContainer.nativeElement.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #f5f5f5; color: #666;">
-          <p>ไม่สามารถโหลดแผนที่ได้</p>
-        </div>
-      `;
-    }
-  }
-
-  addMeasurementMarkers() {
-    if (!this.map) return;
-
-    const validMeasurements = this.measurements.filter(m => 
-      m.lat !== undefined && m.lng !== undefined && 
-      !isNaN(m.lat) && !isNaN(m.lng)
-    );
-
-    validMeasurements.forEach((measurement, index) => {
-      const markerElement = document.createElement('div');
-      markerElement.style.backgroundColor = '#FF4444';
-      markerElement.style.color = 'white';
-      markerElement.style.width = '30px';
-      markerElement.style.height = '30px';
-      markerElement.style.borderRadius = '50%';
-      markerElement.style.display = 'flex';
-      markerElement.style.alignItems = 'center';
-      markerElement.style.justifyContent = 'center';
-      markerElement.style.fontSize = '12px';
-      markerElement.style.fontWeight = 'bold';
-      markerElement.style.border = '3px solid white';
-      markerElement.style.cursor = 'pointer';
-      markerElement.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
-      markerElement.textContent = (measurement.measurementPoint || (index + 1)).toString();
-
-      const marker = new Marker({ element: markerElement })
-        .setLngLat([measurement.lng!, measurement.lat!])
-        .addTo(this.map!);
-
-      markerElement.addEventListener('click', () => {
-        this.showMeasurementPopup(measurement);
-      });
+    if (!this.mapContainer) return;
+    this.map = new Map({
+      container: this.mapContainer.nativeElement,
+      style: 'streets-v2',
+      center: [100.5018, 13.7563], // ค่าเริ่มต้น (กรุงเทพ)
+      zoom: 10,
     });
   }
 
   fitMapToBounds() {
     if (!this.map || this.measurements.length === 0) return;
 
-    const validMeasurements = this.measurements.filter(m => 
-      m.lat !== undefined && m.lng !== undefined && 
-      !isNaN(m.lat) && !isNaN(m.lng)
+    const validMeasurements = this.measurements.filter(
+      (m) =>
+        m.lat !== undefined &&
+        m.lng !== undefined &&
+        !isNaN(m.lat) &&
+        !isNaN(m.lng)
     );
 
     if (validMeasurements.length === 0) {
@@ -192,8 +125,8 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    const lats = validMeasurements.map(m => m.lat!);
-    const lngs = validMeasurements.map(m => m.lng!);
+    const lats = validMeasurements.map((m) => m.lat!);
+    const lngs = validMeasurements.map((m) => m.lng!);
 
     const bounds = new LngLatBounds(
       [Math.min(...lngs), Math.min(...lats)],

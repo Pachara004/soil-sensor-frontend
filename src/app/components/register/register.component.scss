@@ -60,7 +60,7 @@
 // Progress Bar
 .progress-container {
   margin-bottom: 30px;
-  
+
   .progress-bar {
     width: 100%;
     height: 8px;
@@ -68,7 +68,7 @@
     border-radius: 10px;
     overflow: hidden;
     margin-bottom: 10px;
-    
+
     .progress-fill {
       height: 100%;
       background: linear-gradient(90deg, #00aaff, #0088cc);
@@ -76,7 +76,7 @@
       border-radius: 10px;
     }
   }
-  
+
   .progress-text {
     text-align: center;
     font-size: 14px;
@@ -88,7 +88,7 @@
 // Step Container
 .step-container {
   animation: slideIn 0.4s ease;
-  
+
   h3 {
     text-align: center;
     color: #002e24;
@@ -96,7 +96,7 @@
     font-size: 24px;
     font-weight: 600;
   }
-  
+
   .step-description {
     text-align: center;
     color: #666;
@@ -116,8 +116,8 @@ label {
   transition: color 0.3s ease;
 }
 
-input[type="email"], 
-input[type="text"], 
+input[type="email"],
+input[type="text"],
 input[type="tel"],
 input[type="password"] {
   width: 100%;
@@ -154,7 +154,7 @@ input[type="password"] {
 // Password Container
 .password-container {
   position: relative;
-  
+
   .password-toggle {
     position: absolute;
     right: 15px;
@@ -163,7 +163,7 @@ input[type="password"] {
     cursor: pointer;
     color: #666;
     transition: color 0.3s ease;
-    
+
     &:hover {
       color: #00aaff;
     }
@@ -173,7 +173,7 @@ input[type="password"] {
 // Password Strength
 .password-strength {
   margin-top: 10px;
-  
+
   .strength-bar {
     width: 100%;
     height: 6px;
@@ -181,38 +181,38 @@ input[type="password"] {
     border-radius: 3px;
     overflow: hidden;
     margin-bottom: 5px;
-    
+
     .strength-fill {
       height: 100%;
       transition: width 0.3s ease;
       border-radius: 3px;
-      
+
       &.weak {
         background-color: #ef4444;
       }
-      
+
       &.medium {
         background-color: #f59e0b;
       }
-      
+
       &.strong {
         background-color: #10b981;
       }
     }
   }
-  
+
   span {
     font-size: 12px;
     font-weight: 500;
-    
+
     &.weak {
       color: #ef4444;
     }
-    
+
     &.medium {
       color: #f59e0b;
     }
-    
+
     &.strong {
       color: #10b981;
     }
@@ -246,11 +246,33 @@ input[type="password"] {
   }
 }
 
+// Reference Info
+.reference-info {
+  background-color: #f0f9ff;
+  border: 1px solid #0ea5e9;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin: 15px 0;
+  text-align: center;
+
+  .reference-text {
+    color: #0369a1;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 0;
+
+    strong {
+      color: #0c4a6e;
+      font-weight: 700;
+    }
+  }
+}
+
 // Resend Container
 .resend-container {
   text-align: center;
   margin: 15px 0;
-  
+
   span {
     color: #666;
     font-size: 14px;
@@ -261,16 +283,62 @@ input[type="password"] {
 .username-status {
   margin-top: 5px;
   margin-bottom: 10px;
-  
+
   .error {
     color: #ef4444;
     font-size: 14px;
     animation: shake 0.5s ease;
   }
-  
+
   .success {
     color: #10b981;
     font-size: 14px;
+  }
+
+  .loading {
+    color: #f59e0b;
+    font-size: 14px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+}
+
+// Email Status
+.email-status {
+  margin-top: 10px;
+  margin-bottom: 10px;
+
+  .error {
+    color: #ef4444;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 12px;
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    border-left: 4px solid #ef4444;
+  }
+
+  .success {
+    color: #10b981;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 12px;
+    background-color: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    border-left: 4px solid #10b981;
+  }
+
+  .loading {
+    color: #f59e0b;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 12px;
+    background-color: #fffbeb;
+    border: 1px solid #fed7aa;
+    border-radius: 8px;
+    border-left: 4px solid #f59e0b;
+    animation: pulse 1.5s ease-in-out infinite;
   }
 }
 
@@ -289,7 +357,9 @@ input[type="password"] {
 }
 
 // Buttons
-.primary-btn, .otp-btn, .confirm-btn {
+.primary-btn,
+.otp-btn,
+.confirm-btn {
   background: linear-gradient(135deg, #00aaff 0%, #0088cc 100%);
   color: white;
   font-weight: bold;
@@ -343,7 +413,7 @@ input[type="password"] {
   cursor: pointer;
   text-decoration: underline;
   font-size: 14px;
-  
+
   &:hover {
     color: #0088cc;
   }
@@ -354,7 +424,7 @@ input[type="password"] {
   text-align: center;
   margin: 25px 0;
   position: relative;
-  
+
   &::before {
     content: '';
     position: absolute;
@@ -364,7 +434,7 @@ input[type="password"] {
     height: 1px;
     background-color: #e0e0e0;
   }
-  
+
   span {
     background-color: white;
     padding: 0 15px;
@@ -390,13 +460,13 @@ input[type="password"] {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  
+
   &:hover {
     background-color: #f8f9ff;
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
   }
-  
+
   img {
     width: 20px;
     height: 20px;
@@ -409,6 +479,7 @@ input[type="password"] {
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -420,6 +491,7 @@ input[type="password"] {
     opacity: 0;
     transform: translateX(20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -427,11 +499,33 @@ input[type="password"] {
 }
 
 @keyframes shake {
-  0%, 20%, 40%, 60%, 80% { 
-    transform: translateX(0); 
+
+  0%,
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(0);
   }
-  10%, 30%, 50%, 70%, 90% { 
-    transform: translateX(-5px); 
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-5px);
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
   }
 }
 
@@ -440,43 +534,45 @@ input[type="password"] {
   .container {
     padding: 10px;
   }
-  
+
   .card {
     padding: 30px 20px;
     border-radius: 20px;
   }
-  
+
   .logo img {
     width: 60px;
   }
-  
+
   .step-container h3 {
     font-size: 20px;
   }
-  
+
   label {
     font-size: 14px;
   }
-  
-  input[type="email"], 
-  input[type="text"], 
+
+  input[type="email"],
+  input[type="text"],
   input[type="tel"],
   input[type="password"] {
     font-size: 14px;
     padding: 12px 14px;
   }
-  
+
   .otp-boxes input {
     width: 35px;
     height: 40px;
     font-size: 18px;
   }
-  
-  .primary-btn, .otp-btn, .confirm-btn {
+
+  .primary-btn,
+  .otp-btn,
+  .confirm-btn {
     font-size: 14px;
     padding: 14px 0;
   }
-  
+
   .progress-text {
     font-size: 12px;
   }
@@ -486,10 +582,10 @@ input[type="password"] {
   .card {
     padding: 25px 15px;
   }
-  
+
   .otp-boxes {
     gap: 8px;
-    
+
     input {
       width: 30px;
       height: 35px;

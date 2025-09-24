@@ -3,14 +3,16 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { AuthService } from '../../service/auth.service';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { Auth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from '@angular/fire/auth';
 
 @Component({
   selector: 'app-login',
   standalone: true,
   imports: [CommonModule, FormsModule, MatProgressSpinnerModule],
   templateUrl: './login.component.html',
-  styleUrl: './login.component.scss'
+  styleUrl: './login.component.scss',
 })
 export class LoginComponent {
   email = '';
@@ -18,10 +20,7 @@ export class LoginComponent {
   isLoading = false;
   showPassword = false;
 
-  constructor(
-    private auth: AuthService,
-    private router: Router
-  ) {}
+  constructor(private http: HttpClient, private router: Router, private auth: Auth) {}
 
   async loginuser(email: string, password: string, event: Event) {
     event.preventDefault();
@@ -39,25 +38,21 @@ export class LoginComponent {
     this.isLoading = true;
 
     try {
-      const userData = await this.auth.login(email, password);
-      
-      console.log('✅ Login successful:', userData);
+      await signInWithEmailAndPassword(this.auth, email, password);
+      const user = this.auth.currentUser;
+      if (!user) throw new Error('ไม่พบผู้ใช้หลังล็อกอิน');
 
-      // เก็บข้อมูลใน localStorage ตาม type
-      if (userData.type === 'admin') {
-        localStorage.setItem('admin', JSON.stringify(userData));
-        this.router.navigate(['/adminmain']);
-      } else {
-        localStorage.setItem('user', JSON.stringify(userData));
-        this.router.navigate(['/main']);
-      }
+      // Store minimal client session marker if needed
+      localStorage.setItem('user', JSON.stringify({ email: user.email }));
 
+      // Route: if backend provides role later, this can be refined. For now, default to /main
+      this.router.navigate(['/main']);
     } catch (err: any) {
       console.error('❌ Login error:', err);
-      alert(err.message || 'เข้าสู่ระบบล้มเหลว');
+      const msg = err?.message || 'เข้าสู่ระบบล้มเหลว';
+      alert(msg);
     } finally {
       this.isLoading = false;
-      // ล้างฟอร์มเมื่อมี error
       if (this.isLoading === false) {
         this.password = '';
       }
@@ -66,18 +61,11 @@ export class LoginComponent {
 
   async loginWithGoogle() {
     this.isLoading = true;
-    
+
     try {
-      const userData = await this.auth.loginWithGoogle();
-      
-      if (userData.type === 'user') {
-        console.log('✅ Google login successful:', userData);
-        localStorage.setItem('user', JSON.stringify(userData));
-        this.router.navigate(['/main']);
-      } else {
-        localStorage.setItem('admin', JSON.stringify(userData));
-        this.router.navigate(['/adminmain']);
-      }
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(this.auth, provider);
+      this.router.navigate(['/main']);
     } catch (error: any) {
       console.error('❌ Google login error:', error);
       alert('เข้าสู่ระบบด้วย Google ล้มเหลว');

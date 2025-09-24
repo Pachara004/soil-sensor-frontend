@@ -1,58 +1,49 @@
 <div class="container">
   <button (click)="logout()" class="logout-btn">ออกจากระบบ</button>
 
-  <div class="card" *ngIf="devices && devices.length; else loadingState">
+  <div class="card">
     <!-- ไอคอนบนสุด -->
-    <img
-      src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png"
-      class="chip-icon"
-      alt="chip"
-    />
+    <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png" class="chip-icon"
+      alt="chip" />
 
     <!-- ข้อมูลผู้ใช้ -->
     <div class="user-box">
       <span class="label">User : </span>
-      <span class="value">{{ userID }}</span>
+      <span class="value">{{ userName || userEmail || userID }}</span>
     </div>
 
     <!-- ข้อมูลชื่ออุปกรณ์ -->
     <div class="device-box">
-      <img
-        src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png"
-        class="chip-icon"
-        alt="chip"
-      />
+      <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png" class="chip-icon"
+        alt="chip" />
       <span class="label-orange">ชื่ออุปกรณ์ :</span>
 
-      <!-- แสดงชื่ออุปกรณ์ (กรณี <= 1 ชิ้น) -->
-      <span class="value" *ngIf="devices.length <= 1">
-        {{ (selectedDevice?.displayName) || (devices[0].displayName) || 'ไม่มีอุปกรณ์' }}
+      <!-- แสดงชื่ออุปกรณ์ -->
+      <span class="value" *ngIf="devices.length === 0">
+        ไม่พบอุปกรณ์
+      </span>
+      <!-- แสดงข้อความเมื่อยังไม่ได้เลือกอุปกรณ์ -->
+      <span class="value" *ngIf="devices.length > 1 && !selectedDevice">
+        กรุณาเลือกอุปกรณ์
       </span>
 
       <!-- เลือกอุปกรณ์ (กรณี > 1 ชิ้น) -->
-      <select
-        class="device-select"
-        *ngIf="devices.length > 1"
-        [(ngModel)]="selectedDeviceId"
-        (ngModelChange)="onDeviceChange()"
-        aria-label="เลือกอุปกรณ์"
-      >
-        <option *ngFor="let device of devices" [value]="device.id">
-          {{ device.displayName }}
+      <select class="device-select" *ngIf="devices.length > 1" [(ngModel)]="selectedDeviceId"
+        (ngModelChange)="onDeviceChange()" aria-label="เลือกอุปกรณ์">
+        <option value="" disabled>-- เลือกอุปกรณ์ --</option>
+        <option *ngFor="let device of devices" [value]="device.deviceid">
+          {{ device.device_name || device.deviceid }}
         </option>
       </select>
 
       <!-- สถานะ Online/Offline ของ "อุปกรณ์ที่เลือก" -->
-      <span
-        class="status-indicator"
-        [ngClass]="{
+      <span class="status-indicator" [ngClass]="{
           online: selectedDevice?.status === 'online',
-          offline: selectedDevice?.status !== 'online'
-        }"
-      >
+          offline: selectedDevice?.status !== 'online' || devices.length === 0
+        }">
         <span class="status-dot"></span>
         <span class="status-text">
-          {{ selectedDevice?.status === 'online' ? 'Online' : 'Offline' }}
+          {{ devices.length === 0 ? 'Offline' : (selectedDevice?.status === 'online' ? 'Online' : 'Offline') }}
         </span>
       </span>
     </div>
@@ -64,10 +55,7 @@
 
     <!-- ปุ่มข้อมูลผู้ใช้ -->
     <div class="user-icon" (click)="goToProfile()" style="cursor: pointer;">
-      <img
-        src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png"
-        alt="user"
-      />
+      <img src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png" alt="user" />
       <div class="text">ข้อมูลผู้ใช้</div>
     </div>
 
@@ -88,54 +76,28 @@
       <div id="claim-title" class="claim-title">เพิ่มอุปกรณ์ของฉัน</div>
 
       <div class="claim-row">
-        <input
-          class="claim-input"
-          type="text"
-          [(ngModel)]="claimDeviceId"
-          (keyup.enter)="requestDeviceClaim()"
-          placeholder="ใส่ Device ID เช่น esp32-soil-01"
-          aria-label="Device ID"
-          aria-describedby="claim-help"
-        />
+        <input class="claim-input" type="text" [(ngModel)]="claimDeviceId" (keyup.enter)="addNewDevice()"
+          placeholder="ใส่ Device ID เช่น esp32-soil-01" aria-label="Device ID" aria-describedby="claim-help" />
 
-        <button
-          class="claim-btn"
-          [disabled]="requestingClaim || !claimDeviceId.trim()"
-          (click)="requestDeviceClaim()"
-          aria-label="เพิ่มอุปกรณ์"
-        >
-          <span *ngIf="!requestingClaim">เพิ่ม</span>
+        <button class="claim-btn" [disabled]="requestingClaim || !claimDeviceId.trim()" (click)="addNewDevice()"
+          aria-label="เพิ่มอุปกรณ์">
+          <span *ngIf="!requestingClaim">เพิ่มอุปกรณ์</span>
           <span *ngIf="requestingClaim" class="spinner" aria-hidden="true"></span>
         </button>
       </div>
 
       <small id="claim-help" class="claim-help">
-        พิมพ์ Device ID แล้วกด Enter หรือคลิก “เพิ่ม” เพื่อผูกให้บัญชีของคุณทันที
+        พิมพ์ Device ID แล้วกด Enter หรือคลิก "เพิ่มอุปกรณ์" เพื่อเพิ่มอุปกรณ์ให้บัญชีของคุณ
       </small>
       <div class="claim-status" *ngIf="lastClaimMessage">
-        <span
-          class="status-dot"
-          [ngClass]="{
+        <span class="status-dot" [ngClass]="{
             ok: lastClaimType === 'ok',
             warn: lastClaimType === 'warn',
             err: lastClaimType === 'err'
-          }"
-        ></span>
+          }"></span>
         {{ lastClaimMessage }}
       </div>
     </div>
   </div>
 
-  <ng-template #loadingState>
-    <div class="card">
-      <div class="device-box">
-        <span class="label-orange">ชื่ออุปกรณ์ :</span>
-        <span class="value">กำลังโหลด...</span>
-        <span class="status-indicator offline">
-          <span class="status-dot"></span>
-          <span class="status-text">Offline</span>
-        </span>
-      </div>
-    </div>
-  </ng-template>
 </div>

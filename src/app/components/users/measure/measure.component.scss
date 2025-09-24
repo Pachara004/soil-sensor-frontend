@@ -1,12 +1,210 @@
 .measure-container {
   width: 100%;
-  min-height: 100vh; /* เปลี่ยนเป็น min-height เพื่อให้เลื่อนได้เมื่อเนื้อหายาว */
+  min-height: 100vh;
+  /* เปลี่ยนเป็น min-height เพื่อให้เลื่อนได้เมื่อเนื้อหายาว */
   background-color: #013828;
   display: flex;
   justify-content: center;
-  align-items: flex-start; /* เปลี่ยนจาก center เพื่อให้เลื่อนได้ */
-  padding: 20px 0; /* เพิ่ม padding เพื่อให้เนื้อหาไม่ชิดขอบ */
+  align-items: flex-start;
+  /* เปลี่ยนจาก center เพื่อให้เลื่อนได้ */
+  padding: 20px 0;
+  /* เพิ่ม padding เพื่อให้เนื้อหาไม่ชิดขอบ */
   box-sizing: border-box;
+}
+
+// ✅ Popup Styles
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.popup-content {
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border: 3px solid #00aaff;
+
+  h3 {
+    color: #013828;
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 24px;
+  }
+
+  p {
+    text-align: center;
+    margin-bottom: 15px;
+    color: #666;
+  }
+
+  .polygon-info {
+    color: #00aaff !important;
+    font-weight: bold;
+    background-color: #e3f2fd;
+    padding: 8px;
+    border-radius: 6px;
+    border-left: 4px solid #00aaff;
+    margin: 10px 0;
+  }
+
+  .polygon-warning {
+    color: #ff9800 !important;
+    font-weight: bold;
+    background-color: #fff3e0;
+    padding: 8px;
+    border-radius: 6px;
+    border-left: 4px solid #ff9800;
+    margin: 10px 0;
+  }
+}
+
+.map-popup {
+  margin: 20px 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.selection-info {
+  margin: 20px 0;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  border-left: 4px solid #00aaff;
+
+  p {
+    margin: 0 0 10px 0;
+    font-weight: bold;
+    color: #013828;
+  }
+}
+
+.measurement-info {
+  margin: 20px 0;
+  padding: 15px;
+  background-color: #f0f9f8;
+  border-radius: 10px;
+  border-left: 4px solid #4ecdc4;
+
+  p {
+    margin: 0 0 10px 0;
+    font-weight: bold;
+    color: #4ecdc4;
+  }
+}
+
+.coordinates-list {
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.coordinate-item {
+  padding: 5px 0;
+  font-family: monospace;
+  font-size: 14px;
+  color: #666;
+  border-bottom: 1px solid #eee;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &.measurement-point {
+    color: #4ecdc4;
+    font-weight: bold;
+    background-color: #f0f9f8;
+    padding: 8px;
+    border-radius: 4px;
+    margin: 2px 0;
+    border-left: 3px solid #4ecdc4;
+  }
+}
+
+.popup-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 20px 0;
+
+  button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  .btn-primary {
+    background-color: #00aaff;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: #0088cc;
+      transform: translateY(-2px);
+    }
+  }
+
+  .btn-secondary {
+    background-color: #6c757d;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: #5a6268;
+      transform: translateY(-2px);
+    }
+  }
+
+  .btn-cancel {
+    background-color: #dc3545;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: #c82333;
+      transform: translateY(-2px);
+    }
+  }
+}
+
+.instructions {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #e3f2fd;
+  border-radius: 10px;
+  border-left: 4px solid #2196f3;
+
+  p {
+    margin: 0 0 10px 0;
+    font-weight: bold;
+    color: #1976d2;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 20px;
+
+    li {
+      margin-bottom: 5px;
+      color: #1976d2;
+    }
+  }
 }
 
 .card {
@@ -18,8 +216,10 @@
   padding: 4vw;
   position: relative;
   box-sizing: border-box;
-  overflow-y: auto; /* เพิ่มการเลื่อนในกรณีที่เนื้อหาเกิน */
-  margin-bottom: 20px; /* ระยะห่างจากขอบล่าง */
+  overflow-y: auto;
+  /* เพิ่มการเลื่อนในกรณีที่เนื้อหาเกิน */
+  margin-bottom: 20px;
+  /* ระยะห่างจากขอบล่าง */
 }
 
 .back {
@@ -90,8 +290,10 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 3 คอลัมน์เท่า ๆ กัน */
-  grid-template-rows: repeat(2, auto); /* 2 แถวปรับตามเนื้อหา */
+  grid-template-columns: repeat(3, 1fr);
+  /* 3 คอลัมน์เท่า ๆ กัน */
+  grid-template-rows: repeat(2, auto);
+  /* 2 แถวปรับตามเนื้อหา */
   gap: 15px;
   margin: 25px 0;
   padding: 0 10px;
@@ -119,7 +321,8 @@
 }
 
 .value {
-  font-size: clamp(20px, 5vw, 28px); /* ลดขนาดสูงสุดเพื่อให้เหมาะสมกับมือถือ */
+  font-size: clamp(20px, 5vw, 28px);
+  /* ลดขนาดสูงสุดเพื่อให้เหมาะสมกับมือถือ */
   font-weight: bold;
   color: #333;
   display: block;
@@ -156,7 +359,8 @@
 
 .location-box textarea {
   width: 100%;
-  height: clamp(60px, 15vw, 100px); /* เพิ่มความยืดหยุ่นของความสูง */
+  height: clamp(60px, 15vw, 100px);
+  /* เพิ่มความยืดหยุ่นของความสูง */
   border-radius: 15px;
   background-color: #d9d9d9;
   border: none;
@@ -217,11 +421,13 @@
   }
 
   .grid {
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); /* ปรับขนาดเซ็นเซอร์ในแท็บเล็ต */
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    /* ปรับขนาดเซ็นเซอร์ในแท็บเล็ต */
   }
 
   .map {
-    height: 200px; /* ลดความสูงในแท็บเล็ต */
+    height: 200px;
+    /* ลดความสูงในแท็บเล็ต */
   }
 }
 
@@ -244,7 +450,8 @@
 
   .grid {
     gap: 10px;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); /* ปรับขนาดในมือถือ */
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    /* ปรับขนาดในมือถือ */
   }
 
   .sensor-box {
@@ -252,7 +459,8 @@
   }
 
   .value {
-    font-size: clamp(18px, 5vw, 22px); /* ลดขนาดในมือถือ */
+    font-size: clamp(18px, 5vw, 22px);
+    /* ลดขนาดในมือถือ */
   }
 
   .location-box textarea {
@@ -260,7 +468,8 @@
   }
 
   .map {
-    height: 150px; /* ลดความสูงในมือถือ */
+    height: 150px;
+    /* ลดความสูงในมือถือ */
   }
 
   .save-btn {
@@ -282,8 +491,10 @@
 
 .map {
   width: 100%;
-  height: clamp(200px, 30vw, 300px); /* ความสูงยืดหยุ่นตามขนาดหน้าจอ */
+  height: clamp(200px, 30vw, 300px);
+  /* ความสูงยืดหยุ่นตามขนาดหน้าจอ */
 }
+
 .history-btn {
   background-color: #ff9800;
   border: none;
@@ -300,6 +511,7 @@
     background-color: #f57c00;
   }
 }
+
 .popup-overlay {
   position: fixed;
   top: 0;
@@ -418,6 +630,7 @@
     background-color: #f57c00;
   }
 }
+
 .popup-overlay {
   position: fixed;
   top: 0;
@@ -445,9 +658,208 @@
   overflow: hidden;
   margin: 15px 0;
 }
+
 .popup-buttons {
   display: flex;
   justify-content: center;
-  gap: 15px; /* Adjust this value to change the spacing */
-  padding-top: 20px; /* Add some space above the buttons */
+  gap: 15px;
+  /* Adjust this value to change the spacing */
+  padding-top: 20px;
+  /* Add some space above the buttons */
+}
+
+// ✅ Connection Status Styles
+.connection-status {
+  margin: 15px 0;
+  text-align: center;
+
+  .status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 14px;
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    &.connected {
+      background-color: #e8f5e8;
+      color: #2e7d32;
+      border: 1px solid #4caf50;
+
+      .status-dot {
+        background-color: #4caf50;
+      }
+    }
+
+    &.disconnected {
+      background-color: #ffebee;
+      color: #c62828;
+      border: 1px solid #f44336;
+
+      .status-dot {
+        background-color: #f44336;
+      }
+    }
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+// ✅ Control Buttons Styles
+.control-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 20px 0;
+
+  .control-btn {
+    padding: 8px 16px;
+    border: 2px solid #007bff;
+    border-radius: 20px;
+    background-color: white;
+    color: #007bff;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+
+    &:hover {
+      background-color: #007bff;
+      color: white;
+      transform: translateY(-2px);
+    }
+
+    &.active {
+      background-color: #007bff;
+      color: white;
+    }
+  }
+}
+
+// ✅ User Info Styles
+.user-info {
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  border-left: 4px solid #007bff;
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .label {
+      font-weight: bold;
+      color: #495057;
+      min-width: 80px;
+    }
+
+    .value {
+      color: #212529;
+      font-family: monospace;
+      background-color: #e9ecef;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+  }
+}
+
+// ✅ Device Info Styles
+.device-info {
+  background-color: #fff3cd;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  border-left: 4px solid #ffc107;
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .label {
+      font-weight: bold;
+      color: #856404;
+      min-width: 100px;
+    }
+
+    .value {
+      color: #212529;
+      font-family: monospace;
+      background-color: #ffeaa7;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 15px;
+      font-weight: bold;
+      font-size: 12px;
+
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      }
+
+      &.online {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+
+        .status-dot {
+          background-color: #28a745;
+        }
+      }
+
+      &.offline {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+
+        .status-dot {
+          background-color: #dc3545;
+        }
+      }
+    }
+  }
 }

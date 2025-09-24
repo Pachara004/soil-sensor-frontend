@@ -22,10 +22,16 @@
     <div *ngIf="step === 1" class="step-container">
       <h3>ใส่อีเมลของคุณ</h3>
       <label>Email</label>
-      <input type="email" [(ngModel)]="email" placeholder="Enter your email" required />
-      <button class="primary-btn" (click)="sendOtp()" [disabled]="isLoading">
-        <span *ngIf="!isLoading">ส่ง OTP</span>
+      <input type="email" [(ngModel)]="email" placeholder="Enter your email" (blur)="checkEmailAvailability()"
+        required />
+      <div class="email-status" *ngIf="emailStatus">
+        <span [class]="emailStatus.class">{{ emailStatus.message }}</span>
+      </div>
+      <button class="primary-btn" (click)="sendOtp()"
+        [disabled]="isLoading || isCheckingEmail || emailStatus?.class === 'error'">
+        <span *ngIf="!isLoading && !isCheckingEmail">ส่ง OTP</span>
         <span *ngIf="isLoading">กำลังส่ง...</span>
+        <span *ngIf="isCheckingEmail">กำลังตรวจสอบ...</span>
       </button>
     </div>
 
@@ -33,21 +39,21 @@
     <div *ngIf="step === 2" class="step-container">
       <h3>ยืนยัน OTP</h3>
       <p class="step-description">กรุณาใส่รหัส OTP ที่ส่งไปยัง {{ email }}</p>
+      <div class="reference-info" *ngIf="otpReferenceNumber">
+        <p class="reference-text">เลขอ้างอิง: <strong>{{ otpReferenceNumber }}</strong></p>
+      </div>
       <div class="otp-boxes">
-        <input 
-          *ngFor="let box of otpInputsArray; let i = index" 
-          maxlength="1" 
-          [(ngModel)]="otp[i]" 
-          (input)="moveToNext($event, i)"
-          (keydown)="onKeyDown($event, i)"
-          #otpInput
-        />
+        <input *ngFor="let box of otpInputsArray; let i = index" maxlength="1" [(ngModel)]="otp[i]"
+          (input)="moveToNext($event, i)" (keydown)="onKeyDown($event, i)" #otpInput />
       </div>
       <div class="resend-container">
         <span *ngIf="countdown > 0">ส่งใหม่ได้ในอีก {{ countdown }} วินาที</span>
         <button *ngIf="countdown === 0" class="link-btn" (click)="resendOtp()">ส่ง OTP ใหม่</button>
       </div>
-      <button class="primary-btn" (click)="verifyOtp()">ยืนยัน OTP</button>
+      <button class="primary-btn" (click)="verifyOtp()" [disabled]="isLoading">
+        <span *ngIf="!isLoading">ยืนยัน OTP</span>
+        <span *ngIf="isLoading">กำลังตรวจสอบ...</span>
+      </button>
     </div>
 
     <!-- Step 3: กรอกรหัสผ่าน -->
@@ -55,32 +61,17 @@
       <h3>สร้างรหัสผ่าน</h3>
       <label>รหัสผ่าน</label>
       <div class="password-container">
-        <input 
-          [type]="showPassword ? 'text' : 'password'" 
-          [(ngModel)]="password" 
-          placeholder="อย่างน้อย 6 ตัวอักษร" 
-        />
-        <i 
-          class="password-toggle fas" 
-          [class.fa-eye]="!showPassword" 
-          [class.fa-eye-slash]="showPassword"
-          (click)="togglePassword()"
-        ></i>
+        <input [type]="showPassword ? 'text' : 'password'" [(ngModel)]="password" placeholder="อย่างน้อย 6 ตัวอักษร" />
+        <i class="password-toggle fas" [class.fa-eye]="!showPassword" [class.fa-eye-slash]="showPassword"
+          (click)="togglePassword()"></i>
       </div>
 
       <label>ยืนยันรหัสผ่าน</label>
       <div class="password-container">
-        <input 
-          [type]="showConfirmPassword ? 'text' : 'password'" 
-          [(ngModel)]="confirmPassword" 
-          placeholder="ยืนยันรหัสผ่าน" 
-        />
-        <i 
-          class="password-toggle fas" 
-          [class.fa-eye]="!showConfirmPassword" 
-          [class.fa-eye-slash]="showConfirmPassword"
-          (click)="toggleConfirmPassword()"
-        ></i>
+        <input [type]="showConfirmPassword ? 'text' : 'password'" [(ngModel)]="confirmPassword"
+          placeholder="ยืนยันรหัสผ่าน" />
+        <i class="password-toggle fas" [class.fa-eye]="!showConfirmPassword" [class.fa-eye-slash]="showConfirmPassword"
+          (click)="toggleConfirmPassword()"></i>
       </div>
 
       <div class="error" *ngIf="passwordMismatch">
@@ -101,12 +92,8 @@
     <div *ngIf="step === 4" class="step-container">
       <h3>ข้อมูลส่วนตัว</h3>
       <label>ชื่อผู้ใช้ (Username)</label>
-      <input 
-        type="text" 
-        [(ngModel)]="username" 
-        placeholder="ชื่อผู้ใช้ที่ไม่ซ้ำใคร" 
-        (blur)="checkUsernameAvailability()"
-      />
+      <input type="text" [(ngModel)]="username" placeholder="ชื่อผู้ใช้ที่ไม่ซ้ำใคร"
+        (blur)="checkUsernameAvailability()" />
       <div class="username-status" *ngIf="usernameStatus">
         <span [class]="usernameStatus.class">{{ usernameStatus.message }}</span>
       </div>
@@ -115,12 +102,7 @@
       <input type="text" [(ngModel)]="fullName" placeholder="ชื่อ-นามสกุล" />
 
       <label>เบอร์โทรศัพท์</label>
-      <input 
-        type="tel" 
-        [(ngModel)]="phoneNumber" 
-        placeholder="08X-XXX-XXXX" 
-        (input)="formatPhoneNumber($event)"
-      />
+      <input type="tel" [(ngModel)]="phoneNumber" placeholder="08X-XXX-XXXX" (input)="formatPhoneNumber($event)" />
 
       <button class="primary-btn" (click)="register()" [disabled]="isRegistering">
         <span *ngIf="!isRegistering">สมัครสมาชิก</span>

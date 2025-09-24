@@ -1,43 +1,53 @@
 <div class="profile-container">
   <div class="profile-card">
     <div class="back" (click)="goBack()">
-        <i class="fas fa-arrow-left"></i>
-      </div>
+      <i class="fas fa-arrow-left"></i>
+    </div>
 
     <div class="user-id">User : {{ username }}</div>
-    <h2 class="title">ข้อมูลผู้ใช้</h2>
+    <h2 class="title">แก้ไขข้อมูลผู้ใช้</h2>
 
-    <div class="info-row">
-    <div class="label">Username</div>
-      <input 
-        type="text" 
-        class="value" 
-        [(ngModel)]="username" readonly />
+    <!-- Loading State -->
+    <div class="loading-state" *ngIf="isLoading">
+      <div class="spinner"></div>
+      <p>กำลังโหลดข้อมูล...</p>
     </div>
 
-    <div class="info-row">
-    <div class="label">Email</div>
-    <input type="email" class="value" [(ngModel)]="email" readonly />
-    </div>
+    <!-- Profile Form -->
+    <div class="profile-form" *ngIf="!isLoading">
+      <div class="info-row">
+        <div class="label">Username</div>
+        <input type="text" class="value" [(ngModel)]="username" readonly placeholder="ชื่อผู้ใช้" />
+      </div>
 
-    <div class="info-row">
-    <div class="label">Phone</div>
-    <input type="tel" class="value" [(ngModel)]="phoneNumber" />
-    </div>
+      <div class="info-row">
+        <div class="label">Full Name</div>
+        <input type="text" class="value" [(ngModel)]="name" placeholder="ชื่อเต็ม" />
+      </div>
 
-    <div class="info-row">
-    <div class="label">Password</div>
-    <input type="password" class="value" [(ngModel)]="password" />
-    </div>
+      <div class="info-row">
+        <div class="label">Email</div>
+        <input type="email" class="value" [(ngModel)]="email" readonly placeholder="อีเมล" />
+      </div>
 
-    <div class="info-row">
-    <div class="label">Confirm Password</div>
-    <input type="password" class="value" [(ngModel)]="confirmPassword" />
-    </div>
- 
+      <div class="info-row">
+        <div class="label">Phone</div>
+        <input type="tel" class="value" [(ngModel)]="phoneNumber" placeholder="เบอร์โทรศัพท์" />
+      </div>
 
-    <div class="button-group">
-      <button class="edit-button" (click)="saveProfile()">บันทึก</button>
+      <div class="info-row">
+        <div class="label">New Password</div>
+        <input type="password" class="value" [(ngModel)]="password" placeholder="รหัสผ่านใหม่ (ไม่บังคับ)" />
+      </div>
+
+      <div class="info-row">
+        <div class="label">Confirm Password</div>
+        <input type="password" class="value" [(ngModel)]="confirmPassword" placeholder="ยืนยันรหัสผ่าน" />
+      </div>
+
+      <div class="button-group">
+        <button class="edit-button" (click)="saveProfile()">บันทึก</button>
+      </div>
     </div>
 
     <div class="admin" (click)="goToContactAdmin()">

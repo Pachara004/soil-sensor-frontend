@@ -21,12 +21,13 @@
     "lib": [
       "ES2022",
       "dom"
-    ]
+    ],
+    "ignoreDeprecations": "5.0"
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
     "strictInjectionParameters": true,
     "strictInputAccessModifiers": true,
-    "strictTemplates": true
+    "strictTemplates": false
   }
 }

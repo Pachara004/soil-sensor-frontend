@@ -3,7 +3,10 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
-import { Database, ref, update } from '@angular/fire/database';
+import { HttpClient } from '@angular/common/http';
+import { Constants } from '../../../config/constants';
+import { Auth, onAuthStateChanged } from '@angular/fire/auth';
+import { lastValueFrom } from 'rxjs';
 
 interface UserData {
   email: string;
@@ -21,39 +24,90 @@ interface UserData {
   standalone: true,
   imports: [FormsModule, CommonModule],
   templateUrl: './edit-profile.component.html',
-  styleUrl: './edit-profile.component.scss'
+  styleUrl: './edit-profile.component.scss',
 })
 export class EditProfileComponent implements OnInit {
   userID: string | null = null;
   username: string = '';
-  name: string = ''; // เพิ่ม name
+  name: string = '';
   email: string = '';
   phoneNumber: string = '';
   password: string = '';
   confirmPassword: string = '';
+  isLoading: boolean = true;
+  currentUser: any = null;
+  private apiUrl: string;
 
   constructor(
     private router: Router,
     private location: Location,
-    private db: Database
-  ) {}
+    private http: HttpClient,
+    private constants: Constants,
+    private auth: Auth
+  ) {
+    this.apiUrl = this.constants.API_ENDPOINT;
+  }
 
   ngOnInit(): void {
-    let userData = localStorage.getItem('user');
-    if (!userData) {
-      userData = localStorage.getItem('admin');
-    }
+    // ✅ ใช้ Firebase Auth แทน localStorage
+    onAuthStateChanged(this.auth, async (user) => {
+      if (user) {
+        this.currentUser = user;
+        this.username = user.displayName || user.email?.split('@')[0] || '';
+        this.email = user.email || '';
+        console.log('✅ User authenticated in edit-profile:', this.username);
+        
+        // ✅ ดึงข้อมูลเพิ่มเติมจาก backend
+        await this.loadUserProfile();
+      } else {
+        console.log('❌ User not authenticated, redirecting to login');
+        this.router.navigate(['/']);
+      }
+    });
+  }
 
-    if (userData) {
-      const user: UserData = JSON.parse(userData);
-      this.userID = user.userID || user.username || null;
-      this.username = user.username || '';
-      this.name = user.name || user.username || ''; // โหลด name
-      this.email = user.email || '';
-      this.phoneNumber = user.phoneNumber || '';
-    } else {
-      alert('ไม่พบข้อมูลผู้ใช้');
-      this.router.navigate(['/']);
+  // ✅ ดึงข้อมูล user profile จาก backend
+  async loadUserProfile() {
+    if (!this.currentUser) return;
+    
+    try {
+      console.log('👤 Loading user profile from backend...');
+      
+      const token = await this.currentUser.getIdToken();
+      console.log('🔑 Firebase ID token obtained for edit-profile');
+      
+      // ✅ ดึงข้อมูล user
+      try {
+        const userResponse = await lastValueFrom(
+          this.http.get<any>(`${this.apiUrl}/api/auth/me`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        );
+        
+        if (userResponse && userResponse.user) {
+          const userData = userResponse.user;
+          this.username = userData.user_name || userData.username || this.username;
+          this.name = userData.fullname || this.username; // ✅ ลบ user_fullname ออก
+          this.email = userData.user_email || userData.email || this.email;
+          this.phoneNumber = userData.user_phone || userData.phone || '';
+          
+          console.log('👤 User profile loaded:', {
+            username: this.username,
+            name: this.name,
+            email: this.email,
+            phoneNumber: this.phoneNumber
+          });
+        } else {
+          console.log('⚠️ No user data in backend response, using Firebase data');
+        }
+      } catch (userError) {
+        console.log('⚠️ Could not load user data from backend, using Firebase data:', userError);
+      }
+      
+      this.isLoading = false;
+    } catch (error) {
+      console.error('❌ Error loading user profile:', error);
+      this.isLoading = false;
     }
   }
 
@@ -69,31 +123,38 @@ export class EditProfileComponent implements OnInit {
     }
 
     try {
-      const userRef = ref(this.db, `users/${this.username}`);
       const updates: Partial<UserData> = {
         username: this.username,
-        name: this.name, // เพิ่ม name
+        name: this.name,
         email: this.email,
-        phoneNumber: this.phoneNumber
+        phoneNumber: this.phoneNumber,
       };
       if (this.password) {
         updates.password = this.password;
       }
 
-      await update(userRef, updates);
+      await this.http
+        .put(`${this.apiUrl}/api/users/${this.username}`, updates)
+        .toPromise();
 
       // อัปเดต localStorage
-      localStorage.setItem('user', JSON.stringify({
-        userID: this.userID,
-        username: this.username,
-        name: this.name, // เพิ่ม name
-        email: this.email,
-        phoneNumber: this.phoneNumber
-      }));
-      localStorage.setItem('admin', JSON.stringify({
-        username: this.username,
-        name: this.name // ใช้ name แทน username
-      }));
+      localStorage.setItem(
+        'user',
+        JSON.stringify({
+          userID: this.userID,
+          username: this.username,
+          name: this.name,
+          email: this.email,
+          phoneNumber: this.phoneNumber,
+        })
+      );
+      localStorage.setItem(
+        'admin',
+        JSON.stringify({
+          username: this.username,
+          name: this.name,
+        })
+      );
 
       alert('บันทึกข้อมูลสำเร็จ!');
       this.location.back();

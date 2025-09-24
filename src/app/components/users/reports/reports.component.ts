@@ -2,24 +2,29 @@ import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Database, ref, push, set } from '@angular/fire/database';
+import { HttpClient } from '@angular/common/http';
+import { Constants } from '../../../config/constants';
 
 @Component({
   selector: 'app-reports',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './reports.component.html',
-  styleUrl: './reports.component.scss'
+  styleUrl: './reports.component.scss',
 })
 export class ReportsComponent {
   subject: string = '';
   message: string = '';
+  private apiUrl: string;
 
   constructor(
     private router: Router,
     private location: Location,
-    private db: Database // 👈 เพิ่ม Database
-  ) {}
+    private http: HttpClient,
+    private constants: Constants
+  ) {
+    this.apiUrl = this.constants.API_ENDPOINT;
+  }
 
   goBack() {
     this.location.back();
@@ -31,25 +36,24 @@ export class ReportsComponent {
       return;
     }
 
-    // เก็บข้อมูลลง Realtime Database
-    const reportsRef = ref(this.db, 'reports'); // path: /reports
-    const newReportRef = push(reportsRef);
+    try {
+      // ลบ username parameter ออก - ให้ AuthInterceptor จัดการ Firebase ID token
+      await this.http
+        .post(`${this.apiUrl}/api/reports`, {
+          subject: this.subject,
+          message: this.message,
+          timestamp: new Date().toISOString(),
+        })
+        .toPromise();
 
-    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      alert('ส่งเรื่องสำเร็จ! ทีมงานจะติดต่อกลับโดยเร็ว');
 
-    await set(newReportRef, {
-      subject: this.subject,
-      message: this.message,
-      timestamp: new Date().toISOString(),
-      uid: userData.uid || 'unknown',
-      username: userData.username || 'unknown'
-    });
-
-    alert('ส่งเรื่องสำเร็จ! ทีมงานจะติดต่อกลับโดยเร็ว');
-
-    // ล้างฟอร์ม
-    alert('ส่งสำเร็จ!');
-    this.subject = '';
-    this.message = '';
+      // ล้างฟอร์ม
+      this.subject = '';
+      this.message = '';
+    } catch (error) {
+      console.error('Error sending report:', error);
+      alert('เกิดข้อผิดพลาดในการส่งรายงาน');
+    }
   }
 }

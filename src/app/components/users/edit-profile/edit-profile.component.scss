@@ -1,362 +1,326 @@
-body, html {
+body,
+html {
   margin: 0;
   padding: 0;
   font-family: 'Prompt', sans-serif;
   background-color: #013828;
 }
 
+// Loading State
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 20px;
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #00aaff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+  }
+
+  p {
+    color: #666;
+    font-size: 14px;
+    margin: 0;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+// Profile Container
 .profile-container {
-  width: 100vw;
   min-height: 100vh;
-  background-color: #013828;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  box-sizing: border-box;
+  background-color: #013828;
 }
 
 .profile-card {
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   width: 100%;
-  max-width: 600px;
-  background-color: white;
-  border-radius: 30px;
-  padding: 40px;
-  border: 4px solid #00aaff;
+  max-width: 500px;
   position: relative;
-  text-align: center;
-  box-shadow: 0 0 20px rgba(0,170,255,0.3);
-  animation: subtle-float 6s ease-in-out infinite;
-  box-sizing: border-box;
 }
 
+// Back Button
 .back {
   position: absolute;
   top: 20px;
   left: 20px;
-  font-size: 20px;
   cursor: pointer;
-  color: #002e24;
-  padding: 8px;
-  border-radius: 50%;
-  transition: all 0.3s ease;
+  color: #666;
+  font-size: 18px;
+  transition: color 0.3s ease;
 
   &:hover {
-    background-color: #f0f0f0;
-    transform: scale(1.1);
+    color: #00aaff;
   }
 }
 
-.icon {
-  width: 50px;
-  margin-bottom: 10px;
-}
-
+// Header
 .user-id {
-  background: linear-gradient(135deg, #424242);
-  color: white;
-  padding: 12px 20px;
-  margin: 0 auto 15px auto;
-  font-weight: 600;
-  border-radius: 20px;
-  width: fit-content;
-  font-size: 16px;
-  box-shadow: 0 4px 15px rgba(0,170,255,0.3);
-  letter-spacing: 0.5px;
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 10px;
+  margin-top: 20px;
 }
 
 .title {
-  margin: 10px 0 20px 0;
-  font-size: 18px;
-  font-weight: bold;
-  color: #002e24;
+  text-align: center;
+  color: #333;
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 30px;
 }
 
-.info-row {
-  margin-bottom: 20px;
-  position: relative;
+// Profile Form
+.profile-form {
+  .info-row {
+    margin-bottom: 20px;
 
-  .label {
-    font-weight: 600;
-    margin-bottom: 8px;
-    font-size: 14px;
-    color: #002e24;
-    text-align: left;
-    padding-left: 15px;
-    position: relative;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-
-    &::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 4px;
-      height: 20px;
-      background: linear-gradient(45deg, #00aaff, #0088cc);
-      border-radius: 2px;
-    }
-  }
-
-  input.value {
-    width: 100%;
-    max-width: 400px;
-    padding: 12px 18px;
-    border-radius: 15px;
-    border: 2px solid #e9ecef;
-    font-size: 16px;
-    font-weight: 500;
-    color: #2c3e50;
-    transition: all 0.3s ease;
-    background: linear-gradient(145deg, #f8f9fa, #e9ecef);
-    position: relative;
-    overflow: hidden;
-    box-sizing: border-box;
-
-    &:focus {
-      outline: none;
-      border-color: #00aaff;
-      box-shadow: 0 0 15px rgba(0,170,255,0.3);
-      transform: translateY(-1px);
+    .label {
+      display: block;
+      color: #333;
+      font-weight: 500;
+      margin-bottom: 8px;
+      font-size: 14px;
     }
 
-    &:hover:not(:focus) {
-      border-color: #00aaff;
-      box-shadow: 0 4px 15px rgba(0,170,255,0.15);
-    }
+    .value {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e1e5e9;
+      border-radius: 10px;
+      font-size: 16px;
+      transition: border-color 0.3s ease;
+      box-sizing: border-box;
 
-    &[readonly] {
-      background: linear-gradient(145deg, #e0e0e0, #d0d0d0);
-      cursor: not-allowed;
-      color: #666;
+      &:focus {
+        outline: none;
+        border-color: #00aaff;
+      }
 
-      &:hover {
-        border-color: #ccc;
-        box-shadow: none;
+      &[readonly] {
+        background-color: #f8f9fa;
+        color: #666;
+        cursor: not-allowed;
+      }
+
+      &::placeholder {
+        color: #999;
+        font-size: 14px;
       }
     }
   }
-
-  // Different border colors for different input fields
-  &:nth-child(3) input.value {
-    border-left: 4px solid #fc8181;
-  }
-
-  &:nth-child(4) input.value {
-    border-left: 4px solid #68d391;
-  }
-
-  &:nth-child(5) input.value {
-    border-left: 4px solid #f6ad55;
-  }
-
-  &:nth-child(6) input.value {
-    border-left: 4px solid #63b3ed;
-  }
-
-  &:nth-child(7) input.value {
-    border-left: 4px solid #b794f6;
-  }
 }
 
+// Button Group
 .button-group {
+  display: flex;
+  justify-content: center;
   margin-top: 30px;
-}
+  margin-bottom: 20px;
 
-.edit-button {
-  background: linear-gradient(135deg, #1eec16, #15c412);
-  color: white;
-  border: none;
-  padding: 12px 30px;
-  border-radius: 25px;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 16px;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(30,236,22,0.3);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(30,236,22,0.4);
-    background: linear-gradient(135deg, #15c412, #12a10f);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-}
-
-.admin {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
-  text-align: center;
-  font-size: 14px;
-  color: #002e24;
-  cursor: pointer;
-
-  img {
-    width: 30px;
-    height: 30px;
-    transition: transform 0.3s ease;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  .edit-button {
+    background: linear-gradient(135deg, #00aaff, #0088cc);
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
 
     &:hover {
-      transform: scale(1.1);
+      background: linear-gradient(135deg, #0088cc, #006699);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 170, 255, 0.3);
+    }
+
+    &:active {
+      transform: translateY(0);
     }
   }
+}
 
-  div {
-    margin-top: 4px;
-    font-weight: 500;
+// Admin Contact
+.admin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  margin-top: 20px;
+
+  &:hover {
+    color: #00aaff;
+  }
+
+  img {
+    width: 20px;
+    height: 20px;
   }
 }
 
-// Subtle animation for the entire card
-@keyframes subtle-float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
-// Media queries for responsiveness
-@media screen and (max-width: 768px) {
+// Responsive Design
+@media (max-width: 768px) {
   .profile-container {
     padding: 15px;
   }
 
   .profile-card {
-    width: 100%;
-    padding: 30px 25px;
-    border-radius: 25px;
-    max-width: none;
-  }
-
-  .info-row {
-    margin-bottom: 18px;
-
-    input.value {
-      width: 100%;
-      max-width: none;
-    }
-  }
-
-  .user-id {
-    font-size: 14px;
-    padding: 10px 16px;
+    padding: 20px;
+    border-radius: 15px;
   }
 
   .title {
-    font-size: 16px;
-  }
-}
-
-@media screen and (max-width: 480px) {
-  .profile-container {
-    padding: 10px;
-    min-height: 100vh;
-    align-items: flex-start;
-    padding-top: 20px;
+    font-size: 20px;
+    margin-bottom: 25px;
   }
 
-  .profile-card {
-    width: 100%;
-    padding: 25px 20px;
-    border-radius: 20px;
-    margin-bottom: 20px;
-    animation: none; // ปิด animation เพื่อประสิทธิภาพบนมือถือ
-  }
+  .profile-form {
+    .info-row {
+      margin-bottom: 15px;
 
-  .back {
-    top: 15px;
-    left: 15px;
-    font-size: 18px;
-    padding: 6px;
-  }
-
-  .user-id {
-    font-size: 12px;
-    padding: 8px 12px;
-    margin-bottom: 20px;
-  }
-
-  .title {
-    font-size: 16px;
-    margin: 10px 0 15px 0;
-  }
-
-  .info-row {
-    margin-bottom: 15px;
-
-    .label {
-      padding-left: 10px;
-      font-size: 12px;
-      margin-bottom: 6px;
-
-      &::before {
-        width: 3px;
-        height: 15px;
+      .value {
+        padding: 10px 14px;
+        font-size: 14px;
       }
-    }
-
-    input.value {
-      width: 100%;
-      padding: 10px 12px;
-      font-size: 14px;
-      border-radius: 12px;
     }
   }
 
   .button-group {
     margin-top: 25px;
-  }
 
-  .edit-button {
-    padding: 12px 25px;
-    font-size: 14px;
-    border-radius: 20px;
-  }
-
-  .admin {
-    position: relative;
-    bottom: auto;
-    right: auto;
-    margin-top: 20px;
-    font-size: 12px;
-
-    img {
-      width: 25px;
-      height: 25px;
+    .edit-button {
+      padding: 10px 25px;
+      font-size: 14px;
     }
   }
 }
 
-@media screen and (max-width: 360px) {
+@media (max-width: 480px) {
+  .profile-container {
+    padding: 10px;
+  }
+
   .profile-card {
-    padding: 20px 15px;
+    padding: 15px;
+    border-radius: 10px;
   }
 
-  .info-row {
-    .label {
-      font-size: 11px;
-      padding-left: 8px;
-    }
+  .back {
+    top: 15px;
+    left: 15px;
+    font-size: 16px;
+  }
 
-    input.value {
-      padding: 8px 10px;
+  .user-id {
+    font-size: 12px;
+    margin-top: 15px;
+  }
+
+  .title {
+    font-size: 18px;
+    margin-bottom: 20px;
+  }
+
+  .profile-form {
+    .info-row {
+      margin-bottom: 12px;
+
+      .label {
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+
+      .value {
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+    }
+  }
+
+  .button-group {
+    margin-top: 20px;
+
+    .edit-button {
+      padding: 8px 20px;
       font-size: 13px;
+      min-width: 100px;
     }
   }
 
-  .edit-button {
-    padding: 10px 20px;
-    font-size: 13px;
+  .admin {
+    font-size: 12px;
+    margin-top: 15px;
+
+    img {
+      width: 16px;
+      height: 16px;
+    }
+  }
+}
+
+// Form Validation Styles
+.info-row {
+  .value {
+    &.ng-invalid.ng-touched {
+      border-color: #ff4757;
+    }
+
+    &.ng-valid.ng-touched {
+      border-color: #2ed573;
+    }
+  }
+}
+
+// Focus States
+.info-row .value:focus {
+  box-shadow: 0 0 0 3px rgba(0, 170, 255, 0.1);
+}
+
+// Animation for form elements
+.profile-form .info-row {
+  animation: fadeInUp 0.5s ease forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+@for $i from 1 through 6 {
+  .profile-form .info-row:nth-child(#{$i}) {
+    animation-delay: #{$i * 0.1}s;
+  }
+}
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

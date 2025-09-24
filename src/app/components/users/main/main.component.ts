@@ -2,393 +2,535 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Database, ref, get, onValue, update, set } from '@angular/fire/database';
-import { interval, Subscription } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { interval, Subscription, lastValueFrom } from 'rxjs'; // 👈 ใช้ lastValueFrom
+import { Constants } from '../../../config/constants';
+import { Auth, onAuthStateChanged } from '@angular/fire/auth';
 
 interface Device {
-  id: string;
-  displayName: string;
+  deviceid: number;
+  device_name: string;
+  created_at: string;
+  updated_at: string;
+  userid: number;
   status: 'online' | 'offline';
 }
 
 type LivePayload = {
-  ts_epoch?: number;   // epoch วินาทีจากอุปกรณ์ (อาศัย NTP)
-  ts_uptime?: number;  // uptime วินาทีจากอุปกรณ์ (fallback)
+  ts_epoch?: number;
+  ts_uptime?: number;
   temperature?: number;
   moisture?: number;
   nitrogen?: number;
   phosphorus?: number;
   potassium?: number;
   ph?: number;
-  // progress?: number;
 };
+
+// 👇 เพิ่ม type ของ response จาก /api/devices/claim
+interface ClaimResponse {
+  success: boolean;
+  message?: string;
+}
 
 @Component({
   selector: 'app-main',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './main.component.html',
-  styleUrl: './main.component.scss'
+  styleUrl: './main.component.scss',
 })
 export class MainComponent implements OnInit, OnDestroy {
   userID: string = '';
+  userName: string = '';
+  userEmail: string = '';
+  currentUser: any = null; // ✅ เพิ่ม currentUser property
 
-  // มี placeholder เริ่มต้นกันเฟรมแรกที่อาร์เรย์ยังว่าง
-  devices: Device[] = [{ id: '__none__', displayName: 'กำลังโหลด...', status: 'offline' }];
+  devices: Device[] = [];
   selectedDevice: Device | null = null;
-  selectedDeviceId: string = '';   // ใช้ subscribe /live/{id}
-
+  selectedDeviceId: string = '';
   isLoading = false;
   currentTime: string = '';
   private clockSubscription: Subscription | null = null;
 
-  // live monitor
   private liveUnsub: (() => void) | null = null;
-  private readonly FRESH_WINDOW_MS = 45_000; // ถือว่าสดภายใน 45 วิ
-  private liveOfflineTimer: any = null;
+  private readonly FRESH_WINDOW_MS = 45_000;
+  // 👇 ใช้ type ให้ถูก + เริ่มต้นเป็น null
+  private liveOfflineTimer: ReturnType<typeof setInterval> | null = null;
   private lastLiveLocalMs = 0;
 
-  // ฟอร์ม “ขอผูกอุปกรณ์”
   claimDeviceId: string = '';
   lastClaimMessage: string = '';
   lastClaimType: 'ok' | 'warn' | 'err' | '' = '';
   requestingClaim = false;
+  private apiUrl: string;
 
   constructor(
     private router: Router,
-    private db: Database
-  ) {}
-
-  async ngOnInit() {
-    const userData = localStorage.getItem('user');
-    if (!userData) {
-      alert('กรุณาล็อกอินก่อน');
-      this.router.navigate(['/']);
-      return;
-    }
-
-    const user = JSON.parse(userData);
-    this.userID = user.username || user.userID || 'ไม่พบข้อมูล';
-
-    await this.loadDevices();
-
-    if (this.devices.length > 0 && this.devices[0].id !== '__none__') {
-      this.selectedDeviceId = (localStorage.getItem('selectedDeviceId') || this.devices[0].id).trim();
-      this.selectedDevice = this.devices.find(d => d.id === this.selectedDeviceId) || this.devices[0];
-      this.selectedDeviceId = this.selectedDevice.id; // sync
-      this.startLiveMonitor(this.selectedDeviceId);
-    } else {
-      this.selectedDeviceId = '__none__';
-      this.selectedDevice = null;
-      localStorage.removeItem('selectedDeviceId');
-    }
-
-    // นาฬิกา
-    this.updateTime();
-    this.clockSubscription = interval(1000).subscribe(() => this.updateTime());
+    private http: HttpClient,
+    private constants: Constants,
+    private auth: Auth
+  ) {
+    this.apiUrl = this.constants.API_ENDPOINT;
   }
 
-  ngOnDestroy() {
-    if (this.clockSubscription) this.clockSubscription.unsubscribe();
-    if (this.liveUnsub) { this.liveUnsub(); this.liveUnsub = null; }
-    if (this.liveOfflineTimer) { clearTimeout(this.liveOfflineTimer); this.liveOfflineTimer = null; }
-  }
-
-  // ===== clock =====
-  private updateTime() {
-    const now = new Date();
-    const hh = now.getHours().toString().padStart(2, '0');
-    const mm = now.getMinutes().toString().padStart(2, '0');
-    const ss = now.getSeconds().toString().padStart(2, '0');
-    this.currentTime = `${hh}:${mm}:${ss}`;
-  }
-
-  // ===== โหลดรายการอุปกรณ์ของผู้ใช้ =====
-  private async loadDevices() {
-    this.isLoading = true;
-    this.devices = [];
-
-    try {
-      // วิธีที่ 1: users/{userID}/devices (map)
-      const userDevicesRef = ref(this.db, `users/${this.userID}/devices`);
-      const userDevicesSnapshot = await get(userDevicesRef);
-
-      if (userDevicesSnapshot.exists()) {
-        const userDevicesData = userDevicesSnapshot.val();
-        if (userDevicesData && typeof userDevicesData === 'object') {
-          this.devices = Object.entries<any>(userDevicesData).map(([deviceId, value]) => ({
-            id: deviceId,
-            displayName: value?.name || deviceId,
-            status: (value?.status as 'online' | 'offline') || 'offline'
-          }));
-        }
-      }
-
-      // วิธีที่ 2: /devices (owner/user = userID)
-      if (this.devices.length === 0) {
-        const allDevicesRef = ref(this.db, 'devices');
-        const snap = await get(allDevicesRef);
-        if (snap.exists()) {
-          const data = snap.val();
-          const list: Device[] = [];
-          for (const [deviceId, dev] of Object.entries<any>(data)) {
-            if (dev?.user === this.userID || dev?.owner === this.userID || dev?.userId === this.userID) {
-              list.push({
-                id: deviceId,
-                displayName: dev?.name || deviceId,
-                status: (dev?.status as 'online' | 'offline') || 'offline'
-              });
-            }
-          }
-          this.devices = list;
-        }
-      }
-
-      // วิธีที่ 3: userDevices/{userID}
-      if (this.devices.length === 0) {
-        const userDevices2Ref = ref(this.db, `userDevices/${this.userID}`);
-        const snap2 = await get(userDevices2Ref);
-        if (snap2.exists()) {
-          const data2 = snap2.val();
-          if (Array.isArray(data2)) {
-            this.devices = data2
-              .filter(d => d?.id)
-              .map((d: any) => ({
-                id: d.id,
-                displayName: d?.name || d.id,
-                status: (d?.status as 'online' | 'offline') || 'offline'
-              }));
-          } else if (data2 && typeof data2 === 'object') {
-            this.devices = Object.entries<any>(data2).map(([deviceId, v]) => ({
-              id: deviceId,
-              displayName: v?.name || deviceId,
-              status: (v?.status as 'online' | 'offline') || 'offline'
-            }));
-          }
-        }
-      }
-
-      // ผลลัพธ์สุดท้าย
-      if (this.devices.length === 0) {
-        this.devices = [{ id: '__none__', displayName: 'ไม่มีอุปกรณ์', status: 'offline' }];
-        this.selectedDevice = null;
+  ngOnInit(): void {
+    this.clockSubscription = interval(1000).subscribe(() => {
+      this.currentTime = new Date().toLocaleTimeString('th-TH');
+    });
+    
+    // ตรวจสอบ Firebase auth state ก่อนโหลด devices
+    onAuthStateChanged(this.auth, (user) => {
+      if (user) {
+        this.currentUser = user; // ✅ เก็บ currentUser
+        console.log('✅ User is authenticated:', user.email);
+        console.log('🔑 User UID:', user.uid);
+        
+        // ตรวจสอบว่า user มี token หรือไม่
+        user.getIdToken().then((token) => {
+          console.log('🎫 Firebase ID Token obtained');
+          // เพิ่ม delay เล็กน้อยเพื่อให้ Firebase token พร้อมใช้งาน
+          setTimeout(() => {
+            this.loadUserProfile();
+            this.loadDevices();
+          }, 100);
+        }).catch((error) => {
+          console.error('❌ Failed to get ID token:', error);
+          this.loadUserProfile();
+          this.loadDevices();
+        });
       } else {
-        this.devices = this.devices.filter(d => typeof d.id === 'string' && d.id.trim().length > 0);
-        if (!this.devices.length) {
-          this.devices = [{ id: '__none__', displayName: 'ไม่มีอุปกรณ์', status: 'offline' }];
-          this.selectedDevice = null;
-        }
+        console.log('❌ User is not authenticated, redirecting to login');
+        this.router.navigate(['/']);
       }
-    } catch (error) {
-      console.error('ข้อผิดพลาดในการโหลดอุปกรณ์:', error);
-      this.devices = [{ id: '__none__', displayName: 'เกิดข้อผิดพลาด', status: 'offline' }];
-      this.selectedDevice = null;
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.clockSubscription) {
+      this.clockSubscription.unsubscribe();
+    }
+    if (this.liveUnsub) {
+      this.liveUnsub();
+    }
+    if (this.liveOfflineTimer) {
+      clearInterval(this.liveOfflineTimer); // 👈 ใช้ clearInterval
+      this.liveOfflineTimer = null;
+    }
+  }
+
+  async loadUserProfile() {
+    try {
+      console.log('👤 Loading user profile...');
+      
+      // ตรวจสอบ Firebase user
+      const currentUser = this.auth.currentUser;
+      if (!currentUser) {
+        console.log('❌ No current user found for profile');
+        return;
+      }
+
+      // ✅ ใช้ข้อมูลจาก PostgreSQL เท่านั้น - ไม่ใช้ Firebase
+      console.log('👤 Loading user profile from PostgreSQL only...');
+
+      // ✅ ดึงข้อมูลจาก PostgreSQL เท่านั้น
+      try {
+        const token = await currentUser.getIdToken(true);
+        console.log('🔑 Firebase ID token obtained for PostgreSQL data');
+        
+        // ลองดึงข้อมูลจาก PostgreSQL endpoints
+        const endpoints = [
+          '/api/auth/me',
+          '/api/user/profile', 
+          '/api/user/me',
+          '/api/profile'
+        ];
+
+        let userDataFound = false;
+        for (const endpoint of endpoints) {
+          try {
+            console.log(`🔍 Trying PostgreSQL endpoint: ${endpoint}`);
+            const response = await lastValueFrom(
+              this.http.get<any>(`${this.apiUrl}${endpoint}`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              })
+            );
+            
+            console.log(`✅ Success with PostgreSQL ${endpoint}:`, response);
+            
+            // อัปเดตข้อมูลจาก PostgreSQL
+            let userData = response;
+            if (response.user) {
+              userData = response.user;
+            }
+            
+            // ✅ ใช้ข้อมูลจาก PostgreSQL เท่านั้น
+            if (userData.user_name) {
+              this.userName = userData.user_name;
+              console.log('👤 User name from PostgreSQL:', this.userName);
+            }
+            if (userData.user_email) {
+              this.userEmail = userData.user_email;
+              console.log('📧 User email from PostgreSQL:', this.userEmail);
+            }
+            if (userData.userid) {
+              this.userID = userData.userid.toString();
+              console.log('🆔 User ID from PostgreSQL:', this.userID);
+            }
+            
+            userDataFound = true;
+            break; // หยุดเมื่อเจอ endpoint ที่ทำงานได้
+          } catch (endpointError: any) {
+            console.log(`❌ PostgreSQL endpoint ${endpoint} failed:`, endpointError.status);
+            continue; // ลอง endpoint ถัดไป
+          }
+        }
+        
+        if (!userDataFound) {
+          console.log('⚠️ No PostgreSQL data found, using default values');
+          this.userName = 'Unknown User';
+          this.userEmail = 'No email';
+          this.userID = 'No ID';
+        }
+        
+      } catch (tokenError) {
+        console.log('❌ Failed to get token for PostgreSQL data');
+        // ใช้ข้อมูล default
+        this.userName = 'Unknown User';
+        this.userEmail = 'No email';
+        this.userID = 'No ID';
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Error loading user profile:', error);
+      // ใช้ข้อมูล default
+      this.userName = 'Unknown User';
+      this.userEmail = 'No email';
+      this.userID = 'No ID';
+    }
+  }
+
+  async loadDevices() {
+    this.isLoading = true;
+    try {
+      console.log('🚀 Starting to load devices...');
+      
+      // ตรวจสอบ Firebase user
+      const currentUser = this.auth.currentUser;
+      if (!currentUser) {
+        console.log('❌ No current user found');
+        this.devices = [
+          { deviceid: 0, device_name: 'ไม่พบอุปกรณ์', created_at: '', updated_at: '', userid: 0, status: 'offline' }
+        ];
+        return;
+      }
+
+      // ✅ ดึงข้อมูล devices จาก PostgreSQL
+      try {
+        const token = await currentUser.getIdToken(true);
+        console.log('🔑 Firebase ID token obtained for devices');
+        
+        const response = await lastValueFrom(
+          this.http.get<Device[]>(`${this.apiUrl}/api/devices`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          })
+        );
+
+        console.log('✅ Devices loaded from PostgreSQL:', response);
+        this.devices = Array.isArray(response) ? response : [];
+        
+        // ✅ ตั้งค่าสถานะ offline สำหรับทุกอุปกรณ์ (ยังไม่มีการเชื่อม IoT)
+        this.devices = this.devices.map(device => ({
+          ...device,
+          status: 'offline' as 'online' | 'offline'
+        }));
+        
+      } catch (deviceError: any) {
+        console.error('❌ Error loading devices from PostgreSQL:', deviceError);
+        // ✅ ใช้ข้อมูลจาก PostgreSQL เท่านั้น - ไม่มี fallback
+        this.devices = [];
+        console.log('✅ No devices found - PostgreSQL only');
+      }
+
+
+      if (this.devices.length > 0) {
+        // ✅ ตรวจสอบ localStorage ก่อน
+        const savedDeviceId = localStorage.getItem('selectedDeviceId');
+        let deviceToSelect = null;
+        
+        if (savedDeviceId) {
+          // ✅ หาอุปกรณ์ที่เคยเลือกไว้
+          deviceToSelect = this.devices.find(d => d.deviceid.toString() === savedDeviceId);
+          console.log('🔄 Found saved device selection:', savedDeviceId, deviceToSelect);
+        }
+        
+        // ✅ ถ้าไม่เจออุปกรณ์ที่เคยเลือก หรือไม่มี savedDeviceId ให้เลือกอุปกรณ์แรก
+        if (!deviceToSelect) {
+          deviceToSelect = this.devices[0];
+          console.log('🔄 No saved selection found, selecting first device:', deviceToSelect);
+        }
+        
+        this.selectedDeviceId = deviceToSelect.deviceid.toString();
+        this.selectedDevice = deviceToSelect;
+        localStorage.setItem('selectedDeviceId', this.selectedDeviceId);
+        
+        console.log('📱 Selected device:', this.selectedDevice);
+      } else {
+        // fallback ถ้าไม่มีอุปกรณ์
+        this.selectedDevice = null;
+        this.selectedDeviceId = '';
+        localStorage.removeItem('selectedDeviceId');
+        console.log('📱 No devices found for user');
+      }
+    } catch (error: any) {
+      console.error('❌ Error loading devices:', error);
+      // ✅ ใช้ข้อมูลจาก PostgreSQL เท่านั้น - ไม่มี fallback
+      this.devices = [];
+      console.log('✅ No devices found - PostgreSQL only');
     } finally {
       this.isLoading = false;
     }
   }
 
-  // ===== เปลี่ยนอุปกรณ์ที่เลือก =====
-  onDeviceChange() {
-    this.selectedDevice = this.devices.find(d => d.id === this.selectedDeviceId) || null;
-
-    if (this.selectedDevice && this.selectedDevice.id !== '__none__') {
-      localStorage.setItem('selectedDeviceId', this.selectedDevice.id);
-      this.startLiveMonitor(this.selectedDevice.id);
-    } else {
-      localStorage.removeItem('selectedDeviceId');
-      if (this.liveUnsub) { this.liveUnsub(); this.liveUnsub = null; }
-      if (this.liveOfflineTimer) { clearTimeout(this.liveOfflineTimer); this.liveOfflineTimer = null; }
-    }
-  }
-
-  // ===== LIVE monitor: อ่าน /live/{deviceId} แล้วอัปเดต online/offline =====
-  private startLiveMonitor(deviceIdRaw: string) {
-    const deviceId = (deviceIdRaw || '').trim();
-    if (!deviceId || deviceId === '__none__') {
-      if (this.liveUnsub) { this.liveUnsub(); this.liveUnsub = null; }
-      if (this.liveOfflineTimer) { clearTimeout(this.liveOfflineTimer); this.liveOfflineTimer = null; }
-      this.setDeviceStatus(deviceIdRaw, 'offline');
-      return;
-    }
-
-    // ปิดตัวเก่าก่อน
-    if (this.liveUnsub) { this.liveUnsub(); this.liveUnsub = null; }
-    if (this.liveOfflineTimer) { clearTimeout(this.liveOfflineTimer); this.liveOfflineTimer = null; }
-    this.lastLiveLocalMs = 0;
-
-    const liveRef = ref(this.db, `live/${deviceId}`);
-    this.liveUnsub = onValue(liveRef, (snap) => {
-      if (!snap.exists()) {
-        this.setDeviceStatus(deviceId, 'offline');
-        return;
-      }
-      const v = (snap.val() || {}) as LivePayload;
-
-      const now = Date.now();
-      const seenSec = typeof v.ts_epoch === 'number' ? v.ts_epoch : 0;
-      let isFresh = false;
-
-      // 1) ถ้ามี ts_epoch และยังไม่เกินกรอบ → สด
-      if (seenSec > 0) {
-        isFresh = (now - seenSec * 1000) < this.FRESH_WINDOW_MS;
-      }
-
-      // 2) ถ้า ts_epoch ไม่มี/เป็น 0 แต่มี onValue เด้ง (หรือมี ts_uptime>0) → ถือว่าสด (ให้ timer เป็นตัวตัด)
-      if (!isFresh && seenSec === 0) {
-        if (typeof v.ts_uptime === 'number' && v.ts_uptime > 0) {
-          isFresh = true;
-        } else {
-          isFresh = true; // เด้ง onValue = มีอัปเดต
-        }
-      }
-
-      this.setDeviceStatus(deviceId, isFresh ? 'online' : 'offline');
-
-      // ตั้ง/รีเซ็ตตัวจับเวลา ถ้าไม่มีเด้งใหม่ในกรอบ → offline
-      if (isFresh) {
-        this.lastLiveLocalMs = now;
-        if (this.liveOfflineTimer) clearTimeout(this.liveOfflineTimer);
-        this.liveOfflineTimer = setTimeout(() => {
-          if (Date.now() - this.lastLiveLocalMs >= this.FRESH_WINDOW_MS) {
-            this.setDeviceStatus(deviceId, 'offline');
-          }
-        }, this.FRESH_WINDOW_MS + 1000);
-      }
-    }, (err) => {
-      console.error('live onValue error:', err);
-      this.setDeviceStatus(deviceId, 'offline');
+  selectDevice(deviceId: string) {
+    console.log('🎯 Selecting device:', deviceId);
+    this.selectedDeviceId = deviceId;
+    this.selectedDevice = this.devices.find((d) => d.deviceid.toString() === deviceId) || null;
+    localStorage.setItem('selectedDeviceId', deviceId);
+    
+    console.log('📱 Device selection updated:', {
+      selectedDeviceId: this.selectedDeviceId,
+      selectedDevice: this.selectedDevice,
+      deviceName: this.selectedDevice?.device_name || this.selectedDevice?.deviceid
     });
+    
+    this.startLiveMonitor(deviceId);
   }
 
-  // อัปเดตทั้ง selectedDevice และ devices[]
-  private setDeviceStatus(deviceId: string, status: 'online' | 'offline') {
-    if (!deviceId) return;
-
-    if (this.selectedDevice && this.selectedDevice.id === deviceId) {
-      this.selectedDevice = { ...this.selectedDevice, status };
+  private startLiveMonitor(deviceId: string) {
+    if (this.liveUnsub) {
+      this.liveUnsub();
     }
-    if (this.devices && this.devices.length) {
-      this.devices = this.devices.map(d =>
-        d.id === deviceId ? { ...d, status } : d
-      );
+    this.liveUnsub = () => {}; // Placeholder for cleanup
+    this.lastLiveLocalMs = Date.now();
+
+    if (this.liveOfflineTimer) {
+      clearInterval(this.liveOfflineTimer); // เคลียร์ของเดิมก่อน
+    }
+    this.liveOfflineTimer = setInterval(() => {
+      if (Date.now() - this.lastLiveLocalMs > this.FRESH_WINDOW_MS) {
+        this.updateDeviceStatus(deviceId, 'offline');
+      } else {
+        this.updateDeviceStatus(deviceId, 'online');
+      }
+    }, 1000);
+  }
+
+  private updateDeviceStatus(deviceId: string, status: 'online' | 'offline') {
+    const device = this.devices.find((d) => d.deviceid.toString() === deviceId);
+    if (device) {
+      device.status = status;
     }
   }
 
-  // ===== Actions / Nav =====
+  // Minimal stub for template
   logout() {
+    localStorage.removeItem('token');
     localStorage.removeItem('user');
-    localStorage.removeItem('selectedDeviceId');
+    localStorage.removeItem('admin');
     this.router.navigate(['/']);
   }
 
-  goToProfile() { this.router.navigate(['/profile']); }
-
-  goToHistory() {
-    if (!this.selectedDevice || this.selectedDevice.id === '__none__') {
-      alert('กรุณาเพิ่มอุปกรณ์ก่อนดูประวัติ');
-      return;
-    }
-    this.router.navigate(['/history']);
+  // เพิ่ม method สำหรับการเพิ่มอุปกรณ์
+  async requestDeviceClaim() {
+    await this.claimDevice();
   }
 
-  goToMeasure() {
-    if (!this.selectedDevice || this.selectedDevice.id === '__none__') {
-      alert('กรุณาเพิ่มอุปกรณ์ก่อนทำการวัดค่า');
-      return;
-    }
-    this.router.navigate(['/measure']);
-  }
-
-  goToContactAdmin() { this.router.navigate(['/reports']); }
-
-  // ===== ผูกอุปกรณ์ทันที (ไม่ต้องส่งคำขอ) =====
-async requestDeviceClaim() {
-  const rawId = (this.claimDeviceId || '').trim();
-  if (!rawId) {
+  // เพิ่ม method สำหรับเพิ่มอุปกรณ์ใหม่ (POST /api/devices)
+  async addNewDevice() {
+  if (!this.claimDeviceId.trim()) {
     this.lastClaimType = 'warn';
-    this.lastClaimMessage = 'กรุณากรอก Device ID ก่อน';
-    return;
-  }
-  if (!this.userID) {
-    this.lastClaimType = 'err';
-    this.lastClaimMessage = 'กรุณาเข้าสู่ระบบใหม่';
+    this.lastClaimMessage = 'กรุณากรอก ID อุปกรณ์';
     return;
   }
 
-  const deviceId = rawId.toLowerCase();
-  const username = this.userID;
-
+  this.requestingClaim = true;
   try {
-    this.requestingClaim = true;
-    this.lastClaimMessage = '';
-    this.lastClaimType = '';
+    // ตรวจสอบ Firebase user และส่ง token ไปกับ request
+    const currentUser = this.auth.currentUser;
+    if (!currentUser) {
+      this.lastClaimType = 'err';
+      this.lastClaimMessage = 'ไม่พบผู้ใช้ กรุณาเข้าสู่ระบบใหม่';
+      return;
+    }
 
-    const devRef = ref(this.db, `devices/${deviceId}`);
-    const devSnap = await get(devRef);
+    const token = await currentUser.getIdToken();
+    console.log('🔑 Firebase ID token obtained for add device');
 
-    // ถ้ามีอยู่แล้ว: ตรวจสอบว่าถูกผูกกับใคร
-    if (devSnap.exists()) {
-      const dev = devSnap.val() || {};
-      const meta = (dev.meta || {}) as any;
+    const response = await lastValueFrom(
+      this.http.post<ClaimResponse>(`${this.apiUrl}/api/devices`, {
+        deviceId: this.claimDeviceId.trim(),
+        device_name: this.claimDeviceId.trim(),
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+    );
 
-      // 1) ผูกกับคนอื่นอยู่แล้ว → ไม่อนุญาต (ป้องกันการแย่งอุปกรณ์)
-      const boundToSomeoneElse =
-        (dev.user && dev.user !== username) ||
-        (meta.userName && meta.userName !== username) ||
-        dev.enabled === true && dev.user && dev.user !== username;
+    console.log('✅ Add device response:', response);
 
-      if (boundToSomeoneElse) {
-        this.lastClaimType = 'err';
-        this.lastClaimMessage = 'อุปกรณ์นี้ถูกผูกกับผู้ใช้อื่นอยู่แล้ว';
-        return;
+    if (response.success) {
+      this.lastClaimType = 'ok';
+      this.lastClaimMessage = `เพิ่มอุปกรณ์สำเร็จ! (อุปกรณ์: ${this.claimDeviceId.trim()})`;
+      
+      // 🚀 ทำการ fetch ข้อมูลใหม่ทันที
+      console.log('🔄 Fetching updated devices list...');
+      await this.loadDevices();
+      
+      // เลือกอุปกรณ์ที่เพิ่งเพิ่มให้เป็นอุปกรณ์ที่เลือก
+      const newDeviceId = this.claimDeviceId.trim();
+      this.selectedDeviceId = newDeviceId;
+      this.selectedDevice = this.devices.find((d) => d.deviceid.toString() === newDeviceId) || null;
+      
+      if (this.selectedDevice) {
+        localStorage.setItem('selectedDeviceId', newDeviceId);
+        console.log('📱 Auto-selected new device:', this.selectedDevice);
       }
-
-      // 2) ถ้าเคยเป็นของเราอยู่แล้ว → อัปเดตสถานะให้ถูกต้อง
-      await update(devRef, {
-        enabled: true,
-        user: username,
-        meta: { ...(meta || {}), userName: username },
-        claim: null, // ล้างคำขอเก่าออก
-      });
+      
+      // ล้าง input field
+      this.claimDeviceId = '';
+      
     } else {
-      // ไม่มีในฐานข้อมูล → สร้างใหม่แล้วผูกให้เราเลย
-      await set(devRef, {
-        enabled: true,
-        user: username,
-        name: deviceId, // ตั้งชื่อเบื้องต้นเป็น ID (ปรับภายหลังได้)
-        meta: { userName: username },
-        claim: null,
-      });
+      this.lastClaimType = 'err';
+      this.lastClaimMessage = response.message || 'เพิ่มอุปกรณ์ไม่สำเร็จ';
     }
-
-    // เขียน mapping ที่ฝั่งผู้ใช้ด้วย (ให้แอปรู้ว่ามีอุปกรณ์นี้)
-    const userDevRef = ref(this.db, `users/${username}/devices/${deviceId}`);
-    await update(userDevRef, {
-      name: deviceId,
-      status: 'offline',    // เริ่มต้นให้ offline ไปก่อน รอ live monitor อัปเดต
-      boundAt: Date.now(),
-    });
-
-    // รีโหลดรายการอุปกรณ์ + ตั้งให้เลือกตัวที่เพิ่งผูก
-    await this.loadDevices();
-    this.selectedDeviceId = deviceId;
-    this.selectedDevice = this.devices.find(d => d.id === deviceId) || null;
-    if (this.selectedDevice) {
-      localStorage.setItem('selectedDeviceId', deviceId);
-      this.startLiveMonitor(deviceId);
-    }
-
-    this.lastClaimType = 'ok';
-    this.lastClaimMessage = `ผูกอุปกรณ์สำเร็จ! (อุปกรณ์: ${deviceId})`;
-    this.claimDeviceId = '';
-  } catch (err) {
-    console.error('bind device error:', err);
+  } catch (err: any) {
+    console.error('❌ Add device error:', err);
     this.lastClaimType = 'err';
-    this.lastClaimMessage = 'ผูกอุปกรณ์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+    
+    // ให้ข้อความ error ที่ชัดเจนขึ้น
+    if (err.status === 400) {
+      this.lastClaimMessage = 'ข้อมูลไม่ถูกต้อง หรือ Device ID ซ้ำ';
+    } else if (err.status === 401) {
+      this.lastClaimMessage = 'ไม่มีสิทธิ์ กรุณาเข้าสู่ระบบใหม่';
+    } else if (err.status === 409) {
+      this.lastClaimMessage = 'Device ID นี้มีอยู่แล้ว';
+    } else if (err.status === 500) {
+      this.lastClaimMessage = 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง';
+    } else {
+      this.lastClaimMessage = 'เพิ่มอุปกรณ์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+    }
   } finally {
     this.requestingClaim = false;
   }
 }
 
+  // เพิ่ม method สำหรับการเปลี่ยนอุปกรณ์
+  onDeviceChange() {
+    console.log('🔄 Device changed to:', this.selectedDeviceId);
+    this.selectDevice(this.selectedDeviceId);
+    console.log('📱 Selected device updated:', {
+      deviceId: this.selectedDeviceId,
+      deviceName: this.selectedDevice?.device_name || this.selectedDevice?.deviceid,
+      device: this.selectedDevice
+    });
+  }
+
+  // เพิ่ม method สำหรับการไปยังหน้า profile
+  goToProfile() {
+    this.router.navigate(['/profile']);
+  }
+
+  // เพิ่ม method สำหรับการไปยังหน้า history
+  goToHistory() {
+    this.router.navigate(['/history']);
+  }
+
+  // เพิ่ม method สำหรับการไปยังหน้า measure
+  goToMeasure() {
+    // ✅ ส่งข้อมูลอุปกรณ์ที่เลือกไปหน้า measurement
+    const deviceData = this.selectedDevice ? {
+      deviceId: this.selectedDevice.deviceid.toString(),
+      deviceName: this.selectedDevice.device_name || this.selectedDevice.deviceid.toString(),
+      deviceStatus: this.selectedDevice.status || 'offline'
+    } : null;
+    
+    console.log('🎯 Navigating to measurement with device data:', deviceData);
+    
+    // ✅ ส่งข้อมูลผ่าน query parameters หรือ state
+    this.router.navigate(['/measure'], {
+      queryParams: deviceData ? {
+        deviceId: deviceData.deviceId,
+        deviceName: deviceData.deviceName,
+        deviceStatus: deviceData.deviceStatus
+      } : {}
+    });
+  }
+
+  // เพิ่ม method สำหรับการไปยังหน้า contact admin
+  goToContactAdmin() {
+    this.router.navigate(['/reports']);
+  }
+
+  async claimDevice() {
+    if (!this.claimDeviceId.trim()) {
+      this.lastClaimType = 'warn';
+      this.lastClaimMessage = 'กรุณากรอก ID อุปกรณ์';
+      return;
+    }
+
+    this.requestingClaim = true;
+    try {
+      // ตรวจสอบ Firebase user และส่ง token ไปกับ request
+      const currentUser = this.auth.currentUser;
+      if (!currentUser) {
+        this.lastClaimType = 'err';
+        this.lastClaimMessage = 'ไม่พบผู้ใช้ กรุณาเข้าสู่ระบบใหม่';
+        return;
+      }
+
+      const token = await currentUser.getIdToken();
+      console.log('🔑 Firebase ID token obtained for claim device');
+
+      const response = await lastValueFrom(
+        this.http.post<ClaimResponse>(`${this.apiUrl}/api/devices/claim`, {
+          deviceId: this.claimDeviceId,
+          device_name: this.claimDeviceId, // เพิ่ม device_name
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+      );
+
+      // ตอนนี้ response เป็น ClaimResponse แบบไม่ undefined แล้ว
+      if (response.success) {
+        this.lastClaimType = 'ok';
+        this.lastClaimMessage = `ผูกอุปกรณ์สำเร็จ! (อุปกรณ์: ${this.claimDeviceId})`;
+        await this.loadDevices();
+        this.selectedDeviceId = this.claimDeviceId;
+        this.selectedDevice =
+          this.devices.find((d) => d.deviceid.toString() === this.claimDeviceId) || null;
+        if (this.selectedDevice) {
+          localStorage.setItem('selectedDeviceId', this.claimDeviceId);
+          // ไม่ต้อง start live monitor เพราะยังไม่มีการเชื่อมกับ IoT
+        }
+      } else {
+        this.lastClaimType = 'err';
+        this.lastClaimMessage = response.message || 'ผูกอุปกรณ์ไม่สำเร็จ';
+      }
+    } catch (err) {
+      console.error('bind device error:', err);
+      this.lastClaimType = 'err';
+      this.lastClaimMessage = 'ผูกอุปกรณ์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+    } finally {
+      this.requestingClaim = false;
+    }
+  }
 }
