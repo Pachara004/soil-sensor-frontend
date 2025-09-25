@@ -35,6 +35,51 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
 }
 
 // Header Section
+.header {
+  margin-bottom: 20px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: $border-radius;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+
+  .user-summary {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+
+    .user-avatar {
+      width: 50px;
+      height: 50px;
+      background: $primary-gradient;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .user-details {
+      flex: 1;
+
+      .user-name {
+        margin: 0 0 5px 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: #333;
+      }
+
+      .user-email {
+        margin: 0;
+        font-size: 14px;
+        color: #666;
+      }
+    }
+  }
+}
+
 .back {
   position: absolute;
   top: 20px;

@@ -128,7 +128,7 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
   deviceStatus: 'online' | 'offline' = 'offline';
   
   // ✅ UI Control properties
-  showUserInfo = false;
+  showUserInfo = true;  // แสดงข้อมูล user โดยอัตโนมัติ
   showDeviceInfo = false;
   showMainMap = false;
   showCardMenu = false;

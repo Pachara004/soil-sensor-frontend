@@ -1,26 +1,35 @@
+// Variables
+$primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+$card-bg: rgba(255, 255, 255, 0.95);
+$border-radius: 20px;
+$transition: all 0.3s ease;
+$shadow-light: 0 4px 16px rgba(0, 0, 0, 0.1);
+
 /* Main Container */
 .measure-container {
   width: 100vw;
   height: 100vh;
-  background: linear-gradient(135deg, #013828 0%, #0a4d3a 100%);
+  background: $primary-gradient;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 20px;
   box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .card {
   width: min(800px, 95vw);
   max-height: 90vh;
-  background: white;
-  border-radius: 20px;
-  border: 4px solid #00aaff;
+  background: $card-bg;
+  border-radius: $border-radius;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 20px;
   position: relative;
   box-sizing: border-box;
   overflow-y: auto;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: $shadow-light;
+  backdrop-filter: blur(20px);
 }
 
 /* Header Section */
@@ -119,10 +128,12 @@
   flex-wrap: wrap;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
 }
+
 .device-box span {
   color: #013828;
   font-weight: 600;
 }
+
 .device-box select {
   flex: 1;
   padding: 8px;
@@ -134,9 +145,11 @@
   outline: none;
   transition: border-color 0.3s ease;
 }
+
 .device-box select:hover {
   border-color: #0077cc;
 }
+
 .device-box select:focus {
   border-color: #0077cc;
   box-shadow: 0 0 5px rgba(0, 170, 255, 0.3);
@@ -178,7 +191,7 @@
 }
 
 .history-list::-webkit-scrollbar-thumb {
-  background: #00aaff;
+  background: $primary-gradient;
   border-radius: 3px;
 }
 
@@ -265,12 +278,36 @@
 }
 
 /* Color coding for different values */
-.avg-item:nth-child(1) .avg-value { color: #ff6b35; } /* Temperature */
-.avg-item:nth-child(2) .avg-value { color: #4dabf7; } /* Moisture */
-.avg-item:nth-child(3) .avg-value { color: #69db7c; } /* Nitrogen */
-.avg-item:nth-child(4) .avg-value { color: #ffd43b; } /* Phosphorus */
-.avg-item:nth-child(5) .avg-value { color: #ff8cc8; } /* Potassium */
-.avg-item:nth-child(6) .avg-value { color: #845ef7; } /* pH */
+.avg-item:nth-child(1) .avg-value {
+  color: #ff6b35;
+}
+
+/* Temperature */
+.avg-item:nth-child(2) .avg-value {
+  color: #4dabf7;
+}
+
+/* Moisture */
+.avg-item:nth-child(3) .avg-value {
+  color: #69db7c;
+}
+
+/* Nitrogen */
+.avg-item:nth-child(4) .avg-value {
+  color: #ffd43b;
+}
+
+/* Phosphorus */
+.avg-item:nth-child(5) .avg-value {
+  color: #ff8cc8;
+}
+
+/* Potassium */
+.avg-item:nth-child(6) .avg-value {
+  color: #845ef7;
+}
+
+/* pH */
 
 /* Action Buttons */
 .area-actions {
@@ -279,7 +316,8 @@
   margin-top: 15px;
 }
 
-.detail-btn, .stats-btn {
+.detail-btn,
+.stats-btn {
   flex: 1;
   padding: 10px 16px;
   border: none;
@@ -403,19 +441,36 @@
   font-size: 12px;
   color: #666;
   font-weight: 500;
-} 
+}
 
 .summary-value {
   font-weight: bold;
   font-size: 13px;
 }
 
-.summary-value.temperature { color: #ff6b35; }
-.summary-value.moisture { color: #4dabf7; }
-.summary-value.nitrogen { color: #69db7c; }
-.summary-value.phosphorus { color: #ffd43b; }
-.summary-value.potassium { color: #ff8cc8; }
-.summary-value.ph { color: #845ef7; }
+.summary-value.temperature {
+  color: #ff6b35;
+}
+
+.summary-value.moisture {
+  color: #4dabf7;
+}
+
+.summary-value.nitrogen {
+  color: #69db7c;
+}
+
+.summary-value.phosphorus {
+  color: #ffd43b;
+}
+
+.summary-value.potassium {
+  color: #ff8cc8;
+}
+
+.summary-value.ph {
+  color: #845ef7;
+}
 
 /* Recommendation Section */
 .recommendation-section {
@@ -605,7 +660,7 @@
   .avg-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .user-id {
     margin-left: 10px;
     font-size: 11px;

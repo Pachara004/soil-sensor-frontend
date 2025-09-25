@@ -17,6 +17,8 @@ import '@maptiler/sdk/dist/maptiler-sdk.css';
 import { environment } from '../../../service/environment';
 import { Constants } from '../../../config/constants';
 import { NotificationService } from '../../../service/notification.service';
+import { Auth, onAuthStateChanged } from '@angular/fire/auth';
+import { lastValueFrom } from 'rxjs';
 
 interface Measurement {
   id: string;
@@ -84,6 +86,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
   showAreaDetails = false;
   isLoading = true;
   map: Map | undefined;
+  currentUser: any = null;
   @ViewChild('mapContainer') mapContainer!: ElementRef<HTMLElement>;
   private apiUrl: string;
 
@@ -92,24 +95,28 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     private location: Location,
     private http: HttpClient,
     private constants: Constants,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private auth: Auth
   ) {
     this.apiUrl = this.constants.API_ENDPOINT;
     config.apiKey = environment.mapTilerApiKey;
   }
 
   ngOnInit(): void {
-    const userData =
-      localStorage.getItem('user') || localStorage.getItem('admin');
-    if (userData) {
-      const user: UserData = JSON.parse(userData);
-      this.username = user.username;
-      this.deviceId = Object.keys(user.devices || {})[0] || null;
-      this.devices = Object.keys(user.devices || {});
-    }
-    // Minimal stub data to avoid template errors
-    this.areaGroups = [];
-    this.loadAreas();
+    // ใช้ Firebase Auth แทน localStorage
+    onAuthStateChanged(this.auth, (user) => {
+      if (user) {
+        this.currentUser = user;
+        this.username = user.displayName || user.email?.split('@')[0] || '';
+        console.log('✅ User authenticated:', this.username);
+        
+        // ดึงข้อมูล user และ device จาก backend
+        this.loadUserAndDeviceData();
+      } else {
+        console.log('❌ No user found, redirecting to login');
+        this.router.navigate(['/login']);
+      }
+    });
   }
 
   ngAfterViewInit() {
@@ -126,14 +133,82 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     // no-op stub; would reload data for selected device
   }
 
+  async loadUserAndDeviceData() {
+    if (!this.currentUser) return;
+    
+    try {
+      console.log('👤 Loading user and device data...');
+      
+      // ดึงข้อมูล user และ device จาก backend
+      const token = await this.currentUser.getIdToken();
+      
+      // ดึงข้อมูล user
+      try {
+        const userResponse = await lastValueFrom(
+          this.http.get<any>(`${this.apiUrl}/api/auth/me`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        );
+        
+        if (userResponse && userResponse.user) {
+          const userData = userResponse.user;
+          this.username = userData.user_name || userData.username || this.username;
+          console.log('👤 User data loaded:', this.username);
+        }
+      } catch (userError) {
+        console.log('⚠️ Could not load user data from backend:', userError);
+      }
+      
+      // ดึงข้อมูล device
+      try {
+        const devicesResponse = await lastValueFrom(
+          this.http.get<any[]>(`${this.apiUrl}/api/devices`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        );
+        
+        if (devicesResponse && devicesResponse.length > 0) {
+          this.devices = devicesResponse.map(device => device.deviceid);
+          this.deviceId = this.devices[0] || null;
+          console.log('📱 Devices loaded:', this.devices);
+        }
+      } catch (deviceError) {
+        console.log('⚠️ Could not load devices from backend:', deviceError);
+      }
+      
+      // ดึงข้อมูล areas หลังจากได้ token แล้ว
+      await this.loadAreas();
+      
+      // ถ้ามี deviceId ให้ดึง measurements ของ device นั้นด้วย
+      if (this.deviceId) {
+        await this.loadDeviceMeasurements();
+      }
+      
+    } catch (error) {
+      console.error('❌ Error loading user and device data:', error);
+    }
+  }
+
   async loadAreas() {
+    if (!this.currentUser) {
+      console.log('❌ No current user, cannot load areas');
+      return;
+    }
+    
     this.isLoading = true;
     try {
-      const response = await this.http
-        .get<{ [key: string]: AreaGroup }>(
-          `${this.apiUrl}/api/measurements/areas`
+      const token = await this.currentUser.getIdToken();
+      
+      // ใช้ endpoint /api/measurements/areas ที่ backend พร้อมแล้ว
+      const response = await lastValueFrom(
+        this.http.get<{ [key: string]: AreaGroup }>(
+          `${this.apiUrl}/api/measurements/areas`,
+          {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }
         )
-        .toPromise();
+      );
+      
       const list = Object.values(response || {}).map((area) => ({
         ...area,
         measurements: area.measurements || [],
@@ -141,9 +216,197 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       this.areas = list;
       this.areaGroups = list;
       this.isLoading = false;
-    } catch (error) {
-      console.error('Error loading areas:', error);
+      console.log('✅ Areas loaded successfully:', list.length);
+      
+      if (list.length === 0) {
+        this.notificationService.showNotification(
+          'info',
+          'ไม่มีข้อมูล',
+          'ยังไม่มีข้อมูลการวัดค่าในระบบ'
+        );
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Error loading areas:', error);
       this.isLoading = false;
+      
+      // ตรวจสอบว่าเป็น 501 Not Implemented หรือ 500 Internal Server Error
+      if (error.status === 501 || error.status === 500) {
+        console.log('⚠️ API endpoint error, trying alternative endpoint');
+        // ลองใช้ endpoint อื่น
+        await this.loadAreasAlternative();
+      } else if (error.status === 401) {
+        console.log('⚠️ Unauthorized, token may be expired');
+        this.notificationService.showNotification(
+          'error',
+          'หมดอายุการเข้าสู่ระบบ',
+          'กรุณาเข้าสู่ระบบใหม่'
+        );
+        // Redirect to login
+        this.router.navigate(['/login']);
+      } else {
+        this.notificationService.showNotification(
+          'error',
+          'เกิดข้อผิดพลาด',
+          'ไม่สามารถโหลดข้อมูลประวัติการวัดได้ กรุณาลองใหม่อีกครั้ง'
+        );
+      }
+    }
+  }
+
+  async loadAreasAlternative() {
+    try {
+      console.log('🔄 Trying alternative endpoint: /api/areas');
+      const token = await this.currentUser.getIdToken();
+      
+      // ลองใช้ endpoint /api/areas
+      const response = await lastValueFrom(
+        this.http.get<any[]>(
+          `${this.apiUrl}/api/areas`,
+          {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }
+        )
+      );
+      
+      if (response && Array.isArray(response)) {
+        // แปลงข้อมูล areas เป็น format ที่ต้องการ
+        const areaGroups: AreaGroup[] = response.map(area => ({
+          areaId: area.id || area.areaId || '',
+          areaName: area.name || area.location || 'ไม่ระบุสถานที่',
+          measurements: area.measurements || [],
+          totalMeasurements: area.measurements?.length || 0,
+          averages: {
+            temperature: 0,
+            moisture: 0,
+            nitrogen: 0,
+            phosphorus: 0,
+            potassium: 0,
+            ph: 0
+          },
+          lastMeasurementDate: area.measurements?.[0]?.date || ''
+        }));
+        
+        this.areas = areaGroups;
+        this.areaGroups = areaGroups;
+        console.log('✅ Areas loaded from alternative endpoint:', areaGroups.length);
+        
+        if (areaGroups.length === 0) {
+          this.notificationService.showNotification(
+            'info',
+            'ยังไม่มีข้อมูล',
+            'ยังไม่มีข้อมูลการวัดค่าในระบบ'
+          );
+        }
+      } else {
+        this.areas = [];
+        this.areaGroups = [];
+        this.notificationService.showNotification(
+          'info',
+          'ยังไม่มีข้อมูล',
+          'ยังไม่มีข้อมูลการวัดค่าในระบบ'
+        );
+      }
+      
+    } catch (altError: any) {
+      console.error('❌ Alternative endpoint also failed:', altError);
+      
+      if (altError.status === 401) {
+        console.log('⚠️ Unauthorized in alternative endpoint, token may be expired');
+        this.notificationService.showNotification(
+          'error',
+          'หมดอายุการเข้าสู่ระบบ',
+          'กรุณาเข้าสู่ระบบใหม่'
+        );
+        // Redirect to login
+        this.router.navigate(['/login']);
+      } else {
+        this.areas = [];
+        this.areaGroups = [];
+        this.notificationService.showNotification(
+          'info',
+          'ยังไม่มีข้อมูล',
+          'ยังไม่มีข้อมูลการวัดค่าในระบบ'
+        );
+      }
+    }
+  }
+
+  async loadDeviceMeasurements() {
+    if (!this.currentUser || !this.deviceId) return;
+    
+    try {
+      console.log('📱 Loading measurements for device:', this.deviceId);
+      const token = await this.currentUser.getIdToken();
+      
+      const response = await lastValueFrom(
+        this.http.get<Measurement[]>(
+          `${this.apiUrl}/api/measurements/${this.deviceId}`,
+          {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }
+        )
+      );
+      
+      if (response && Array.isArray(response)) {
+        console.log('✅ Device measurements loaded:', response.length);
+        
+        // จัดกลุ่ม measurements ตาม location
+        const areaMap: { [key: string]: AreaGroup } = {};
+        
+        response.forEach((measurement) => {
+          const location = measurement.location || 'ไม่ระบุสถานที่';
+          
+          if (!areaMap[location]) {
+            areaMap[location] = {
+              areaId: measurement.areaId || '',
+              areaName: location,
+              measurements: [],
+              totalMeasurements: 0,
+              averages: {
+                temperature: 0,
+                moisture: 0,
+                nitrogen: 0,
+                phosphorus: 0,
+                potassium: 0,
+                ph: 0
+              },
+              lastMeasurementDate: ''
+            };
+          }
+          
+          const area = areaMap[location];
+          area.measurements.push(measurement);
+          area.totalMeasurements = area.measurements.length;
+          
+          // หาการวัดล่าสุด
+          if (!area.lastMeasurementDate || new Date(measurement.date) > new Date(area.lastMeasurementDate)) {
+            area.lastMeasurementDate = measurement.date;
+          }
+        });
+        
+        const deviceAreas: AreaGroup[] = Object.values(areaMap);
+        
+        // รวมกับ areas ที่มีอยู่แล้ว
+        this.areas = [...this.areas, ...deviceAreas];
+        this.areaGroups = this.areas;
+        
+        console.log('✅ Total areas after adding device measurements:', this.areas.length);
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Error loading device measurements:', error);
+      
+      if (error.status === 401) {
+        console.log('⚠️ Unauthorized in device measurements, token may be expired');
+        this.notificationService.showNotification(
+          'error',
+          'หมดอายุการเข้าสู่ระบบ',
+          'กรุณาเข้าสู่ระบบใหม่'
+        );
+        // Redirect to login
+        this.router.navigate(['/login']);
+      }
     }
   }
 
