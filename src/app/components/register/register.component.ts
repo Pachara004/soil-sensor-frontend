@@ -45,6 +45,16 @@ export class RegisterComponent {
   private usernameCheckTimeout: any;
   private emailCheckTimeout: any;
 
+  // Notification popup properties
+  showNotification = false;
+  notificationType: 'success' | 'error' | 'warning' | 'info' = 'info';
+  notificationTitle = '';
+  notificationMessage = '';
+  showNotificationActions = false;
+  notificationConfirmText = '';
+  notificationConfirmCallback: (() => void) | null = null;
+
+
   constructor(
     private http: HttpClient,
     private router: Router,
@@ -176,7 +186,7 @@ export class RegisterComponent {
   async sendOtp() {
     // ตรวจสอบความถูกต้องของอีเมลก่อน
     if (!this.email || !this.isValidEmail(this.email)) {
-      alert('กรุณากรอก Email ที่ถูกต้อง');
+      this.showNotificationPopup('error', 'อีเมลไม่ถูกต้อง', 'กรุณากรอก Email ที่ถูกต้อง');
       return;
     }
 
@@ -206,7 +216,7 @@ export class RegisterComponent {
       } else {
         console.error('Firebase check failed during OTP send:', firebaseResult.reason);
         // หาก Firebase check ล้มเหลว ให้แสดงข้อผิดพลาด
-        alert('ไม่สามารถตรวจสอบอีเมลกับระบบ Firebase ได้ กรุณาลองใหม่');
+        this.showNotificationPopup('error', 'ระบบไม่พร้อม', 'ไม่สามารถตรวจสอบอีเมลกับระบบ Firebase ได้ กรุณาลองใหม่');
         return;
       }
 
@@ -228,8 +238,9 @@ export class RegisterComponent {
           source = 'ฐานข้อมูล';
         }
         
-        alert(`อีเมลนี้ถูกใช้ไปแล้ว กรุณาใช้อีเมลอื่นหรือเข้าสู่ระบบ`);
-        this.router.navigate(['/login']);
+        this.showNotificationPopup('warning', 'อีเมลถูกใช้แล้ว', 'อีเมลนี้ถูกใช้ไปแล้ว กรุณาใช้อีเมลอื่นหรือเข้าสู่ระบบ', true, 'ไปหน้า Login', () => {
+          this.router.navigate(['/login']);
+        });
         return;
       }
 
@@ -241,17 +252,17 @@ export class RegisterComponent {
 
       this.otpReferenceNumber = response?.referenceNumber || response?.ref || 'N/A';
       
-      alert(`OTP ถูกส่งไปยังอีเมลของคุณแล้ว\nเลขอ้างอิง: ${this.otpReferenceNumber}`);
+      this.showNotificationPopup('success', 'ส่ง OTP สำเร็จ', `OTP ถูกส่งไปยังอีเมลของคุณแล้ว\nเลขอ้างอิง: ${this.otpReferenceNumber}`);
       this.step = 2;
       this.startCountdown();
     } catch (error: any) {
       console.error('Error sending OTP:', error);
       if (error?.status === 404) {
-        alert('ส่ง OTP ไม่ได้: ตรวจ URL/พอร์ต backend');
+        this.showNotificationPopup('error', 'ไม่สามารถส่ง OTP', 'ส่ง OTP ไม่ได้: ตรวจ URL/พอร์ต backend');
       } else if (error?.status >= 500) {
-        alert('ระบบอีเมลยังไม่พร้อม กรุณาลองใหม่ภายหลัง');
+        this.showNotificationPopup('error', 'ระบบไม่พร้อม', 'ระบบอีเมลยังไม่พร้อม กรุณาลองใหม่ภายหลัง');
       } else {
-        alert('เกิดข้อผิดพลาดในการส่ง OTP กรุณาลองใหม่');
+        this.showNotificationPopup('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการส่ง OTP กรุณาลองใหม่');
       }
     } finally {
       this.isLoading = false;
@@ -295,7 +306,7 @@ export class RegisterComponent {
     const enteredOtp = this.otp.join('');
     
     if (enteredOtp.length !== 6) {
-      alert('กรุณากรอก OTP ให้ครบ 6 หลัก');
+      this.showNotificationPopup('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอก OTP ให้ครบ 6 หลัก');
       return;
     }
 
@@ -310,18 +321,18 @@ export class RegisterComponent {
       );
 
       if (response) {
-        alert('OTP ถูกต้อง');
-      this.step = 3;
+        this.showNotificationPopup('success', 'OTP ถูกต้อง', 'ยืนยัน OTP สำเร็จ');
+        this.step = 3;
         this.otp = ['', '', '', '', '', ''];
       }
     } catch (error: any) {
       console.error('Error verifying OTP:', error);
       if (error?.status === 400) {
-        alert('OTP ไม่ถูกต้อง กรุณาลองใหม่');
+        this.showNotificationPopup('error', 'OTP ไม่ถูกต้อง', 'OTP ไม่ถูกต้อง กรุณาลองใหม่');
       } else if (error?.status === 410) {
-        alert('OTP หมดอายุแล้ว กรุณาขอ OTP ใหม่');
+        this.showNotificationPopup('warning', 'OTP หมดอายุ', 'OTP หมดอายุแล้ว กรุณาขอ OTP ใหม่');
     } else {
-        alert('เกิดข้อผิดพลาดในการตรวจสอบ OTP กรุณาลองใหม่');
+        this.showNotificationPopup('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการตรวจสอบ OTP กรุณาลองใหม่');
       }
     } finally {
       this.isLoading = false;
@@ -368,7 +379,7 @@ export class RegisterComponent {
     }
 
     if (this.password.length < 6) {
-      alert('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+      this.showNotificationPopup('error', 'รหัสผ่านสั้นเกินไป', 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
       return;
     }
 
@@ -478,7 +489,7 @@ export class RegisterComponent {
         firebaseExists = firebaseResult.value;
       } else {
         console.error('Firebase check failed during registration:', firebaseResult.reason);
-        alert('ไม่สามารถตรวจสอบอีเมลกับระบบ Firebase ได้ กรุณาลองใหม่');
+        this.showNotificationPopup('error', 'ระบบไม่พร้อม', 'ไม่สามารถตรวจสอบอีเมลกับระบบ Firebase ได้ กรุณาลองใหม่');
         return;
       }
 
@@ -500,8 +511,9 @@ export class RegisterComponent {
           source = 'ฐานข้อมูล';
         }
         
-        alert(`อีเมลนี้ถูกใช้ไปแล้วใน${source} กรุณาใช้อีเมลอื่นหรือเข้าสู่ระบบ`);
-        this.router.navigate(['/login']);
+        this.showNotificationPopup('warning', 'อีเมลถูกใช้แล้ว', `อีเมลนี้ถูกใช้ไปแล้วใน${source} กรุณาใช้อีเมลอื่นหรือเข้าสู่ระบบ`, true, 'ไปหน้า Login', () => {
+          this.router.navigate(['/login']);
+        });
         return;
       }
 
@@ -527,28 +539,30 @@ export class RegisterComponent {
           console.error('Failed to delete Firebase user:', deleteError);
         }
         
-        alert(`สมัครไม่สำเร็จ: ${backendError.message}`);
+        this.showNotificationPopup('error', 'สมัครไม่สำเร็จ', `สมัครไม่สำเร็จ: ${backendError.message}`);
         return;
       }
 
-      alert('สมัครสำเร็จ!');
-      this.router.navigate(['/']);
+      this.showNotificationPopup('success', 'สมัครสำเร็จ!', 'ยินดีต้อนรับเข้าสู่ระบบ', true, 'เข้าสู่หน้าหลัก', () => {
+        this.router.navigate(['/']);
+      });
     } catch (error: any) {
       console.error('Registration error:', error);
       
       if (error.code === 'auth/email-already-in-use') {
-        alert('อีเมลนี้ถูกใช้ไปแล้ว กรุณาใช้อีเมลอื่นหรือเข้าสู่ระบบ');
-        this.router.navigate(['/login']);
+        this.showNotificationPopup('warning', 'อีเมลถูกใช้แล้ว', 'อีเมลนี้ถูกใช้ไปแล้ว กรุณาใช้อีเมลอื่นหรือเข้าสู่ระบบ', true, 'ไปหน้า Login', () => {
+          this.router.navigate(['/login']);
+        });
       } else if (error.code === 'auth/weak-password') {
-        alert('รหัสผ่านอ่อนเกินไป กรุณาใช้รหัสผ่านที่แข็งแรงกว่า');
+        this.showNotificationPopup('error', 'รหัสผ่านไม่ปลอดภัย', 'รหัสผ่านอ่อนเกินไป กรุณาใช้รหัสผ่านที่แข็งแรงกว่า');
       } else if (error.code === 'auth/invalid-email') {
-        alert('รูปแบบอีเมลไม่ถูกต้อง');
+        this.showNotificationPopup('error', 'อีเมลไม่ถูกต้อง', 'รูปแบบอีเมลไม่ถูกต้อง');
       } else if (error.code === 'auth/operation-not-allowed') {
-        alert('การสมัครสมาชิกถูกปิดใช้งาน กรุณาติดต่อผู้ดูแลระบบ');
+        this.showNotificationPopup('error', 'ระบบปิดใช้งาน', 'การสมัครสมาชิกถูกปิดใช้งาน กรุณาติดต่อผู้ดูแลระบบ');
       } else if (error.code === 'auth/network-request-failed') {
-        alert('เกิดปัญหาเครือข่าย กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต');
+        this.showNotificationPopup('error', 'ปัญหาเครือข่าย', 'เกิดปัญหาเครือข่าย กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต');
       } else {
-      alert('เกิดข้อผิดพลาด: ' + (error.message || 'ไม่ทราบสาเหตุ'));
+        this.showNotificationPopup('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาด: ' + (error.message || 'ไม่ทราบสาเหตุ'));
       }
     } finally {
       this.isRegistering = false;
@@ -562,7 +576,47 @@ export class RegisterComponent {
       this.router.navigate(['/main']);
     } catch (err: any) {
       console.error('Google sign-in error:', err);
-      alert('Google Sign-in ล้มเหลว');
+      this.showNotificationPopup('error', 'Google Sign-in ล้มเหลว', 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้ กรุณาลองใหม่');
+    }
+  }
+
+  // Notification methods
+  showNotificationPopup(
+    type: 'success' | 'error' | 'warning' | 'info',
+    title: string,
+    message: string,
+    showActions: boolean = false,
+    confirmText: string = '',
+    confirmCallback: (() => void) | null = null
+  ) {
+    this.notificationType = type;
+    this.notificationTitle = title;
+    this.notificationMessage = message;
+    this.showNotificationActions = showActions;
+    this.notificationConfirmText = confirmText;
+    this.notificationConfirmCallback = confirmCallback;
+    this.showNotification = true;
+  }
+
+  closeNotification() {
+    this.showNotification = false;
+    this.notificationConfirmCallback = null;
+  }
+
+  onNotificationConfirm() {
+    if (this.notificationConfirmCallback) {
+      this.notificationConfirmCallback();
+    }
+    this.closeNotification();
+  }
+
+  getNotificationIcon(): string {
+    switch (this.notificationType) {
+      case 'success': return 'fas fa-check-circle';
+      case 'error': return 'fas fa-exclamation-circle';
+      case 'warning': return 'fas fa-exclamation-triangle';
+      case 'info': return 'fas fa-info-circle';
+      default: return 'fas fa-info-circle';
     }
   }
 
@@ -576,50 +630,50 @@ export class RegisterComponent {
     }); // Debug log
 
     if (!this.email || !this.email.trim()) {
-      alert('กรุณากรอกอีเมล');
+      this.showNotificationPopup('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกอีเมล');
       return false;
     }
 
     if (!this.username || !this.username.trim()) {
-      alert('กรุณากรอกชื่อผู้ใช้');
+      this.showNotificationPopup('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกชื่อผู้ใช้');
       return false;
     }
 
     if (!this.fullName || !this.fullName.trim()) {
-      alert('กรุณากรอกชื่อ-นามสกุล');
+      this.showNotificationPopup('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกชื่อ-นามสกุล');
       return false;
     }
 
     if (!this.phoneNumber || !this.phoneNumber.replace(/\D/g, '')) {
-      alert('กรุณากรอกเบอร์โทรศัพท์');
+      this.showNotificationPopup('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกเบอร์โทรศัพท์');
       return false;
     }
 
     if (this.usernameStatus?.class === 'error') {
-      alert('กรุณาเลือกชื่อผู้ใช้อื่น');
+      this.showNotificationPopup('error', 'ชื่อผู้ใช้ไม่ถูกต้อง', 'กรุณาเลือกชื่อผู้ใช้อื่น');
       return false;
     }
 
     if (this.emailStatus?.class === 'error') {
-      alert('กรุณาใช้อีเมลอื่น');
+      this.showNotificationPopup('error', 'อีเมลไม่ถูกต้อง', 'กรุณาใช้อีเมลอื่น');
       return false;
     }
 
     // ตรวจสอบความยาวของข้อมูล
     if (this.username.trim().length < 3) {
-      alert('ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษร');
+      this.showNotificationPopup('error', 'ชื่อผู้ใช้สั้นเกินไป', 'ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษร');
       return false;
     }
 
     if (this.phoneNumber.replace(/\D/g, '').length < 10) {
-      alert('เบอร์โทรศัพท์ต้องมีอย่างน้อย 10 หลัก');
+      this.showNotificationPopup('error', 'เบอร์โทรศัพท์ไม่ถูกต้อง', 'เบอร์โทรศัพท์ต้องมีอย่างน้อย 10 หลัก');
       return false;
     }
 
     // ตรวจสอบรูปแบบอีเมล
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(this.email.trim())) {
-      alert('รูปแบบอีเมลไม่ถูกต้อง');
+      this.showNotificationPopup('error', 'รูปแบบอีเมลไม่ถูกต้อง', 'กรุณากรอกอีเมลในรูปแบบที่ถูกต้อง');
       return false;
     }
 

@@ -7,6 +7,7 @@ import { HttpClient } from '@angular/common/http';
 import { Constants } from '../../../config/constants';
 import { Auth, onAuthStateChanged } from '@angular/fire/auth';
 import { lastValueFrom } from 'rxjs';
+import { NotificationService } from '../../../service/notification.service';
 
 interface UserData {
   email: string;
@@ -43,7 +44,8 @@ export class EditProfileComponent implements OnInit {
     private location: Location,
     private http: HttpClient,
     private constants: Constants,
-    private auth: Auth
+    private auth: Auth,
+    private notificationService: NotificationService
   ) {
     this.apiUrl = this.constants.API_ENDPOINT;
   }
@@ -113,12 +115,12 @@ export class EditProfileComponent implements OnInit {
 
   async saveProfile() {
     if (this.password && this.password !== this.confirmPassword) {
-      alert('รหัสผ่านไม่ตรงกัน');
+      this.notificationService.showNotification('error', 'รหัสผ่านไม่ตรงกัน', 'รหัสผ่านไม่ตรงกัน');
       return;
     }
 
     if (!this.userID || !this.username) {
-      alert('ไม่พบรหัสผู้ใช้หรือชื่อผู้ใช้');
+      this.notificationService.showNotification('error', 'ข้อมูลไม่ครบถ้วน', 'ไม่พบรหัสผู้ใช้หรือชื่อผู้ใช้');
       return;
     }
 
@@ -156,11 +158,12 @@ export class EditProfileComponent implements OnInit {
         })
       );
 
-      alert('บันทึกข้อมูลสำเร็จ!');
-      this.location.back();
+      this.notificationService.showNotification('success', 'บันทึกข้อมูลสำเร็จ!', 'ข้อมูลของคุณได้รับการอัปเดตแล้ว', true, 'กลับ', () => {
+        this.location.back();
+      });
     } catch (error) {
       console.error('ข้อผิดพลาดในการบันทึก:', error);
-      alert('เกิดข้อผิดพลาดในการบันทึก');
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการบันทึก');
     }
   }
 

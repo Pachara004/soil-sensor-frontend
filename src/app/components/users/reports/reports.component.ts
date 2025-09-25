@@ -4,6 +4,7 @@ import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Constants } from '../../../config/constants';
+import { NotificationService } from '../../../service/notification.service';
 
 @Component({
   selector: 'app-reports',
@@ -21,7 +22,8 @@ export class ReportsComponent {
     private router: Router,
     private location: Location,
     private http: HttpClient,
-    private constants: Constants
+    private constants: Constants,
+    private notificationService: NotificationService
   ) {
     this.apiUrl = this.constants.API_ENDPOINT;
   }
@@ -32,7 +34,7 @@ export class ReportsComponent {
 
   async sendReport() {
     if (!this.subject.trim() || !this.message.trim()) {
-      alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+      this.notificationService.showNotification('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกข้อมูลให้ครบถ้วน');
       return;
     }
 
@@ -46,14 +48,16 @@ export class ReportsComponent {
         })
         .toPromise();
 
-      alert('ส่งเรื่องสำเร็จ! ทีมงานจะติดต่อกลับโดยเร็ว');
+      this.notificationService.showNotification('success', 'ส่งเรื่องสำเร็จ!', 'ทีมงานจะติดต่อกลับโดยเร็ว', true, 'กลับ', () => {
+        this.location.back();
+      });
 
       // ล้างฟอร์ม
       this.subject = '';
       this.message = '';
     } catch (error) {
       console.error('Error sending report:', error);
-      alert('เกิดข้อผิดพลาดในการส่งรายงาน');
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการส่งรายงาน');
     }
   }
 }

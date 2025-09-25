@@ -8,6 +8,7 @@ import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
 import { throwError } from 'rxjs'; // เปลี่ยนจาก rxjs/operators มาเป็น rxjs
 import { Constants } from '../../../config/constants'; // ปรับ path ตามโครงสร้าง
+import { NotificationService } from '../../../service/notification.service';
 
 interface UserData {
   username: string;
@@ -61,7 +62,8 @@ export class AdmainComponent implements OnInit, OnDestroy {
     private router: Router,
     private cdr: ChangeDetectorRef,
     private http: HttpClient,
-    private constants: Constants // Inject Constants
+    private constants: Constants, // Inject Constants
+    private notificationService: NotificationService
   ) {
     const adminData = localStorage.getItem('admin');
     if (adminData) {
@@ -81,8 +83,9 @@ export class AdmainComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     if (!this.adminName) {
-      alert('กรุณาล็อกอินก่อน');
-    	this.router.navigate(['/']);
+      this.notificationService.showNotification('warning', 'กรุณาล็อกอิน', 'กรุณาล็อกอินก่อน', true, 'ไปหน้า Login', () => {
+        this.router.navigate(['/']);
+      });
       return;
     }
     await this.loadDevices();
@@ -104,7 +107,7 @@ export class AdmainComponent implements OnInit, OnDestroy {
       this.cdr.detectChanges();
     } catch (error) {
       console.error('Error loading devices:', error);
-      alert('เกิดข้อผิดพลาดในการโหลดอุปกรณ์');
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการโหลดอุปกรณ์');
     }
   }
 
@@ -120,7 +123,7 @@ export class AdmainComponent implements OnInit, OnDestroy {
       this.cdr.detectChanges();
     } catch (error) {
       console.error('Error loading users:', error);
-      alert('เกิดข้อผิดพลาดในการโหลดผู้ใช้');
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการโหลดผู้ใช้');
     }
   }
 
@@ -141,24 +144,24 @@ export class AdmainComponent implements OnInit, OnDestroy {
 
   async addDevice() {
     if (!this.newDeviceName || !this.newDeviceUser) {
-      alert('กรุณากรอกชื่ออุปกรณ์และผู้ใช้');
+      this.notificationService.showNotification('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกชื่ออุปกรณ์และผู้ใช้');
       return;
     }
     try {
       await this.adminService.addDevice(this.newDeviceName, this.newDeviceUser);
-      alert('เพิ่มอุปกรณ์สำเร็จ');
+      this.notificationService.showNotification('success', 'เพิ่มอุปกรณ์สำเร็จ', 'อุปกรณ์ถูกเพิ่มเรียบร้อยแล้ว');
       this.newDeviceName = '';
       this.newDeviceUser = '';
       await this.loadDevices();
     } catch (error) {
       console.error('Error adding device:', error);
-      alert('เกิดข้อผิดพลาดในการเพิ่มอุปกรณ์');
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการเพิ่มอุปกรณ์');
     }
   }
 
   async bindHardwareDevice() {
     if (!this.hwDeviceId || !this.hwDeviceName || !this.hwDeviceUser) {
-      alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+      this.notificationService.showNotification('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกข้อมูลให้ครบถ้วน');
       return;
     }
     try {
@@ -175,13 +178,13 @@ export class AdmainComponent implements OnInit, OnDestroy {
           })
         )
         .toPromise();
-      alert('ผูกอุปกรณ์สำเร็จ');
+      this.notificationService.showNotification('success', 'ผูกอุปกรณ์สำเร็จ', 'อุปกรณ์ถูกผูกเรียบร้อยแล้ว');
       this.hwDeviceId = '';
       this.hwDeviceName = '';
       this.hwDeviceUser = '';
       await this.loadDevices();
     } catch (error) {
-      alert('เกิดข้อผิดพลาดในการผูกอุปกรณ์');
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการผูกอุปกรณ์');
     }
   }
 
@@ -196,10 +199,10 @@ export class AdmainComponent implements OnInit, OnDestroy {
           })
         )
         .toPromise();
-      alert('อนุมัติคำขอสำเร็จ');
+      this.notificationService.showNotification('success', 'อนุมัติคำขอสำเร็จ', 'คำขอถูกอนุมัติเรียบร้อยแล้ว');
       await this.loadDevices();
     } catch (error) {
-      alert('อนุมัติคำขอไม่สำเร็จ');
+      this.notificationService.showNotification('error', 'อนุมัติคำขอไม่สำเร็จ', 'ไม่สามารถอนุมัติคำขอได้');
     }
   }
 
@@ -214,10 +217,10 @@ export class AdmainComponent implements OnInit, OnDestroy {
           })
         )
         .toPromise();
-      alert('ปฏิเสธคำขอสำเร็จ');
+      this.notificationService.showNotification('success', 'ปฏิเสธคำขอสำเร็จ', 'คำขอถูกปฏิเสธเรียบร้อยแล้ว');
       await this.loadDevices();
     } catch (error) {
-      alert('ปฏิเสธคำขอไม่สำเร็จ');
+      this.notificationService.showNotification('error', 'ปฏิเสธคำขอไม่สำเร็จ', 'ไม่สามารถปฏิเสธคำขอได้');
     }
   }
 
@@ -225,11 +228,11 @@ export class AdmainComponent implements OnInit, OnDestroy {
     if (confirm(`ลบอุปกรณ์ ${deviceName} ?`)) {
       try {
         await this.adminService.deleteDevice(deviceName);
-        alert('ลบอุปกรณ์สำเร็จ');
+        this.notificationService.showNotification('success', 'ลบอุปกรณ์สำเร็จ', 'อุปกรณ์ถูกลบเรียบร้อยแล้ว');
         await this.loadDevices();
       } catch (error) {
         console.error('เกิดข้อผิดพลาดในการลบอุปกรณ์:', error);
-        alert('เกิดข้อผิดพลาดในการลบอุปกรณ์');
+        this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการลบอุปกรณ์');
       }
     }
   }

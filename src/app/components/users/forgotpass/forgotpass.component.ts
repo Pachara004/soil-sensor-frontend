@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Constants } from '../../../config/constants';
+import { NotificationService } from '../../../service/notification.service';
 
 @Component({
   selector: 'app-forgotpass',
@@ -38,7 +39,8 @@ export class ForgotpassComponent {
     private router: Router,
     private location: Location,
     private http: HttpClient,
-    private constants: Constants
+    private constants: Constants,
+    private notificationService: NotificationService
   ) {
     this.apiUrl = this.constants.API_ENDPOINT;
   }
@@ -88,7 +90,7 @@ export class ForgotpassComponent {
 
   async sendOtp() {
     if (!this.isValidEmail(this.email)) {
-      alert('กรุณากรอกอีเมลให้ถูกต้อง');
+      this.notificationService.showNotification('error', 'อีเมลไม่ถูกต้อง', 'กรุณากรอกอีเมลให้ถูกต้อง');
       return;
     }
 
@@ -104,7 +106,7 @@ export class ForgotpassComponent {
       this.startCountdown();
     } catch (error) {
       console.error('Error sending OTP:', error);
-      alert('ไม่สามารถส่ง OTP ได้');
+      this.notificationService.showNotification('error', 'ไม่สามารถส่ง OTP', 'ไม่สามารถส่ง OTP ได้');
     } finally {
       this.isLoading = false;
     }
@@ -115,7 +117,7 @@ export class ForgotpassComponent {
     if (enteredOtp === this.generatedOtp) {
       this.step = 3;
     } else {
-      alert('รหัส OTP ไม่ถูกต้อง');
+      this.notificationService.showNotification('error', 'OTP ไม่ถูกต้อง', 'รหัส OTP ไม่ถูกต้อง');
     }
   }
 
@@ -151,7 +153,7 @@ export class ForgotpassComponent {
 
   async resetPassword() {
     if (!this.canResetPassword()) {
-      alert('รหัสผ่านไม่ตรงกัน หรือไม่ตรงตามเกณฑ์');
+      this.notificationService.showNotification('error', 'รหัสผ่านไม่ถูกต้อง', 'รหัสผ่านไม่ตรงกัน หรือไม่ตรงตามเกณฑ์');
       return;
     }
 
@@ -164,13 +166,12 @@ export class ForgotpassComponent {
           newPassword: this.newPassword,
         })
       );
-      alert('เปลี่ยนรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่');
-      this.router.navigate(['/']);
+      this.notificationService.showNotification('success', 'เปลี่ยนรหัสผ่านสำเร็จ', 'กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่', true, 'ไปหน้า Login', () => {
+        this.router.navigate(['/']);
+      });
     } catch (error: any) {
       console.error('เกิดข้อผิดพลาด:', error);
-      alert(
-        'ไม่สามารถเปลี่ยนรหัสผ่านได้: ' + (error.message || 'Unknown error')
-      );
+      this.notificationService.showNotification('error', 'ไม่สามารถเปลี่ยนรหัสผ่านได้', 'ไม่สามารถเปลี่ยนรหัสผ่านได้: ' + (error.message || 'Unknown error'));
     } finally {
       this.isLoading = false;
     }

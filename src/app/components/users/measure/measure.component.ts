@@ -18,6 +18,7 @@ import { Constants } from '../../../config/constants';
 import { lastValueFrom } from 'rxjs';
 import { Database, ref, onValue, off } from '@angular/fire/database';
 import { Auth, onAuthStateChanged } from '@angular/fire/auth';
+import { NotificationService } from '../../../service/notification.service';
 
 interface UserData {
   username: string;
@@ -127,9 +128,10 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
   deviceStatus: 'online' | 'offline' = 'offline';
   
   // ✅ UI Control properties
-  showUserInfo = true;
-  showDeviceInfo = true;
-  showMainMap = true;
+  showUserInfo = false;
+  showDeviceInfo = false;
+  showMainMap = false;
+  showCardMenu = false;
 
   map: Map | undefined;
   @ViewChild('mapContainer') mapContainer!: ElementRef<HTMLElement>;
@@ -145,7 +147,8 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     private http: HttpClient,
     private constants: Constants,
     private database: Database,
-    private auth: Auth
+    private auth: Auth,
+    private notificationService: NotificationService
   ) {
     this.apiUrl = this.constants.API_ENDPOINT;
     config.apiKey = environment.mapTilerApiKey;
@@ -428,18 +431,18 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       this.initializeMap();
     } catch (error) {
       console.error('Error loading measurements:', error);
-      alert('เกิดข้อผิดพลาดในการโหลดข้อมูล');
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการโหลดข้อมูล');
     }
   }
 
   async saveMeasurement() {
     if (!this.liveData) {
-      alert('ไม่พบข้อมูลการวัดจากเซ็นเซอร์ กรุณาตรวจสอบการเชื่อมต่อ');
+      this.notificationService.showNotification('error', 'ไม่พบข้อมูลเซ็นเซอร์', 'ไม่พบข้อมูลการวัดจากเซ็นเซอร์ กรุณาตรวจสอบการเชื่อมต่อ');
       return;
     }
     
     if (!this.currentUser) {
-      alert('ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่');
+      this.notificationService.showNotification('error', 'ไม่พบข้อมูลผู้ใช้', 'ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่');
       return;
     }
     
@@ -483,16 +486,16 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       await this.updateAreaStatistics();
       this.initializeMap();
       
-      alert('บันทึกข้อมูลการวัดเรียบร้อยแล้ว');
+      this.notificationService.showNotification('success', 'บันทึกสำเร็จ', 'บันทึกข้อมูลการวัดเรียบร้อยแล้ว');
     } catch (error) {
       console.error('❌ Error saving measurement:', error);
-      alert('เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่อีกครั้ง');
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่อีกครั้ง');
     }
   }
 
   async createArea() {
     if (!this.areaName) {
-      alert('กรุณากรอกชื่อพื้นที่');
+      this.notificationService.showNotification('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกชื่อพื้นที่');
       return;
     }
     const newArea: Area = {
@@ -513,7 +516,7 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       this.initializeMap();
     } catch (error) {
       console.error('Error creating area:', error);
-      alert('เกิดข้อผิดพลาดในการสร้างพื้นที่');
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการสร้างพื้นที่');
     }
   }
 
@@ -575,11 +578,11 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
 
   showAreaStatistics() {
     if (!this.currentArea || !this.currentArea.averages) {
-      alert('ยังไม่มีข้อมูลสถิติของพื้นที่นี้');
+      this.notificationService.showNotification('info', 'ไม่มีข้อมูลสถิติ', 'ยังไม่มีข้อมูลสถิติของพื้นที่นี้');
       return;
     }
     const s = this.currentArea.averages;
-    alert(`สถิติพื้นที่: ${this.currentArea.name}
+    const statsMessage = `สถิติพื้นที่: ${this.currentArea.name}
 จำนวนจุดวัด: ${this.currentArea.totalMeasurements} จุด
 
 ค่าเฉลี่ย:
@@ -588,7 +591,9 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
 • ไนโตรเจน: ${s.nitrogen} mg/kg
 • ฟอสฟอรัส: ${s.phosphorus} mg/kg
 • โพแทสเซียม: ${s.potassium} mg/kg
-• ค่า pH: ${s.ph}`);
+• ค่า pH: ${s.ph}`;
+    
+    this.notificationService.showNotification('info', 'สถิติพื้นที่', statsMessage);
   }
 
   startNewArea() {
@@ -724,7 +729,7 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
   // ✅ ยืนยันพื้นที่
   confirmArea() {
     if (this.selectedPoints.length < 3) {
-      alert('กรุณาเลือกอย่างน้อย 3 จุดเพื่อสร้างพื้นที่');
+      this.notificationService.showNotification('error', 'ข้อมูลไม่เพียงพอ', 'กรุณาเลือกอย่างน้อย 3 จุดเพื่อสร้างพื้นที่');
       return;
     }
     
@@ -973,7 +978,7 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
         
       } catch (error) {
         console.error('❌ Error creating map:', error);
-        alert('เกิดข้อผิดพลาดในการโหลดแผนที่ กรุณาตรวจสอบ API Key');
+        this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการโหลดแผนที่ กรุณาตรวจสอบ API Key');
       }
     }, 500); // เพิ่มเวลาให้ DOM โหลดเสร็จ
   }
@@ -1012,6 +1017,15 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
         this.initializeMap();
       }, 100);
     }
+  }
+  
+  toggleCardMenu() {
+    this.showCardMenu = !this.showCardMenu;
+    console.log('📋 Card menu visibility:', this.showCardMenu);
+  }
+  
+  closeCardMenu() {
+    this.showCardMenu = false;
   }
 
   // ========= 🔻 เพิ่มเมธอดนี้เพื่อแก้ TS2339 และจัดการแผนที่ 🔻 =========

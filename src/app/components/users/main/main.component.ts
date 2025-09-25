@@ -29,8 +29,9 @@ type LivePayload = {
 
 // 👇 เพิ่ม type ของ response จาก /api/devices/claim
 interface ClaimResponse {
-  success: boolean;
+  success?: boolean;
   message?: string;
+  device?: any;
 }
 
 @Component({
@@ -64,6 +65,15 @@ export class MainComponent implements OnInit, OnDestroy {
   lastClaimType: 'ok' | 'warn' | 'err' | '' = '';
   requestingClaim = false;
   private apiUrl: string;
+
+  // Notification popup properties
+  showNotification = false;
+  notificationType: 'success' | 'error' | 'warning' | 'info' = 'info';
+  notificationTitle = '';
+  notificationMessage = '';
+  showNotificationActions = false;
+  notificationConfirmText = '';
+  notificationConfirmCallback: (() => void) | null = null;
 
   constructor(
     private router: Router,
@@ -352,84 +362,105 @@ export class MainComponent implements OnInit, OnDestroy {
 
   // เพิ่ม method สำหรับเพิ่มอุปกรณ์ใหม่ (POST /api/devices)
   async addNewDevice() {
-  if (!this.claimDeviceId.trim()) {
-    this.lastClaimType = 'warn';
-    this.lastClaimMessage = 'กรุณากรอก ID อุปกรณ์';
-    return;
-  }
-
-  this.requestingClaim = true;
-  try {
-    // ตรวจสอบ Firebase user และส่ง token ไปกับ request
-    const currentUser = this.auth.currentUser;
-    if (!currentUser) {
-      this.lastClaimType = 'err';
-      this.lastClaimMessage = 'ไม่พบผู้ใช้ กรุณาเข้าสู่ระบบใหม่';
+    console.log('🚀 addNewDevice() called with deviceId:', this.claimDeviceId);
+    
+    if (!this.claimDeviceId.trim()) {
+      console.log('❌ No device ID provided');
+      this.lastClaimType = 'warn';
+      this.lastClaimMessage = 'กรุณากรอก ID อุปกรณ์';
       return;
     }
 
-    const token = await currentUser.getIdToken();
-    console.log('🔑 Firebase ID token obtained for add device');
+    this.requestingClaim = true;
+    console.log('🔄 Starting device add request...');
+    
+    try {
+      // ตรวจสอบ Firebase user และส่ง token ไปกับ request
+      const currentUser = this.auth.currentUser;
+      if (!currentUser) {
+        console.log('❌ No current user found');
+        this.lastClaimType = 'err';
+        this.lastClaimMessage = 'ไม่พบผู้ใช้ กรุณาเข้าสู่ระบบใหม่';
+        return;
+      }
 
-    const response = await lastValueFrom(
-      this.http.post<ClaimResponse>(`${this.apiUrl}/api/devices`, {
+      const token = await currentUser.getIdToken();
+      console.log('🔑 Firebase ID token obtained for add device');
+
+      const requestData = {
         deviceId: this.claimDeviceId.trim(),
         device_name: this.claimDeviceId.trim(),
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-    );
+      };
+      
+      console.log('📤 Sending request to:', `${this.apiUrl}/api/devices`);
+      console.log('📤 Request data:', requestData);
 
-    console.log('✅ Add device response:', response);
+      const response = await lastValueFrom(
+        this.http.post<ClaimResponse>(`${this.apiUrl}/api/devices`, requestData, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+      );
 
-    if (response.success) {
-      this.lastClaimType = 'ok';
-      this.lastClaimMessage = `เพิ่มอุปกรณ์สำเร็จ! (อุปกรณ์: ${this.claimDeviceId.trim()})`;
-      
-      // 🚀 ทำการ fetch ข้อมูลใหม่ทันที
-      console.log('🔄 Fetching updated devices list...');
-      await this.loadDevices();
-      
-      // เลือกอุปกรณ์ที่เพิ่งเพิ่มให้เป็นอุปกรณ์ที่เลือก
-      const newDeviceId = this.claimDeviceId.trim();
-      this.selectedDeviceId = newDeviceId;
-      this.selectedDevice = this.devices.find((d) => d.deviceid.toString() === newDeviceId) || null;
-      
-      if (this.selectedDevice) {
-        localStorage.setItem('selectedDeviceId', newDeviceId);
-        console.log('📱 Auto-selected new device:', this.selectedDevice);
+      console.log('✅ Add device response:', response);
+      console.log('✅ Response success:', response.success);
+      console.log('✅ Response message:', response.message);
+
+      // ตรวจสอบ response หลายแบบ
+      const isSuccess = response.success === true || 
+                       response.message?.includes('successfully') || 
+                       response.message?.includes('สำเร็จ') ||
+                       response.device;
+
+           if (isSuccess) {
+             console.log('🎉 Device added successfully! Showing notification...');
+             
+             // แสดง notification popup เมื่อเพิ่มอุปกรณ์สำเร็จ
+             const deviceName = this.claimDeviceId.trim();
+             
+             this.showNotificationPopup(
+               'success',
+               'เพิ่มอุปกรณ์สำเร็จ!',
+               `อุปกรณ์: ${deviceName}\n\nกดตกลงเพื่อรีเฟรซหน้า`,
+               true,
+               'ตกลง',
+               () => {
+                 console.log('🔄 Reloading page after notification...');
+                 window.location.reload();
+               }
+             );
+        
+      } else {
+        console.log('❌ Response indicates failure:', response.message);
+        this.lastClaimType = 'err';
+        this.lastClaimMessage = response.message || 'เพิ่มอุปกรณ์ไม่สำเร็จ';
       }
+    } catch (err: any) {
+      console.error('❌ Add device error:', err);
+      console.error('❌ Error status:', err.status);
+      console.error('❌ Error message:', err.message);
       
-      // ล้าง input field
-      this.claimDeviceId = '';
-      
-    } else {
       this.lastClaimType = 'err';
-      this.lastClaimMessage = response.message || 'เพิ่มอุปกรณ์ไม่สำเร็จ';
+      
+      // ให้ข้อความ error ที่ชัดเจนขึ้น
+      if (err.status === 400) {
+        this.lastClaimMessage = 'ข้อมูลไม่ถูกต้อง หรือ Device ID ซ้ำ';
+      } else if (err.status === 401) {
+        this.lastClaimMessage = 'ไม่มีสิทธิ์ กรุณาเข้าสู่ระบบใหม่';
+      } else if (err.status === 409) {
+        this.lastClaimMessage = 'Device ID นี้มีอยู่แล้ว';
+      } else if (err.status === 500) {
+        this.lastClaimMessage = 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง';
+      } else {
+        this.lastClaimMessage = 'เพิ่มอุปกรณ์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+      }
+    } finally {
+      this.requestingClaim = false;
+      console.log('🏁 addNewDevice() completed');
     }
-  } catch (err: any) {
-    console.error('❌ Add device error:', err);
-    this.lastClaimType = 'err';
-    
-    // ให้ข้อความ error ที่ชัดเจนขึ้น
-    if (err.status === 400) {
-      this.lastClaimMessage = 'ข้อมูลไม่ถูกต้อง หรือ Device ID ซ้ำ';
-    } else if (err.status === 401) {
-      this.lastClaimMessage = 'ไม่มีสิทธิ์ กรุณาเข้าสู่ระบบใหม่';
-    } else if (err.status === 409) {
-      this.lastClaimMessage = 'Device ID นี้มีอยู่แล้ว';
-    } else if (err.status === 500) {
-      this.lastClaimMessage = 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง';
-    } else {
-      this.lastClaimMessage = 'เพิ่มอุปกรณ์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
-    }
-  } finally {
-    this.requestingClaim = false;
   }
-}
 
   // เพิ่ม method สำหรับการเปลี่ยนอุปกรณ์
   onDeviceChange() {
@@ -531,6 +562,46 @@ export class MainComponent implements OnInit, OnDestroy {
       this.lastClaimMessage = 'ผูกอุปกรณ์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
     } finally {
       this.requestingClaim = false;
+    }
+  }
+
+  // Notification methods
+  showNotificationPopup(
+    type: 'success' | 'error' | 'warning' | 'info',
+    title: string,
+    message: string,
+    showActions: boolean = false,
+    confirmText: string = '',
+    confirmCallback: (() => void) | null = null
+  ) {
+    this.notificationType = type;
+    this.notificationTitle = title;
+    this.notificationMessage = message;
+    this.showNotificationActions = showActions;
+    this.notificationConfirmText = confirmText;
+    this.notificationConfirmCallback = confirmCallback;
+    this.showNotification = true;
+  }
+
+  closeNotification() {
+    this.showNotification = false;
+    this.notificationConfirmCallback = null;
+  }
+
+  onNotificationConfirm() {
+    if (this.notificationConfirmCallback) {
+      this.notificationConfirmCallback();
+    }
+    this.closeNotification();
+  }
+
+  getNotificationIcon(): string {
+    switch (this.notificationType) {
+      case 'success': return 'fas fa-check-circle';
+      case 'error': return 'fas fa-exclamation-circle';
+      case 'warning': return 'fas fa-exclamation-triangle';
+      case 'info': return 'fas fa-info-circle';
+      default: return 'fas fa-info-circle';
     }
   }
 }

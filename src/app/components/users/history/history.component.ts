@@ -16,6 +16,7 @@ import { Map, Marker, config, LngLatBounds } from '@maptiler/sdk';
 import '@maptiler/sdk/dist/maptiler-sdk.css';
 import { environment } from '../../../service/environment';
 import { Constants } from '../../../config/constants';
+import { NotificationService } from '../../../service/notification.service';
 
 interface Measurement {
   id: string;
@@ -90,7 +91,8 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     private router: Router,
     private location: Location,
     private http: HttpClient,
-    private constants: Constants
+    private constants: Constants,
+    private notificationService: NotificationService
   ) {
     this.apiUrl = this.constants.API_ENDPOINT;
     config.apiKey = environment.mapTilerApiKey;
@@ -218,7 +220,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       • ฟอสฟอรัส: ${stats.phosphorus} mg/kg
       • โพแทสเซียม: ${stats.potassium} mg/kg
       • ค่า pH: ${stats.ph}`;
-    alert(message);
+    this.notificationService.showNotification('info', 'ข้อมูล', message);
   }
 
   viewMeasurementDetail(item: Measurement) {

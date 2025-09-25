@@ -1,6 +1,21 @@
-<div class="measure-container">
-  <div class="card">
+<div class="measure-container" (click)="closeCardMenu()">
+  <div class="card" (click)="$event.stopPropagation()">
     <i class="fas fa-arrow-left back" (click)="goBack()"></i>
+
+    <!-- จุดสามจุดที่มุมขวาบน -->
+    <div class="card-menu" (click)="toggleCardMenu(); $event.stopPropagation()">
+      <i class="fas fa-ellipsis-v"></i>
+      <div class="menu-dropdown" *ngIf="showCardMenu" (click)="$event.stopPropagation()">
+        <div class="menu-item" (click)="goToHistory(); closeCardMenu()">
+          <i class="fas fa-history"></i>
+          ดูประวัติการวัด
+        </div>
+        <div class="menu-item" (click)="goToContactAdmin(); closeCardMenu()">
+          <i class="fas fa-user-shield"></i>
+          ติดต่อ Admin
+        </div>
+      </div>
+    </div>
 
     <div class="header">
     </div>
@@ -121,45 +136,85 @@
       <div #mapContainer class="map" style="width: 100%; height: 300px;"></div>
     </div>
 
-    <div class="admin" (click)="goToContactAdmin()">
-      <img src="https://cdn-icons-png.flaticon.com/512/2914/2914688.png" alt="Admin Icon" />
-      ติดต่อ Admin
-    </div>
-    <button class="history-btn" (click)="goToHistory()">ดูประวัติการวัด</button>
 
-    <!-- Popup สำหรับเลือกพื้นที่วัด -->
+    <!-- Popup สำหรับเลือกพื้นที่วัด - Layout ใหม่สำหรับ Desktop -->
     <div class="popup-overlay" *ngIf="showPopup" (click)="closePopup()">
       <div class="popup-content" (click)="stopPropagation($event)">
+
+        <!-- ส่วนหัว -->
         <h3>🗺️ เลือกพื้นที่วัดดิน</h3>
-        <p>คลิกบนแผนที่เพื่อวางจุดกำหนดพื้นที่ (อย่างน้อย 3 จุด)</p>
-        <p>จุดที่เลือกแล้ว: <strong>{{ selectedPoints.length }}</strong> จุด</p>
-        <p *ngIf="selectedPoints.length >= 3" class="polygon-info">
-          ✅ กรอบการวัดแสดงแล้ว ({{ selectedPoints.length }} จุด)
-        </p>
-        <p *ngIf="selectedPoints.length < 3" class="polygon-warning">
-          ⚠️ ต้องเลือกอย่างน้อย 3 จุดเพื่อแสดงกรอบการวัด
-        </p>
 
-        <div class="map-popup" style="width: 100%; height: 400px; border: 2px solid #00aaff; border-radius: 8px;"></div>
+        <!-- Main Content - Grid Layout สำหรับ Desktop -->
+        <div class="popup-main-content">
 
-        <div class="selection-info" *ngIf="selectedPoints.length > 0">
-          <p>📍 พิกัดที่เลือก ({{ selectedPoints.length }} จุด):</p>
-          <div class="coordinates-list">
-            <div *ngFor="let point of selectedPoints; let i = index" class="coordinate-item">
-              จุดที่ {{ i + 1 }}: {{ point[0].toFixed(6) }}, {{ point[1].toFixed(6) }}
+          <!-- ส่วนแผนที่ - ฝั่งซ้าย -->
+          <div class="map-section">
+            <div class="popup-description">
+              <p>คลิกบนแผนที่เพื่อวางจุดกำหนดพื้นที่</p>
+              <p>จุดที่เลือกแล้ว: <strong>{{ selectedPoints.length }}</strong> จุด</p>
+              <p *ngIf="selectedPoints.length >= 3" class="polygon-info">
+                ✅ กรอบการวัดแสดงแล้ว ({{ selectedPoints.length }} จุด)
+              </p>
+              <p *ngIf="selectedPoints.length < 3" class="polygon-warning">
+                ⚠️ ต้องเลือกอย่างน้อย 3 จุดเพื่อแสดงกรอบการวัด
+              </p>
             </div>
+
+            <!-- แผนที่ -->
+            <div class="map-popup"></div>
           </div>
+
+          <!-- Sidebar - ฝั่งขวา -->
+          <div class="info-sidebar">
+
+            <!-- ส่วนพิกัด -->
+            <div class="coordinates-section">
+
+              <!-- พิกัดที่เลือก -->
+              <div class="coordinates-card" *ngIf="selectedPoints.length > 0">
+                <div class="card-header">
+                  <span>📍</span>
+                  <span>พิกัดที่เลือก ({{ selectedPoints.length }} จุด)</span>
+                </div>
+                <div class="coordinates-list">
+                  <div *ngFor="let point of selectedPoints; let i = index" class="coordinate-item">
+                    จุดที่ {{ i + 1 }}: {{ point[0].toFixed(6) }}, {{ point[1].toFixed(6) }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- จุดวัด -->
+              <div class="coordinates-card" *ngIf="measurementPoints.length > 0">
+                <div class="card-header">
+                  <span>🎯</span>
+                  <span>จุดที่ต้องวัด ({{ measurementPoints.length }} จุด)</span>
+                </div>
+                <div class="coordinates-list">
+                  <div *ngFor="let point of measurementPoints; let i = index" class="coordinate-item measurement-point">
+                    จุดวัดที่ {{ i + 1 }}: {{ point[0].toFixed(6) }}, {{ point[1].toFixed(6) }}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- คำแนะนำการใช้งาน -->
+            <div class="instructions">
+              <div class="section-title">วิธีใช้งาน</div>
+              <ul>
+                <li>คลิกบนแผนที่เพื่อเพิ่มจุด</li>
+                <li>เลือกอย่างน้อย 3 จุดเพื่อสร้างพื้นที่</li>
+                <li>กรอบการวัดจะแสดงเป็นสีฟ้าบนแผนที่</li>
+                <li>กรอบจะแสดงเส้นประสีฟ้าและพื้นหลังโปร่งใส</li>
+                <li>กด "ยืนยันพื้นที่" เมื่อเลือกเสร็จ</li>
+              </ul>
+            </div>
+
+          </div>
+
         </div>
 
-        <div class="measurement-info" *ngIf="measurementPoints.length > 0">
-          <p>🎯 จุดที่ต้องวัด ({{ measurementPoints.length }} จุด):</p>
-          <div class="coordinates-list">
-            <div *ngFor="let point of measurementPoints; let i = index" class="coordinate-item measurement-point">
-              จุดวัดที่ {{ i + 1 }}: {{ point[0].toFixed(6) }}, {{ point[1].toFixed(6) }}
-            </div>
-          </div>
-        </div>
-
+        <!-- ปุ่มควบคุม -->
         <div class="popup-buttons">
           <button class="btn-secondary" (click)="clearMarks()" [disabled]="selectedPoints.length === 0">
             🗑️ เคลียร์จุดทั้งหมด
@@ -172,16 +227,6 @@
           </button>
         </div>
 
-        <div class="instructions">
-          <p><strong>วิธีใช้:</strong></p>
-          <ul>
-            <li>คลิกบนแผนที่เพื่อเพิ่มจุด</li>
-            <li>เลือกอย่างน้อย 3 จุดเพื่อสร้างพื้นที่</li>
-            <li>กรอบการวัดจะแสดงเป็นสีฟ้าบนแผนที่</li>
-            <li>กรอบจะแสดงเส้นประสีฟ้าและพื้นหลังโปร่งใส</li>
-            <li>กด "ยืนยันพื้นที่" เมื่อเลือกเสร็จ</li>
-          </ul>
-        </div>
       </div>
     </div>
 

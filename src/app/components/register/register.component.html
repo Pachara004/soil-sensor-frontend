@@ -119,4 +119,26 @@
       Register With Google
     </button>
   </div>
+
+  <!-- Notification Popup -->
+  <div class="notification-overlay" *ngIf="showNotification" (click)="closeNotification()">
+    <div class="notification-popup" (click)="$event.stopPropagation()">
+      <div class="notification-header" [ngClass]="notificationType">
+        <i class="notification-icon" [ngClass]="getNotificationIcon()"></i>
+        <h3 class="notification-title">{{ notificationTitle }}</h3>
+        <button class="close-btn" (click)="closeNotification()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="notification-body">
+        <p class="notification-message">{{ notificationMessage }}</p>
+        <div class="notification-actions" *ngIf="showNotificationActions">
+          <button class="btn-secondary" (click)="closeNotification()">ปิด</button>
+          <button class="btn-primary" (click)="onNotificationConfirm()" *ngIf="notificationConfirmText">
+            {{ notificationConfirmText }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

@@ -6,6 +6,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Auth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from '@angular/fire/auth';
+import { NotificationService } from '../../service/notification.service';
 
 @Component({
   selector: 'app-login',
@@ -20,18 +21,23 @@ export class LoginComponent {
   isLoading = false;
   showPassword = false;
 
-  constructor(private http: HttpClient, private router: Router, private auth: Auth) {}
+  constructor(
+    private http: HttpClient, 
+    private router: Router, 
+    private auth: Auth,
+    private notificationService: NotificationService
+  ) {}
 
   async loginuser(email: string, password: string, event: Event) {
     event.preventDefault();
 
     if (!email || !password) {
-      alert('กรุณากรอกอีเมลและรหัสผ่าน');
+      this.notificationService.showNotification('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกอีเมลและรหัสผ่าน');
       return;
     }
 
     if (!this.isValidEmail(email)) {
-      alert('กรุณากรอกอีเมลที่ถูกต้อง');
+      this.notificationService.showNotification('error', 'อีเมลไม่ถูกต้อง', 'กรุณากรอกอีเมลที่ถูกต้อง');
       return;
     }
 
@@ -50,7 +56,7 @@ export class LoginComponent {
     } catch (err: any) {
       console.error('❌ Login error:', err);
       const msg = err?.message || 'เข้าสู่ระบบล้มเหลว';
-      alert(msg);
+      this.notificationService.showNotification('error', 'เข้าสู่ระบบไม่สำเร็จ', msg);
     } finally {
       this.isLoading = false;
       if (this.isLoading === false) {
@@ -68,7 +74,7 @@ export class LoginComponent {
       this.router.navigate(['/main']);
     } catch (error: any) {
       console.error('❌ Google login error:', error);
-      alert('เข้าสู่ระบบด้วย Google ล้มเหลว');
+      this.notificationService.showNotification('error', 'Google Sign-in ล้มเหลว', 'เข้าสู่ระบบด้วย Google ล้มเหลว');
     } finally {
       this.isLoading = false;
     }

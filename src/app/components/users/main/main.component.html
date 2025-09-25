@@ -1,32 +1,40 @@
 <div class="container">
-  <button (click)="logout()" class="logout-btn">ออกจากระบบ</button>
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <i class="fas fa-seedling"></i>
+      <span>Soil Monitor</span>
+    </div>
+    <button (click)="logout()" class="logout-btn">
+      <i class="fas fa-sign-out-alt"></i>
+      ออกจากระบบ
+    </button>
+  </div>
 
-  <div class="card">
-    <!-- ไอคอนบนสุด -->
-    <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png" class="chip-icon"
-      alt="chip" />
+  <!-- User Info Section -->
+  <div class="user-info">
+    <div class="user-details">
+      <div class="user-item">
+        <i class="fas fa-user"></i>
+        <span class="label">ผู้ใช้:</span>
+        <span class="value">{{ userName || userEmail || userID }}</span>
+      </div>
+      <div class="user-item">
+        <i class="fas fa-clock"></i>
+        <span class="label">เวลา:</span>
+        <span class="value">{{ currentTime }}</span>
+      </div>
+    </div>
+  </div>
 
-    <!-- ข้อมูลผู้ใช้ -->
-    <div class="user-box">
-      <span class="label">User : </span>
-      <span class="value">{{ userName || userEmail || userID }}</span>
+  <!-- Device Section -->
+  <div class="device-section">
+    <div class="device-header">
+      <i class="fas fa-microchip"></i>
+      <h3>อุปกรณ์ของฉัน</h3>
     </div>
 
-    <!-- ข้อมูลชื่ออุปกรณ์ -->
-    <div class="device-box">
-      <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png" class="chip-icon"
-        alt="chip" />
-      <span class="label-orange">ชื่ออุปกรณ์ :</span>
-
-      <!-- แสดงชื่ออุปกรณ์ -->
-      <span class="value" *ngIf="devices.length === 0">
-        ไม่พบอุปกรณ์
-      </span>
-      <!-- แสดงข้อความเมื่อยังไม่ได้เลือกอุปกรณ์ -->
-      <span class="value" *ngIf="devices.length > 1 && !selectedDevice">
-        กรุณาเลือกอุปกรณ์
-      </span>
-
+    <div class="device-selector">
       <!-- เลือกอุปกรณ์ (กรณี > 1 ชิ้น) -->
       <select class="device-select" *ngIf="devices.length > 1" [(ngModel)]="selectedDeviceId"
         (ngModelChange)="onDeviceChange()" aria-label="เลือกอุปกรณ์">
@@ -36,68 +44,102 @@
         </option>
       </select>
 
-      <!-- สถานะ Online/Offline ของ "อุปกรณ์ที่เลือก" -->
-      <span class="status-indicator" [ngClass]="{
+      <!-- แสดงชื่ออุปกรณ์ -->
+      <div class="device-name" *ngIf="devices.length === 1">
+        {{ devices[0].device_name || devices[0].deviceid }}
+      </div>
+      <div class="device-name" *ngIf="devices.length === 0">
+        ไม่พบอุปกรณ์
+      </div>
+
+      <!-- สถานะ Online/Offline -->
+      <div class="status-indicator" [ngClass]="{
           online: selectedDevice?.status === 'online',
           offline: selectedDevice?.status !== 'online' || devices.length === 0
         }">
-        <span class="status-dot"></span>
+        <div class="status-dot"></div>
         <span class="status-text">
           {{ devices.length === 0 ? 'Offline' : (selectedDevice?.status === 'online' ? 'Online' : 'Offline') }}
         </span>
-      </span>
-    </div>
-
-    <div class="time-box">
-      <span class="label">เวลา :</span>
-      {{ currentTime }}
-    </div>
-
-    <!-- ปุ่มข้อมูลผู้ใช้ -->
-    <div class="user-icon" (click)="goToProfile()" style="cursor: pointer;">
-      <img src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png" alt="user" />
-      <div class="text">ข้อมูลผู้ใช้</div>
-    </div>
-
-    <!-- ปุ่มประวัติการวัดค่า -->
-    <button class="btn-history" (click)="goToHistory()">ประวัติการวัดค่า</button>
-
-    <!-- ปุ่มวัดค่า -->
-    <button class="btn-main" (click)="goToMeasure()">วัดค่า</button>
-
-    <!-- ปุ่มติดต่อแอดมิน -->
-    <div class="admin" (click)="goToContactAdmin()">
-      <img src="https://cdn-icons-png.flaticon.com/512/9703/9703596.png" alt="admin" />
-      <div>ติดต่อ Admin</div>
-    </div>
-
-    <!-- แบบฟอร์ม “ขอผูกอุปกรณ์” -->
-    <div class="claim-device-box" role="group" aria-labelledby="claim-title">
-      <div id="claim-title" class="claim-title">เพิ่มอุปกรณ์ของฉัน</div>
-
-      <div class="claim-row">
-        <input class="claim-input" type="text" [(ngModel)]="claimDeviceId" (keyup.enter)="addNewDevice()"
-          placeholder="ใส่ Device ID เช่น esp32-soil-01" aria-label="Device ID" aria-describedby="claim-help" />
-
-        <button class="claim-btn" [disabled]="requestingClaim || !claimDeviceId.trim()" (click)="addNewDevice()"
-          aria-label="เพิ่มอุปกรณ์">
-          <span *ngIf="!requestingClaim">เพิ่มอุปกรณ์</span>
-          <span *ngIf="requestingClaim" class="spinner" aria-hidden="true"></span>
-        </button>
-      </div>
-
-      <small id="claim-help" class="claim-help">
-        พิมพ์ Device ID แล้วกด Enter หรือคลิก "เพิ่มอุปกรณ์" เพื่อเพิ่มอุปกรณ์ให้บัญชีของคุณ
-      </small>
-      <div class="claim-status" *ngIf="lastClaimMessage">
-        <span class="status-dot" [ngClass]="{
-            ok: lastClaimType === 'ok',
-            warn: lastClaimType === 'warn',
-            err: lastClaimType === 'err'
-          }"></span>
-        {{ lastClaimMessage }}
       </div>
     </div>
   </div>
 
+  <!-- Action Buttons -->
+  <div class="actions-grid">
+    <div class="action-card primary" (click)="goToMeasure()">
+      <i class="fas fa-play-circle"></i>
+      <h4>วัดค่า</h4>
+      <p>เริ่มการวัดค่าความชื้นในดิน</p>
+    </div>
+
+    <div class="action-card secondary" (click)="goToHistory()">
+      <i class="fas fa-history"></i>
+      <h4>ประวัติการวัดค่า</h4>
+      <p>ดูประวัติข้อมูลที่วัดได้</p>
+    </div>
+
+    <div class="action-card info" (click)="goToProfile()">
+      <i class="fas fa-user-circle"></i>
+      <h4>ข้อมูลผู้ใช้</h4>
+      <p>จัดการข้อมูลส่วนตัว</p>
+    </div>
+
+    <div class="action-card success" (click)="goToContactAdmin()">
+      <i class="fas fa-headset"></i>
+      <h4>ติดต่อ Admin</h4>
+      <p>ต้องการความช่วยเหลือ</p>
+    </div>
+  </div>
+
+  <!-- Add Device Section -->
+  <div class="add-device">
+    <h3>
+      <i class="fas fa-plus-circle"></i>
+      เพิ่มอุปกรณ์ใหม่
+    </h3>
+
+    <div class="device-input-group">
+      <input class="claim-input" type="text" [(ngModel)]="claimDeviceId" (keyup.enter)="addNewDevice()"
+        placeholder="ใส่ Device ID เช่น esp32-soil-01" aria-label="Device ID">
+
+      <button class="claim-btn" [disabled]="requestingClaim || !claimDeviceId.trim()" (click)="addNewDevice()"
+        aria-label="เพิ่มอุปกรณ์">
+        <i class="fas fa-plus" *ngIf="!requestingClaim"></i>
+        <span class="spinner" *ngIf="requestingClaim" aria-hidden="true"></span>
+        <span *ngIf="!requestingClaim">เพิ่มอุปกรณ์</span>
+      </button>
+    </div>
+
+    <div class="claim-help">
+      พิมพ์ Device ID แล้วกด Enter หรือคลิก "เพิ่มอุปกรณ์" เพื่อเพิ่มอุปกรณ์ให้บัญชีของคุณ
+    </div>
+
+    <div class="claim-status" *ngIf="lastClaimMessage" [ngClass]="lastClaimType">
+      <div class="status-dot"></div>
+      {{ lastClaimMessage }}
+    </div>
+  </div>
+
+  <!-- Notification Popup -->
+  <div class="notification-overlay" *ngIf="showNotification" (click)="closeNotification()">
+    <div class="notification-popup" (click)="$event.stopPropagation()">
+      <div class="notification-header" [ngClass]="notificationType">
+        <i class="notification-icon" [ngClass]="getNotificationIcon()"></i>
+        <h3 class="notification-title">{{ notificationTitle }}</h3>
+        <button class="close-btn" (click)="closeNotification()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="notification-body">
+        <p class="notification-message">{{ notificationMessage }}</p>
+        <div class="notification-actions" *ngIf="showNotificationActions">
+          <button class="btn-secondary" (click)="closeNotification()">ปิด</button>
+          <button class="btn-primary" (click)="onNotificationConfirm()" *ngIf="notificationConfirmText">
+            {{ notificationConfirmText }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

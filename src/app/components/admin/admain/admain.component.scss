@@ -52,8 +52,15 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ไอคอน Soil Sensor กลาง */
@@ -127,7 +134,8 @@
     border-radius: 10px;
     background: white;
     margin-bottom: 20px;
-    -webkit-overflow-scrolling: touch; /* Smooth scrolling on touch devices */
+    -webkit-overflow-scrolling: touch;
+    /* Smooth scrolling on touch devices */
   }
 
   .device-list::-webkit-scrollbar {
@@ -497,7 +505,9 @@
         margin-bottom: 5px;
       }
 
-      .user-email, .user-type, .user-created {
+      .user-email,
+      .user-type,
+      .user-created {
         font-size: clamp(12px, 1.8vw, 14px);
         color: #666;
         margin-bottom: 3px;
@@ -598,6 +608,7 @@
     opacity: 0;
     transform: translateY(-30px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -653,7 +664,8 @@
       font-size: clamp(12px, 1.8vw, 14px);
     }
 
-    input, select {
+    input,
+    select {
       width: 100%;
       padding: clamp(10px, 1.5vw, 12px) 15px;
       border: 2px solid #e9ecef;
@@ -731,26 +743,36 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   }
 
-  .admin-name, .device-section h3, .users-section h3, .modal-header h3 {
+  .admin-name,
+  .device-section h3,
+  .users-section h3,
+  .modal-header h3 {
     color: #e0e0e0;
   }
 
-  .device-list, .users-list, .add-device-form {
+  .device-list,
+  .users-list,
+  .add-device-form {
     background: rgba(51, 51, 51, 0.8);
     border-color: #444;
   }
 
-  .device-item, .user-item {
+  .device-item,
+  .user-item {
     &:hover {
       background-color: #3a3a3a;
     }
   }
 
-  .device-info .device-name, .user-info .user-name {
+  .device-info .device-name,
+  .user-info .user-name {
     color: #e0e0e0;
   }
 
-  .device-info .device-user, .user-info .user-email, .user-info .user-type, .user-info .user-created {
+  .device-info .device-user,
+  .user-info .user-email,
+  .user-info .user-type,
+  .user-info .user-created {
     color: #aaa;
   }
 
@@ -763,7 +785,8 @@
     color: #e0e0e0;
   }
 
-  .modal-body input, .modal-body select {
+  .modal-body input,
+  .modal-body select {
     background: #333;
     color: #e0e0e0;
     border-color: #555;
@@ -812,16 +835,19 @@
       margin-bottom: 10px;
     }
 
-    .view-all-users-btn, .view-all-devices-btn {
+    .view-all-users-btn,
+    .view-all-devices-btn {
       margin-top: 15px;
     }
   }
 
-  .device-item, .user-item {
+  .device-item,
+  .user-item {
     flex-direction: column;
     align-items: flex-start;
 
-    .device-actions, .user-actions {
+    .device-actions,
+    .user-actions {
       margin-top: 10px;
       width: 100%;
       justify-content: flex-end;
@@ -832,7 +858,8 @@
     flex-direction: column;
     gap: 15px;
 
-    input, .user-input-box {
+    input,
+    .user-input-box {
       width: 100%;
       min-width: auto;
     }
@@ -889,9 +916,16 @@
     height: clamp(20px, 3vw, 25px);
   }
 
-  .device-item, .user-item {
-    .device-actions, .user-actions {
-      .view-btn, .delete-btn, .edit-btn, .delete-user-btn {
+  .device-item,
+  .user-item {
+
+    .device-actions,
+    .user-actions {
+
+      .view-btn,
+      .delete-btn,
+      .edit-btn,
+      .delete-user-btn {
         width: calc(50% - 5px);
         text-align: center;
         padding: clamp(6px, 1vw, 8px) clamp(10px, 1.5vw, 12px);
@@ -899,7 +933,8 @@
     }
   }
 
-  .device-list, .users-list {
+  .device-list,
+  .users-list {
     max-height: 300px;
   }
 }
@@ -910,11 +945,13 @@
     max-height: 80vh;
   }
 
-  .device-section h3, .users-section h3 {
+  .device-section h3,
+  .users-section h3 {
     font-size: clamp(14px, 2vw, 16px);
   }
 
-  .device-item, .user-item {
+  .device-item,
+  .user-item {
     padding: 10px 15px;
   }
 

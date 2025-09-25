@@ -15,6 +15,7 @@ import { environment } from '../../../service/environment'; // ใช้ path �
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatSpinner } from '@angular/material/progress-spinner';
+import { NotificationService } from '../../../service/notification.service';
 
 interface Measurement {
   id: number;
@@ -50,7 +51,8 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private router: Router,
     private http: HttpClient,
-    private constants: Constants // Inject Constants
+    private constants: Constants, // Inject Constants
+    private notificationService: NotificationService
   ) {
     config.apiKey = environment.mapTilerApiKey;
     this.apiUrl = this.constants.API_ENDPOINT; // ใช้ instance ของ Constants
@@ -62,8 +64,9 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
       this.device = JSON.parse(savedDevice);
       this.loadMeasurements();
     } else {
-      alert('ไม่พบข้อมูลอุปกรณ์');
-      this.router.navigate(['/adminmain']);
+      this.notificationService.showNotification('error', 'ไม่พบข้อมูล', 'ไม่พบข้อมูลอุปกรณ์', true, 'กลับ', () => {
+        this.router.navigate(['/adminmain']);
+      });
     }
   }
 
@@ -90,7 +93,7 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
       this.fitMapToBounds();
     } catch (error) {
       console.error('Error loading measurements:', error);
-      alert('เกิดข้อผิดพลาดในการโหลดข้อมูลวัด');
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการโหลดข้อมูลวัด');
       this.isLoading = false;
     }
   }
@@ -147,7 +150,7 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
 pH: ${measurement.ph}
 ตำแหน่ง: ${measurement.location}`;
 
-    alert(details);
+    this.notificationService.showNotification('info', 'รายละเอียดการวัด', details);
   }
 
   goBack() {

@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { SafePipe } from '../../../shared/safe.pipe';
 import { environment } from '../../../service/environment'; // นำเข้า environment
+import { NotificationService } from '../../../service/notification.service';
 
 interface MeasurementData {
   id?: string;
@@ -53,7 +54,11 @@ export class HistoryDetailComponent implements OnInit {
   mapUrl: string = '';
   measurementData: MeasurementData = {};
 
-  constructor(private location: Location, private router: Router) {}
+  constructor(
+    private location: Location, 
+    private router: Router,
+    private notificationService: NotificationService
+  ) {}
 
   ngOnInit() {
     this.loadMeasurementData();
@@ -183,7 +188,7 @@ export class HistoryDetailComponent implements OnInit {
       });
     } else {
       navigator.clipboard.writeText(shareText).then(() => {
-        alert('คัดลอกข้อมูลแล้ว!');
+        this.notificationService.showNotification('success', 'คัดลอกสำเร็จ', 'คัดลอกข้อมูลแล้ว!');
       });
     }
   }

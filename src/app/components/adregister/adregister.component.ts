@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { NotificationService } from '../../service/notification.service';
 
 @Component({
   selector: 'app-register',
@@ -52,7 +53,8 @@ export class AdregisterComponent {
     private auth: Auth,
     private router: Router,
     private database: Database,
-    private http: HttpClient
+    private http: HttpClient,
+    private notificationService: NotificationService
   ) {}
 
   goBack() {
@@ -65,7 +67,7 @@ export class AdregisterComponent {
 
   async sendOtp() {
     if (!this.email || !this.isValidEmail(this.email)) {
-      alert('กรุณากรอก Email ที่ถูกต้อง');
+      this.notificationService.showNotification('error', 'อีเมลไม่ถูกต้อง', 'กรุณากรอก Email ที่ถูกต้อง');
       return;
     }
 
@@ -77,19 +79,17 @@ export class AdregisterComponent {
 
       if (useRealEmail) {
         await this.sendOtpEmail(this.email, this.generatedOtp);
-        alert('OTP ถูกส่งไปยังอีเมลของคุณแล้ว');
+        this.notificationService.showNotification('success', 'ส่ง OTP สำเร็จ', 'OTP ถูกส่งไปยังอีเมลของคุณแล้ว');
       } else {
         console.log('OTP สำหรับ', this.email, ':', this.generatedOtp);
-        alert(
-          `OTP สำหรับการทดสอบ: ${this.generatedOtp}\n(ในการใช้งานจริงจะส่งไปยังอีเมล)`
-        );
+        this.notificationService.showNotification('info', 'OTP สำหรับการทดสอบ', `OTP สำหรับการทดสอบ: ${this.generatedOtp}\n(ในการใช้งานจริงจะส่งไปยังอีเมล)`);
       }
 
       this.step = 2;
       this.startCountdown();
     } catch (error) {
       console.error('Error sending OTP:', error);
-      alert('เกิดข้อผิดพลาดในการส่ง OTP กรุณาลองใหม่อีกครั้ง');
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการส่ง OTP กรุณาลองใหม่อีกครั้ง');
     } finally {
       this.isLoading = false;
     }
@@ -199,7 +199,7 @@ export class AdregisterComponent {
     if (enteredOtp === this.generatedOtp) {
       this.step = 3;
     } else {
-      alert('OTP ไม่ถูกต้อง');
+      this.notificationService.showNotification('error', 'OTP ไม่ถูกต้อง', 'OTP ไม่ถูกต้อง');
     }
   }
 
@@ -243,7 +243,7 @@ export class AdregisterComponent {
     }
 
     if (this.password.length < 6) {
-      alert('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+      this.notificationService.showNotification('error', 'รหัสผ่านสั้นเกินไป', 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
       return;
     }
 
@@ -325,14 +325,15 @@ export class AdregisterComponent {
 
       await sendEmailVerification(user);
 
-      alert('สมัครแอดมินสำเร็จ! (กรุณายืนยันอีเมลด้วยหากระบบกำหนด)');
-      this.router.navigate(['/adminmain']);
+      this.notificationService.showNotification('success', 'สมัครแอดมินสำเร็จ!', 'กรุณายืนยันอีเมลด้วยหากระบบกำหนด', true, 'ไปหน้า Admin', () => {
+        this.router.navigate(['/adminmain']);
+      });
     } catch (error: any) {
       console.error('Registration error:', error);
       if (error.code === 'auth/email-already-in-use') {
-        alert('อีเมลนี้ถูกใช้งานแล้ว');
+        this.notificationService.showNotification('warning', 'อีเมลถูกใช้งานแล้ว', 'อีเมลนี้ถูกใช้งานแล้ว');
       } else {
-        alert('เกิดข้อผิดพลาด: ' + error.message);
+        this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาด: ' + error.message);
       }
     } finally {
       this.isRegistering = false;
@@ -341,22 +342,22 @@ export class AdregisterComponent {
 
   private validateForm(): boolean {
     if (!this.username.trim()) {
-      alert('กรุณากรอกชื่อผู้ใช้');
+      this.notificationService.showNotification('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกชื่อผู้ใช้');
       return false;
     }
 
     if (!this.fullName.trim()) {
-      alert('กรุณากรอกชื่อ-นามสกุล');
+      this.notificationService.showNotification('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกชื่อ-นามสกุล');
       return false;
     }
 
     if (!this.phoneNumber.replace(/\D/g, '')) {
-      alert('กรุณากรอกเบอร์โทรศัพท์');
+      this.notificationService.showNotification('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกเบอร์โทรศัพท์');
       return false;
     }
 
     if (this.usernameStatus?.class === 'error') {
-      alert('กรุณาเลือกชื่อผู้ใช้อื่น');
+      this.notificationService.showNotification('error', 'ชื่อผู้ใช้ไม่ถูกต้อง', 'กรุณาเลือกชื่อผู้ใช้อื่น');
       return false;
     }
 
@@ -387,7 +388,7 @@ export class AdregisterComponent {
       this.router.navigate(['/adminmain']);
     } catch (err: any) {
       console.error('Google sign-in error:', err);
-      alert('Google Sign-in ล้มเหลว');
+      this.notificationService.showNotification('error', 'Google Sign-in ล้มเหลว', 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้');
     }
   }
 
