@@ -59,6 +59,30 @@ export class AuthService {
       .toPromise();
   }
 
+  async loginWithGoogleAsAdmin(): Promise<any> {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(this.auth, provider);
+    const idToken = await result.user.getIdToken();
+    
+    // ส่งข้อมูลไปยัง backend พร้อมระบุว่าเป็น admin
+    return this.http
+      .post(`${this.apiUrl}/api/auth/google-login`, { 
+        idToken,
+        role: 'admin'  // ส่ง role ใน body แทน header
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .pipe(
+        catchError((error) => {
+          console.error('Error logging in with Google as admin:', error);
+          return throwError(() => new Error('Google admin login failed'));
+        })
+      )
+      .toPromise();
+  }
+
   checkEmailExists(email: string): Promise<boolean> {
     return this.http
       .get<{ exists: boolean }>(`${this.apiUrl}/api/auth/check-email/${email}`)

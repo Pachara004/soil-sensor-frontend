@@ -1,156 +1,191 @@
 <div class="admin-container">
-  <button class="logout-btn" (click)="logout()">ออกจากระบบ</button>
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <i class="fas fa-seedling"></i>
+      <span>Admin Panel</span>
+    </div>
+    <button class="logout-btn" (click)="logout()">
+      <i class="fas fa-sign-out-alt"></i>
+      ออกจากระบบ
+    </button>
+  </div>
 
-  <div class="card">
-    <div class="top-right-icons">
-      <div class="icon-box" (click)="goToUsers()">
-        <img src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png" alt="Users">
-          <div class="text">ข้อมูลผู้ใช้</div>
-      </div>
+  <!-- Admin Info -->
+  <div class="admin-info">
+    <div class="admin-logo">
+      <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png" alt="Soil Sensor" class="chip-icon">
+      <div class="admin-title">Admin Panel</div>
+    </div>
+    <div class="admin-name">Admin : {{ adminName }}</div>
+  </div>
 
-      <div class="icon-box" (click)="goToReports()">
-        <img src="https://cdn-icons-png.flaticon.com/512/565/565340.png" alt="Messages">
-        <div class="text">
-          ข้อความ
-          <span class="unread-count" *ngIf="unreadCount > 0">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
-        </div>
-      </div>
+  <!-- Quick Actions -->
+  <div class="quick-actions">
+    <div class="action-btn" (click)="goToUsers()">
+      <img src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png" alt="Users">
+      <div class="text">ข้อมูลผู้ใช้</div>
     </div>
 
-    <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png" alt="Soil Sensor" class="chip-icon">
-    <div class="admin-name">Admin : {{ adminName }}</div>
+    <div class="action-btn" (click)="goToReports()">
+      <img src="https://cdn-icons-png.flaticon.com/512/565/565340.png" alt="Messages">
+      <div class="text">
+        ข้อความ
+        <span class="unread-count" *ngIf="unreadCount > 0">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+      </div>
+    </div>
+  </div>
 
-    <div class="user-stats-section">
-      <div class="stats-box">
+  <!-- Stats Section -->
+  <div class="stats-section">
+    <div class="stats-card">
+      <div class="stats-header">
         <span class="stats-icon">👥</span>
-        <div class="stats-content">
-          <div class="stats-number">{{ totalUsers }}</div>
-          <div class="stats-label">ผู้ใช้ทั้งหมดในระบบ</div>
-        </div>
-        <button class="view-all-users-btn" (click)="toggleUsersList()">
+        <div class="stats-title">ผู้ใช้ทั้งหมด</div>
+      </div>
+      <div class="stats-content">
+        <div class="stats-number">{{ totalUsers }}</div>
+        <div class="stats-label">ผู้ใช้ทั้งหมดในระบบ</div>
+      </div>
+      <div class="stats-action">
+        <button class="view-all-btn" (click)="toggleUsersList()">
           {{ showUsersList ? 'ซ่อนรายการ' : 'ดูรายการทั้งหมด' }}
         </button>
       </div>
     </div>
 
-    <div class="users-section" *ngIf="showUsersList">
-      <h3>รายการผู้ใช้ทั้งหมด</h3>
-      <div class="users-list">
-        <div class="user-item" *ngFor="let user of allUsersDisplay">
-          <div class="user-info">
-            <div class="user-name">{{ user.username }}</div>
-            <div class="user-email">อีเมล: {{ user.email }}</div>
-            <div class="user-type">ประเภท: {{ user.type || 'user' }}</div>
-            <div class="user-created">สร้างเมื่อ: {{ formatDate(user.createdAt) }}</div>
-          </div>
-          <div class="user-actions">
-            <button class="edit-btn" (click)="editUser(user)">แก้ไข</button>
-            <button class="delete-user-btn" (click)="deleteUser(user.username)">ลบ</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="modal-overlay" *ngIf="showEditModal">
-      <div class="edit-modal">
-        <div class="modal-header">
-          <h3>แก้ไขข้อมูลผู้ใช้</h3>
-          <button class="close-btn" (click)="closeEditModal()">×</button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label>ชื่อผู้ใช้:</label>
-            <input type="text" [(ngModel)]="editingUser.username" readonly>
-          </div>
-          <div class="form-group">
-            <label>อีเมล:</label>
-            <input type="email" [(ngModel)]="editingUser.email">
-          </div>
-          <div class="form-group">
-            <label>รหัสผ่านใหม่ (เว้นว่างหากไม่ต้องการเปลี่ยน):</label>
-            <input type="password" [(ngModel)]="newPassword">
-          </div>
-          <div class="form-group">
-            <label>ประเภทผู้ใช้:</label>
-            <select [(ngModel)]="editingUser.type">
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="save-btn" (click)="saveUserChanges()">บันทึก</button>
-          <button class="cancel-btn" (click)="closeEditModal()">ยกเลิก</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="device-stats-section">
-      <div class="stats-box device-stats">
+    <div class="stats-card">
+      <div class="stats-header">
         <span class="stats-icon">📱</span>
-        <div class="stats-content">
-          <div class="stats-number">{{ devices.length }}</div>
-          <div class="stats-label">อุปกรณ์ทั้งหมดในระบบ</div>
-        </div>
-        <button class="view-all-devices-btn" (click)="toggleDevicesList()">
+        <div class="stats-title">อุปกรณ์ทั้งหมด</div>
+      </div>
+      <div class="stats-content">
+        <div class="stats-number">{{ devices.length }}</div>
+        <div class="stats-label">อุปกรณ์ทั้งหมดในระบบ</div>
+      </div>
+      <div class="stats-action">
+        <button class="view-all-btn" (click)="toggleDevicesList()">
           {{ showDevicesList ? 'ซ่อนรายการ' : 'ดูรายการทั้งหมด' }}
         </button>
       </div>
     </div>
+  </div>
 
-    <!-- 🔥 NEW: รายการ “คำขอผูกอุปกรณ์” (จาก devices/{id}/claim) -->
-    <div class="device-section" *ngIf="pendingClaims.length > 0">
+  <!-- Users Section -->
+  <div class="content-section" *ngIf="showUsersList">
+    <div class="section-header">
+      <i class="fas fa-users"></i>
+      <h3>รายการผู้ใช้ทั้งหมด</h3>
+    </div>
+    <div class="content-list">
+      <div class="list-item" *ngFor="let user of allUsersDisplay">
+        <div class="item-info">
+          <div class="item-name">{{ user.username }}</div>
+          <div class="item-detail">อีเมล: {{ user.email }}</div>
+          <div class="item-detail highlight">ประเภท: {{ user.type || 'user' }}</div>
+          <div class="item-detail">สร้างเมื่อ: {{ formatDate(user.createdAt) }}</div>
+        </div>
+        <div class="item-actions">
+          <button class="btn btn-edit" (click)="editUser(user)">แก้ไข</button>
+          <button class="btn btn-delete" (click)="deleteUser(user.username)">ลบ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="modal-overlay" *ngIf="showEditModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>แก้ไขข้อมูลผู้ใช้</h3>
+        <button class="close-btn" (click)="closeEditModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>ชื่อผู้ใช้:</label>
+          <input type="text" [(ngModel)]="editingUser.username" readonly>
+        </div>
+        <div class="form-group">
+          <label>อีเมล:</label>
+          <input type="email" [(ngModel)]="editingUser.email">
+        </div>
+        <div class="form-group">
+          <label>รหัสผ่านใหม่ (เว้นว่างหากไม่ต้องการเปลี่ยน):</label>
+          <input type="password" [(ngModel)]="newPassword">
+        </div>
+        <div class="form-group">
+          <label>ประเภทผู้ใช้:</label>
+          <select [(ngModel)]="editingUser.type">
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="save-btn" (click)="saveUserChanges()">บันทึก</button>
+        <button class="cancel-btn" (click)="closeEditModal()">ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pending Claims Section -->
+  <div class="content-section" *ngIf="pendingClaims.length > 0">
+    <div class="section-header">
+      <i class="fas fa-clock"></i>
       <h3>คำขอผูกอุปกรณ์ที่รออนุมัติ</h3>
-      <div class="device-list">
-        <div class="device-item" *ngFor="let c of pendingClaims">
-          <div class="device-info">
-            <div class="device-name">Device ID: {{ c.deviceId }}</div>
-            <div class="device-user">ผู้ขอ: {{ c.username }}</div>
-            <div class="device-time">เวลา: {{ c.ts | date:'short' }}</div>
-          </div>
-          <div class="device-actions">
-            <button class="view-btn" (click)="approveClaim(c.deviceId)">อนุมัติ</button>
-            <button class="delete-btn" (click)="rejectClaim(c.deviceId)">ปฏิเสธ</button>
-          </div>
+    </div>
+    <div class="content-list">
+      <div class="list-item" *ngFor="let c of pendingClaims">
+        <div class="item-info">
+          <div class="item-name">Device ID: {{ c.deviceId }}</div>
+          <div class="item-detail">ผู้ขอ: {{ c.username }}</div>
+          <div class="item-detail">เวลา: {{ c.ts | date:'short' }}</div>
+        </div>
+        <div class="item-actions">
+          <button class="btn btn-edit" (click)="approveClaim(c.deviceId)">อนุมัติ</button>
+          <button class="btn btn-delete" (click)="rejectClaim(c.deviceId)">ปฏิเสธ</button>
         </div>
       </div>
     </div>
-    <!-- /NEW -->
+  </div>
 
-    <div class="device-section" *ngIf="showDevicesList">
+  <!-- Devices Section -->
+  <div class="content-section" *ngIf="showDevicesList">
+    <div class="section-header">
+      <i class="fas fa-microchip"></i>
       <h3>รายการอุปกรณ์ทั้งหมด</h3>
-      <div class="device-list">
-        <div class="device-item" *ngFor="let device of devices">
-          <div class="device-info">
-            <div class="device-name">{{ device.name }}</div>
-            <div class="device-user">ผู้ใช้: {{ device.user }}</div>
-          </div>
-          <div class="device-actions">
-            <button class="view-btn" (click)="viewDevice(device)">ดูข้อมูล</button>
-            <button class="delete-btn" (click)="deleteDevice(device.name)">ลบ</button>
-          </div>
+    </div>
+    <div class="content-list">
+      <div class="list-item" *ngFor="let device of devices">
+        <div class="item-info">
+          <div class="item-name">{{ device.name }}</div>
+          <div class="item-detail">ผู้ใช้: {{ device.user }}</div>
+        </div>
+        <div class="item-actions">
+          <button class="btn btn-view" (click)="viewDevice(device)">ดูข้อมูล</button>
+          <button class="btn btn-delete" (click)="deleteDevice(device.name)">ลบ</button>
         </div>
       </div>
     </div>
+  </div>
 
-    <div class="device-section">
-      <div class="add-device-form">
-        <div class="form-header">
-          <h4>เพิ่มอุปกรณ์ใหม่</h4>
-        </div>
-        <div class="form-inputs">
-          <input type="text" placeholder="ชื่ออุปกรณ์" [(ngModel)]="newDeviceName">
-          <div class="user-input-box">
-            <input type="text" placeholder="ชื่อผู้ใช้" [(ngModel)]="newDeviceUser" (input)="onUserInput()">
-            <ul class="suggest-list" *ngIf="filteredUsers.length > 0">
-              <li *ngFor="let u of filteredUsers" (click)="selectUser(u.username)">
-                {{ u.username }}
-              </li>
-            </ul>
-          </div>
-          <button class="save-btn" (click)="addDevice()">เพิ่มอุปกรณ์</button>
-        </div>
+  <!-- Add Device Section -->
+  <div class="content-section">
+    <div class="section-header">
+      <i class="fas fa-plus-circle"></i>
+      <h3>เพิ่มอุปกรณ์ใหม่</h3>
+    </div>
+    <div class="form-inputs">
+      <input type="text" placeholder="ชื่ออุปกรณ์" [(ngModel)]="newDeviceName">
+      <div class="user-input-box">
+        <input type="text" placeholder="ชื่อผู้ใช้" [(ngModel)]="newDeviceUser" (input)="onUserInput()">
+        <ul class="suggest-list" *ngIf="filteredUsers.length > 0">
+          <li *ngFor="let u of filteredUsers" (click)="selectUser(u.username)">
+            {{ u.username }}
+          </li>
+        </ul>
       </div>
+      <button class="save-btn" (click)="addDevice()">เพิ่มอุปกรณ์</button>
     </div>
   </div>
 </div>

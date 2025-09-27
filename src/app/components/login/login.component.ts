@@ -8,6 +8,7 @@ import { firstValueFrom } from 'rxjs';
 import { Auth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from '@angular/fire/auth';
 import { NotificationService } from '../../service/notification.service';
 import { AuthService } from '../../service/auth.service';
+import { Constants } from '../../config/constants';
 
 @Component({
   selector: 'app-login',
@@ -27,7 +28,8 @@ export class LoginComponent {
     private router: Router, 
     private auth: Auth,
     private notificationService: NotificationService,
-    private authService: AuthService
+    private authService: AuthService,
+    private constants: Constants
   ) {}
 
   async loginuser(email: string, password: string, event: Event) {
@@ -50,11 +52,28 @@ export class LoginComponent {
       const user = this.auth.currentUser;
       if (!user) throw new Error('ไม่พบผู้ใช้หลังล็อกอิน');
 
-      // Store minimal client session marker if needed
-      localStorage.setItem('user', JSON.stringify({ email: user.email }));
+      // ✅ ตรวจสอบ role ของผู้ใช้จาก backend
+      const userRole = await this.getUserRoleFromBackend(user.uid);
+      console.log('👤 User role from login:', userRole);
 
-      // Route: if backend provides role later, this can be refined. For now, default to /main
-      this.router.navigate(['/main']);
+      // ✅ เก็บข้อมูลผู้ใช้ใน localStorage
+      localStorage.setItem('user', JSON.stringify({ 
+        email: user.email, 
+        uid: user.uid,
+        role: userRole 
+      }));
+
+      // ✅ Redirect ตาม role
+      if (userRole === 'admin') {
+        localStorage.setItem('admin', JSON.stringify({ 
+          email: user.email, 
+          uid: user.uid,
+          role: userRole 
+        }));
+        this.router.navigate(['/adminmain']);
+      } else {
+        this.router.navigate(['/main']);
+      }
     } catch (err: any) {
       console.error('❌ Login error:', err);
       const msg = err?.message || 'เข้าสู่ระบบล้มเหลว';
@@ -76,8 +95,31 @@ export class LoginComponent {
       
       if (result) {
         console.log('✅ Google login successful with PostgreSQL data:', result);
-        this.notificationService.showNotification('success', 'เข้าสู่ระบบสำเร็จ', 'ยินดีต้อนรับ!');
-        this.router.navigate(['/main']);
+        
+        // ✅ ตรวจสอบ role จาก response
+        const userRole = result.user?.role || result.role || 'user';
+        console.log('👤 User role from Google login:', userRole);
+        
+        // ✅ เก็บข้อมูลผู้ใช้ใน localStorage
+        localStorage.setItem('user', JSON.stringify({ 
+          email: result.user?.user_email || result.user?.email,
+          uid: result.user?.firebase_uid || result.user?.uid,
+          role: userRole 
+        }));
+        
+        // ✅ Redirect ตาม role
+        if (userRole === 'admin') {
+          localStorage.setItem('admin', JSON.stringify({ 
+            email: result.user?.user_email || result.user?.email,
+            uid: result.user?.firebase_uid || result.user?.uid,
+            role: userRole 
+          }));
+          this.notificationService.showNotification('success', 'เข้าสู่ระบบสำเร็จ', 'ยินดีต้อนรับ Admin!');
+          this.router.navigate(['/adminmain']);
+        } else {
+          this.notificationService.showNotification('success', 'เข้าสู่ระบบสำเร็จ', 'ยินดีต้อนรับ!');
+          this.router.navigate(['/main']);
+        }
       } else {
         throw new Error('No response from backend');
       }
@@ -104,5 +146,34 @@ export class LoginComponent {
   private isValidEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  }
+
+  // ✅ ฟังก์ชันดึง role ของผู้ใช้จาก backend
+  private async getUserRoleFromBackend(firebaseUid: string): Promise<string> {
+    try {
+      console.log('🔍 Getting user role from backend for UID:', firebaseUid);
+      
+      const response = await firstValueFrom(
+        this.http.get(`${this.constants.API_ENDPOINT}/api/auth/user-role/${firebaseUid}`)
+      ) as any;
+      
+      console.log('📊 Backend role response:', response);
+      
+      // ตรวจสอบ response และคืนค่า role
+      if (response && response.role) {
+        return response.role;
+      } else if (response && response.user && response.user.role) {
+        return response.user.role;
+      } else {
+        console.warn('⚠️ No role found in response, defaulting to user');
+        return 'user';
+      }
+    } catch (error: any) {
+      console.error('❌ Error getting user role from backend:', error);
+      
+      // ถ้าไม่สามารถดึง role ได้ ให้ default เป็น user
+      console.warn('⚠️ Failed to get role from backend, defaulting to user');
+      return 'user';
+    }
   }
 }
