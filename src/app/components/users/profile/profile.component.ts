@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -24,6 +24,7 @@ export class ProfileComponent implements OnInit {
   userType: string = '';
   emailVerified: boolean = false;
   isLoading: boolean = true;
+  showCardMenu = false;
   private apiUrl: string;
 
   constructor(
@@ -172,5 +173,25 @@ export class ProfileComponent implements OnInit {
 
   goToContactAdmin() {
     this.router.navigate(['/reports']);
+  }
+
+  goToHistory() {
+    this.router.navigate(['/history']);
+  }
+
+  toggleCardMenu() {
+    this.showCardMenu = !this.showCardMenu;
+  }
+
+  closeCardMenu() {
+    this.showCardMenu = false;
+  }
+
+  // ปิด menu เมื่อคลิกข้างนอก
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event) {
+    if (!(event.target as Element).closest('.card-menu')) {
+      this.closeCardMenu();
+    }
   }
 }

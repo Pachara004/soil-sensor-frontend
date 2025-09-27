@@ -1,10 +1,23 @@
-<div class="profile-container">
-  <div class="profile-card">
-    <div class="back" (click)="goBack()">
-      <i class="fas fa-arrow-left"></i>
-    </div>
+<div class="profile-container" (click)="closeCardMenu()">
+  <!-- Back arrow ย้ายออกจาก card -->
+  <i class="fas fa-arrow-left back" (click)="goBack()"></i>
 
-    <div class="user-id">User : {{ username }}</div>
+  <!-- จุด 3 จุดย้ายออกจาก card -->
+  <div class="card-menu" (click)="toggleCardMenu(); $event.stopPropagation()">
+    <i class="fas fa-ellipsis-v"></i>
+    <div class="menu-dropdown" *ngIf="showCardMenu" (click)="$event.stopPropagation()">
+      <div class="menu-item" (click)="goToHistory(); closeCardMenu()">
+        <i class="fas fa-history"></i>
+        ดูประวัติการวัด
+      </div>
+      <div class="menu-item" (click)="goToContactAdmin(); closeCardMenu()">
+        <i class="fas fa-user-shield"></i>
+        ติดต่อ Admin
+      </div>
+    </div>
+  </div>
+
+  <div class="profile-card" (click)="$event.stopPropagation()">
     <h2 class="title">แก้ไขข้อมูลผู้ใช้</h2>
 
     <!-- Loading State -->
@@ -17,12 +30,7 @@
     <div class="profile-form" *ngIf="!isLoading">
       <div class="info-row">
         <div class="label">Username</div>
-        <input type="text" class="value" [(ngModel)]="username" readonly placeholder="ชื่อผู้ใช้" />
-      </div>
-
-      <div class="info-row">
-        <div class="label">Full Name</div>
-        <input type="text" class="value" [(ngModel)]="name" placeholder="ชื่อเต็ม" />
+        <input type="text" class="value" [(ngModel)]="username" placeholder="ชื่อผู้ใช้" />
       </div>
 
       <div class="info-row">
@@ -48,11 +56,6 @@
       <div class="button-group">
         <button class="edit-button" (click)="saveProfile()">บันทึก</button>
       </div>
-    </div>
-
-    <div class="admin" (click)="goToContactAdmin()">
-      <img src="https://cdn-icons-png.flaticon.com/512/9703/9703596.png" alt="admin" />
-      <div>ติดต่อ Admin</div>
     </div>
   </div>
 </div>

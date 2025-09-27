@@ -1,13 +1,10 @@
 <div class="container">
-  <div class="card">
-    <!-- ปุ่มย้อนกลับ -->
-    <div class="back" (click)="goBack()">
-      <i class="fas fa-arrow-left"></i>
-    </div>
+  <!-- Back arrow ย้ายออกจาก card -->
+  <i class="fas fa-arrow-left back" (click)="goBack()"></i>
 
+  <div class="card">
     <!-- โลโก้หรือไอคอนบนสุด -->
     <div class="logo">
-      <img src="https://cdn-icons-png.freepik.com/512/1345/1345362.png" alt="Report Icon" />
       <h2>ติดต่อ Admin</h2>
     </div>
 
@@ -22,6 +19,35 @@
       <textarea placeholder="โปรดระบุรายละเอียดปัญหาที่ต้องการแจ้ง" [(ngModel)]="message"></textarea>
     </div>
 
-    <button class="send-btn" (click)="sendReport()">ส่งเรื่อง</button>
+    <!-- อัปโหลดรูปภาพ -->
+    <div class="input-group">
+      <label>รูปภาพประกอบ (ไม่บังคับ)</label>
+      <div class="image-upload-container">
+        <input type="file" id="imageUpload" accept="image/*" (change)="onImageSelected($event)"
+          style="display: none;" />
+        <label for="imageUpload" class="upload-btn">
+          <i class="fas fa-camera"></i>
+          <span>เลือกรูปภาพ</span>
+        </label>
+
+        <!-- แสดงรูปภาพที่เลือก -->
+        <div class="selected-images" *ngIf="selectedImages.length > 0">
+          <div class="image-preview" *ngFor="let image of selectedImages; let i = index">
+            <img [src]="image.preview" [alt]="'รูปภาพ ' + (i + 1)" />
+            <button type="button" class="remove-image" (click)="removeImage(i)">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="send-btn" (click)="sendReport()" [disabled]="isUploading">
+      <span *ngIf="!isUploading">ส่งเรื่อง</span>
+      <span *ngIf="isUploading">
+        <i class="fas fa-spinner fa-spin"></i>
+        กำลังส่ง...
+      </span>
+    </button>
   </div>
 </div>

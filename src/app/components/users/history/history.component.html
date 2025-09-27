@@ -1,13 +1,33 @@
-<div class="measure-container">
-  <div class="card">
-    <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png" alt="Chip Icon" class="chip-icon">
-    <span class="material-icons back" (click)="goBack()">arrow_back</span>
+<div class="measure-container" (click)="closeCardMenu()">
+  <!-- Back arrow ย้ายออกจาก card -->
+  <i class="fas fa-arrow-left back" (click)="goBack()"></i>
+
+  <!-- จุด 3 จุดย้ายออกจาก card -->
+  <div class="card-menu" (click)="toggleCardMenu(); $event.stopPropagation()">
+    <i class="fas fa-ellipsis-v"></i>
+    <div class="menu-dropdown" *ngIf="showCardMenu" (click)="$event.stopPropagation()">
+      <div class="menu-item" (click)="goToProfile(); closeCardMenu()">
+        <i class="fas fa-user"></i>
+        ข้อมูลผู้ใช้
+      </div>
+      <div class="menu-item" (click)="goToContactAdmin(); closeCardMenu()">
+        <i class="fas fa-user-shield"></i>
+        แจ้งแอดมิน
+      </div>
+    </div>
+  </div>
+
+  <div class="card" (click)="$event.stopPropagation()">
 
     <div class="header">
-      <div class="user-id">User: {{ username }}</div>
-      <div class="user-icon" (click)="goToProfile()">
-        <img src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png" alt="User Icon">
-        <span class="text">ข้อมูลผู้ใช้</span>
+      <div class="user-summary">
+        <div class="user-avatar">
+          <i class="fas fa-user"></i>
+        </div>
+        <div class="user-details">
+          <h3 class="user-name">{{ userName || 'ไม่ระบุ' }}</h3>
+          <p class="user-email">{{ userEmail || 'ไม่ระบุ' }}</p>
+        </div>
       </div>
     </div>
 
@@ -119,7 +139,8 @@
         <p class="recommendation-text">{{ recommendSoilImprovement(selectedArea).message }}</p>
         <h4>สูตรปุ๋ยที่แนะนำ</h4>
         <div class="summary-grid">
-          <div *ngFor="let fertilizer of recommendSoilImprovement(selectedArea).fertilizers" class="summary-item fertilizer-item">
+          <div *ngFor="let fertilizer of recommendSoilImprovement(selectedArea).fertilizers"
+            class="summary-item fertilizer-item">
             <span class="summary-label">{{ fertilizer.formula }}</span>
             <span class="summary-value">{{ fertilizer.amount }} - {{ fertilizer.description }}</span>
           </div>
@@ -139,11 +160,6 @@
           <button class="view-detail-btn" (click)="viewMeasurementDetail(measurement)">ดูรายละเอียด</button>
         </div>
       </div>
-    </div>
-
-    <div class="admin" (click)="goToContactAdmin()">
-      <img src="https://cdn-icons-png.flaticon.com/512/9703/9703596.png" alt="Admin Icon">
-      <div>ติดต่อ Admin</div>
     </div>
   </div>
 </div>

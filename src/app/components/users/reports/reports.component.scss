@@ -1,81 +1,653 @@
+// IoT Soil Monitor - Reports Component Styles
+// ใช้ตัวแปรจาก main design system
+
+$primary-gradient: linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%);
+$secondary-gradient: linear-gradient(135deg, #0277BD 0%, #29B6F6 100%);
+$success-gradient: linear-gradient(135deg, #4CAF50, #2E7D32);
+$warning-gradient: linear-gradient(135deg, #FB8C00, #FF9800);
+$error-gradient: linear-gradient(135deg, #E53935, #D32F2F);
+
+$primary-color: #2E7D32;
+$secondary-color: #4CAF50;
+$accent-color: #0277BD;
+$warning-color: #FB8C00;
+$error-color: #E53935;
+
+$main-bg: #F8F9FA;
+$card-bg: #FFFFFF;
+$glass-bg: rgba(255, 255, 255, 0.9);
+$field-bg: #F5F5F5;
+$indoor-bg: #FAFAFA;
+
+$text-primary: #212121;
+$text-secondary: #424242;
+$text-muted: #757575;
+
+$font-family: 'Inter', sans-serif;
+$border-radius-sm: 8px;
+$border-radius-md: 12px;
+$border-radius-lg: 16px;
+$border-radius-xl: 20px;
+
+$transition: all 0.3s ease;
+$shadow-light: 0 2px 8px rgba(0, 0, 0, 0.08);
+$shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.12);
+$shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.15);
+$shadow-green: 0 4px 12px rgba(46, 125, 50, 0.2);
+$shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
+
 .container {
-  background-color: #002e24;
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100vh;
+  background: $main-bg;
+  font-family: $font-family;
 }
 
 .card {
-  background-color: white;
-  border-radius: 30px;
-  padding: 40px 30px;
-  border: 4px solid #00aaff;
-  width: 400px;
-  box-shadow: 0px 10px 25px rgba(0, 0, 0, 0.1);
-  box-sizing: border-box;
+  background: $card-bg;
+  border-radius: $border-radius-lg;
+  padding: 30px;
+  box-shadow: $shadow-medium;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   position: relative;
-  text-align: center;
+  overflow: hidden;
+  animation: slideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  // Background pattern overlay
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: $primary-gradient;
+    z-index: 1;
+  }
 }
 
+// Back Arrow - เหมือนหน้า measure
 .back {
   position: absolute;
   top: 20px;
   left: 20px;
+  font-size: 24px;
+  color: #667eea;
   cursor: pointer;
-
-  i {
-    font-size: 20px;
-    color: #000;
-  }
-}
-
-.logo img {
-  width: 50px;
-  margin-bottom: 10px;
-}
-
-.logo h2 {
-  margin: 0;
-  font-size: 20px;
-}
-
-.input-group {
-  margin: 20px 0;
-  text-align: left;
-
-  label {
-    font-weight: bold;
-    display: block;
-    margin-bottom: 5px;
-  }
-
-  input,
-  textarea {
-    background-color: #dcdcdc;
-    border: none;
-    border-radius: 15px;
-    padding: 10px;
-    width: 100%;
-    box-sizing: border-box;
-    font-size: 15px;
-  }
-
-  textarea {
-    min-height: 100px;
-    resize: vertical;
-  }
-}
-
-.send-btn {
-  background-color: #ffc9d4;
-  border: none;
-  border-radius: 25px;
-  padding: 12px 30px;
-  font-weight: bold;
-  cursor: pointer;
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  transition: $transition;
 
   &:hover {
-    background-color: #fbb9c7;
+    background: white;
+    transform: translateX(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  }
+}
+
+// Logo และหัวข้อ
+.logo {
+  text-align: center;
+  margin-bottom: 40px;
+  padding-top: 20px;
+
+  img {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 20px;
+    border-radius: 50%;
+    padding: 15px;
+    background: rgba(46, 125, 50, 0.1);
+    border: 2px solid rgba(46, 125, 50, 0.2);
+    transition: $transition;
+    animation: float 3s ease-in-out infinite;
+
+    &:hover {
+      transform: scale(1.1) rotate(5deg);
+      box-shadow: $shadow-green;
+    }
+  }
+
+  h2 {
+    color: $text-primary;
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0;
+    background: $primary-gradient;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+// Input Groups
+.input-group {
+  margin-bottom: 25px;
+  position: relative;
+
+  label {
+    display: block;
+    margin-bottom: 8px;
+    color: $text-secondary;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 30px;
+      height: 2px;
+      background: $primary-gradient;
+      border-radius: 1px;
+    }
+  }
+
+  input[type="text"],
+  textarea {
+    width: 100%;
+    padding: 16px 20px;
+    border: 2px solid #e0e0e0;
+    border-radius: $border-radius-md;
+    font-size: 16px;
+    font-family: $font-family;
+    background: $field-bg;
+    color: $text-primary;
+    transition: $transition;
+    resize: none;
+    position: relative;
+
+    &:focus {
+      outline: none;
+      border-color: $accent-color;
+      background: white;
+      box-shadow: 0 0 0 4px rgba(2, 119, 189, 0.1);
+      transform: translateY(-2px);
+    }
+
+    &::placeholder {
+      color: $text-muted;
+      font-style: italic;
+    }
+
+    // Icon inside input effect
+    &:focus+.input-icon {
+      color: $accent-color;
+      transform: scale(1.1);
+    }
+  }
+
+  textarea {
+    min-height: 120px;
+    line-height: 1.6;
+    font-family: $font-family;
+
+    &:focus {
+      min-height: 150px;
+    }
+  }
+
+  // Input focus animation
+  &::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: $primary-gradient;
+    transition: width 0.3s ease;
+    border-radius: 1px;
+  }
+
+  &:focus-within::before {
+    width: 100%;
+  }
+}
+
+// Image Upload Container
+.image-upload-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.upload-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: $glass-bg;
+  border: 2px dashed $primary-color;
+  border-radius: $border-radius-md;
+  cursor: pointer;
+  transition: $transition;
+  color: $primary-color;
+  font-weight: 500;
+
+  &:hover {
+    background: rgba(46, 125, 50, 0.1);
+    border-color: $secondary-color;
+    transform: translateY(-1px);
+  }
+
+  i {
+    font-size: 18px;
+  }
+}
+
+.selected-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.image-preview {
+  position: relative;
+  border-radius: $border-radius-sm;
+  overflow: hidden;
+  box-shadow: $shadow-light;
+  transition: $transition;
+
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: $shadow-medium;
+  }
+
+  img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .remove-image {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 24px;
+    height: 24px;
+    background: rgba(229, 57, 53, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: $transition;
+
+    &:hover {
+      background: $error-color;
+      transform: scale(1.1);
+    }
+  }
+}
+
+// ปุ่มส่งเรื่อง
+.send-btn {
+  width: 100%;
+  padding: 18px 24px;
+  background: $success-gradient;
+  color: white;
+  border: none;
+  border-radius: $border-radius-md;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: $font-family;
+  cursor: pointer;
+  transition: $transition;
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: $shadow-green;
+
+  // Button shine effect
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent);
+    transition: left 0.5s ease;
+  }
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: $shadow-hover;
+
+    &::before {
+      left: 100%;
+    }
+  }
+
+  &:active {
+    transform: translateY(-1px);
+  }
+
+  // Loading state
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+
+    &:hover {
+      transform: none;
+      box-shadow: $shadow-green;
+    }
+  }
+
+  // Success state
+  &.success {
+    background: $success-gradient;
+    animation: pulse 0.6s ease-in-out;
+  }
+}
+
+// Animations
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+// Success message
+.success-message {
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  color: $primary-color;
+  padding: 16px 20px;
+  border-radius: $border-radius-md;
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 500;
+  animation: slideIn 0.3s ease-out;
+
+  i {
+    color: $primary-color;
+    font-size: 18px;
+  }
+}
+
+// Error message
+.error-message {
+  background: rgba(229, 57, 53, 0.1);
+  border: 1px solid rgba(229, 57, 53, 0.3);
+  color: $error-color;
+  padding: 16px 20px;
+  border-radius: $border-radius-md;
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 500;
+  animation: slideIn 0.3s ease-out;
+
+  i {
+    color: $error-color;
+    font-size: 18px;
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .container {
+    padding: 15px;
+  }
+
+  .card {
+    padding: 20px;
+    border-radius: $border-radius-md;
+  }
+
+  .back {
+    top: 15px;
+    left: 15px;
+    width: 35px;
+    height: 35px;
+    font-size: 18px;
+    z-index: 20;
+  }
+
+  .logo {
+    margin-bottom: 30px;
+
+    img {
+      width: 60px;
+      height: 60px;
+      padding: 10px;
+    }
+
+    h2 {
+      font-size: 24px;
+    }
+  }
+
+  .input-group {
+    margin-bottom: 20px;
+
+    input[type="text"],
+    textarea {
+      padding: 14px 16px;
+      font-size: 14px;
+    }
+
+    textarea {
+      min-height: 100px;
+
+      &:focus {
+        min-height: 120px;
+      }
+    }
+  }
+
+  .send-btn {
+    padding: 16px 20px;
+    font-size: 14px;
+  }
+
+  .selected-images {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+  }
+
+  .image-preview img {
+    height: 100px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 10px;
+  }
+
+  .card {
+    padding: 15px;
+  }
+
+  .back {
+    top: 12px;
+    left: 12px;
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    z-index: 20;
+  }
+
+  .logo {
+    padding-top: 15px;
+    margin-bottom: 25px;
+
+    img {
+      width: 50px;
+      height: 50px;
+      padding: 8px;
+    }
+
+    h2 {
+      font-size: 20px;
+    }
+  }
+
+  .input-group {
+    margin-bottom: 18px;
+
+    label {
+      font-size: 13px;
+    }
+
+    input[type="text"],
+    textarea {
+      padding: 12px 14px;
+      font-size: 14px;
+      border-radius: $border-radius-sm;
+    }
+
+    textarea {
+      min-height: 80px;
+
+      &:focus {
+        min-height: 100px;
+      }
+    }
+  }
+
+  .send-btn {
+    padding: 14px 18px;
+    font-size: 14px;
+    border-radius: $border-radius-sm;
+  }
+
+  .selected-images {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
+  }
+
+  .image-preview img {
+    height: 80px;
+  }
+
+  .upload-btn {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+}
+
+// Additional hover effects for better UX
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+// Form validation states
+.input-group {
+  &.invalid {
+
+    input[type="text"],
+    textarea {
+      border-color: $error-color;
+      background: rgba(229, 57, 53, 0.05);
+    }
+
+    label::after {
+      background: $error-gradient;
+    }
+
+    &::before {
+      background: $error-gradient;
+    }
+  }
+
+  &.valid {
+
+    input[type="text"],
+    textarea {
+      border-color: $primary-color;
+      background: rgba(76, 175, 80, 0.05);
+    }
+
+    label::after {
+      background: $success-gradient;
+    }
+
+    &::before {
+      background: $success-gradient;
+    }
   }
 }

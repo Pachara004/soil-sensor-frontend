@@ -436,19 +436,47 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async saveMeasurement() {
+    // ตรวจสอบ device status
+    if (!this.deviceId) {
+      this.notificationService.showNotification('error', 'ไม่พบอุปกรณ์', 'กรุณาเลือกอุปกรณ์ก่อนบันทึกข้อมูล');
+      return;
+    }
+
+    if (this.deviceStatus === 'offline') {
+      this.notificationService.showNotification('error', 'อุปกรณ์ออฟไลน์', 'อุปกรณ์ที่เลือกอยู่ในสถานะออฟไลน์ กรุณาเลือกอุปกรณ์ที่ออนไลน์');
+      return;
+    }
+
+    // ตรวจสอบ live data
     if (!this.liveData) {
       this.notificationService.showNotification('error', 'ไม่พบข้อมูลเซ็นเซอร์', 'ไม่พบข้อมูลการวัดจากเซ็นเซอร์ กรุณาตรวจสอบการเชื่อมต่อ');
       return;
     }
+
+    // ตรวจสอบข้อมูลเซ็นเซอร์
+    if (this.liveData.temperature === undefined || 
+        this.liveData.moisture === undefined || 
+        this.liveData.nitrogen === undefined || 
+        this.liveData.phosphorus === undefined || 
+        this.liveData.potassium === undefined || 
+        this.liveData.ph === undefined) {
+      this.notificationService.showNotification('error', 'ข้อมูลเซ็นเซอร์ไม่ครบถ้วน', 'ข้อมูลจากเซ็นเซอร์ไม่ครบถ้วน กรุณารอให้เซ็นเซอร์ส่งข้อมูลครบก่อน');
+      return;
+    }
     
     if (!this.currentUser) {
+      console.error('❌ No current user found');
       this.notificationService.showNotification('error', 'ไม่พบข้อมูลผู้ใช้', 'ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่');
       return;
     }
     
+    console.log('👤 Current user:', this.currentUser.uid, this.currentUser.email);
+    console.log('📱 Selected device:', this.deviceName, 'Status:', this.deviceStatus);
+    console.log('📊 Live data:', this.liveData);
+    
     // ✅ ใช้ข้อมูลจาก Firebase live data
     const newMeasurement: Measurement = {
-      deviceId: this.liveData.deviceId || 'unknown',
+      deviceId: this.deviceId || 'unknown', // ใช้ device ID จาก component
       temperature: this.liveData.temperature,
       moisture: this.liveData.moisture,
       nitrogen: this.liveData.nitrogen,
@@ -470,6 +498,19 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     try {
       // ✅ บันทึกเข้า PostgreSQL ผ่าน backend API
       const token = await this.currentUser.getIdToken();
+      
+      if (!token) {
+        console.error('❌ Failed to get Firebase token');
+        this.notificationService.showNotification('error', 'ไม่สามารถรับ Token', 'ไม่สามารถรับ Token จาก Firebase กรุณาเข้าสู่ระบบใหม่');
+        return;
+      }
+      
+      // Debug: แสดงข้อมูลที่จะส่งไปยัง backend
+      console.log('📊 Measurement request body:', newMeasurement);
+      console.log('🔑 Token length:', token.length);
+      console.log('🔑 Token preview:', token.substring(0, 20) + '...');
+      console.log('🌐 API URL:', `${this.apiUrl}/api/measurements`);
+      
       const response = await lastValueFrom(
         this.http.post(`${this.apiUrl}/api/measurements`, newMeasurement, {
           headers: {
@@ -487,9 +528,23 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       this.initializeMap();
       
       this.notificationService.showNotification('success', 'บันทึกสำเร็จ', 'บันทึกข้อมูลการวัดเรียบร้อยแล้ว');
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error saving measurement:', error);
-      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่อีกครั้ง');
+      
+      // แสดง error details
+      if (error.status === 400) {
+        console.error('❌ Bad Request - Validation Error:', error.error);
+        this.notificationService.showNotification('error', 'ข้อมูลไม่ถูกต้อง', `ข้อมูลไม่ถูกต้อง: ${error.error?.message || 'กรุณาตรวจสอบข้อมูลที่กรอก'}`);
+      } else if (error.status === 401) {
+        console.error('❌ Unauthorized - Token Error:', error.error);
+        this.notificationService.showNotification('error', 'ไม่ได้รับอนุญาต', 'กรุณาเข้าสู่ระบบใหม่');
+      } else if (error.status === 500) {
+        console.error('❌ Server Error:', error.error);
+        this.notificationService.showNotification('error', 'ข้อผิดพลาดเซิร์ฟเวอร์', 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์ กรุณาลองใหม่อีกครั้ง');
+      } else {
+        console.error('❌ Unknown Error:', error);
+        this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่อีกครั้ง');
+      }
     }
   }
 

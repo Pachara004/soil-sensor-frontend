@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Auth, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, fetchSignInMethodsForEmail, deleteUser } from '@angular/fire/auth';
 import { Constants } from '../../config/constants';
+import { AuthService } from '../../service/auth.service';
 
 @Component({
   selector: 'app-register',
@@ -24,7 +25,6 @@ export class RegisterComponent {
   password = '';
   confirmPassword = '';
   username = '';
-  fullName = '';
   phoneNumber = '';
   otpReferenceNumber = '';
 
@@ -60,7 +60,8 @@ export class RegisterComponent {
     private router: Router,
     private route: ActivatedRoute,
     private auth: Auth,
-    private constants: Constants
+    private constants: Constants,
+    private authService: AuthService
   ) {}
 
   ngOnInit() {
@@ -571,9 +572,16 @@ export class RegisterComponent {
 
   async registerWithGoogle() {
     try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(this.auth, provider);
-      this.router.navigate(['/main']);
+      // ใช้ AuthService เพื่อให้มีการสร้างข้อมูลใน PostgreSQL
+      const result = await this.authService.loginWithGoogle();
+      
+      if (result) {
+        console.log('✅ Google registration successful with PostgreSQL data:', result);
+        this.showNotificationPopup('success', 'สมัครสมาชิกสำเร็จ', 'ยินดีต้อนรับ! ข้อมูลของคุณถูกสร้างในระบบแล้ว');
+        this.router.navigate(['/main']);
+      } else {
+        throw new Error('No response from backend');
+      }
     } catch (err: any) {
       console.error('Google sign-in error:', err);
       this.showNotificationPopup('error', 'Google Sign-in ล้มเหลว', 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้ กรุณาลองใหม่');
@@ -624,7 +632,6 @@ export class RegisterComponent {
     console.log('Validating form data:', {
       email: this.email,
       username: this.username,
-      fullName: this.fullName,
       phoneNumber: this.phoneNumber,
       userType: this.userType
     }); // Debug log
@@ -639,10 +646,6 @@ export class RegisterComponent {
       return false;
     }
 
-    if (!this.fullName || !this.fullName.trim()) {
-      this.showNotificationPopup('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกชื่อ-นามสกุล');
-      return false;
-    }
 
     if (!this.phoneNumber || !this.phoneNumber.replace(/\D/g, '')) {
       this.showNotificationPopup('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกเบอร์โทรศัพท์');
@@ -776,7 +779,7 @@ export class RegisterComponent {
   private async saveUserToBackend(): Promise<void> {
     try {
       // ตรวจสอบข้อมูลก่อนส่ง
-      if (!this.email || !this.username || !this.fullName || !this.phoneNumber) {
+      if (!this.email || !this.username || !this.phoneNumber) {
         throw new Error('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบข้อมูลที่กรอก');
       }
 
@@ -789,7 +792,6 @@ export class RegisterComponent {
       // ทำความสะอาดและตรวจสอบข้อมูล
       const cleanEmail = this.email.trim();
       const cleanUsername = this.username.trim();
-      const cleanFullName = this.fullName.trim();
       const cleanPhoneNumber = this.phoneNumber.replace(/\D/g, '');
       const userType = this.userType || 'user'; // กำหนดค่า default
 
@@ -800,10 +802,6 @@ export class RegisterComponent {
 
       if (!cleanUsername || cleanUsername.length < 3) {
         throw new Error('ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษร');
-      }
-
-      if (!cleanFullName || cleanFullName.length === 0) {
-        throw new Error('ชื่อ-นามสกุลไม่ถูกต้อง');
       }
 
       if (!cleanPhoneNumber || cleanPhoneNumber.length < 10) {
@@ -820,7 +818,6 @@ export class RegisterComponent {
         firebase_uid: currentUser.uid, // เพิ่ม Firebase UID
         email: cleanEmail,
         username: cleanUsername,
-        fullName: cleanFullName,
         phoneNumber: cleanPhoneNumber,
         type: userType,
         emailVerified: false
@@ -832,7 +829,6 @@ export class RegisterComponent {
         firebase_uid: typeof userData.firebase_uid,
         email: typeof userData.email,
         username: typeof userData.username,
-        fullName: typeof userData.fullName,
         phoneNumber: typeof userData.phoneNumber,
         type: typeof userData.type,
         emailVerified: typeof userData.emailVerified

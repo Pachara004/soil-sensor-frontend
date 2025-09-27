@@ -1,9 +1,23 @@
-<div class="profile-container">
-  <div class="profile-card">
-    <div class="back" (click)="goBack()">
-      <i class="fas fa-arrow-left"></i>
-    </div>
+<div class="profile-container" (click)="closeCardMenu()">
+  <!-- Back arrow ย้ายออกจาก card -->
+  <i class="fas fa-arrow-left back" (click)="goBack()"></i>
 
+  <!-- จุด 3 จุดย้ายออกจาก card -->
+  <div class="card-menu" (click)="toggleCardMenu(); $event.stopPropagation()">
+    <i class="fas fa-ellipsis-v"></i>
+    <div class="menu-dropdown" *ngIf="showCardMenu" (click)="$event.stopPropagation()">
+      <div class="menu-item" (click)="goToHistory(); closeCardMenu()">
+        <i class="fas fa-history"></i>
+        ดูประวัติการวัด
+      </div>
+      <div class="menu-item" (click)="goToContactAdmin(); closeCardMenu()">
+        <i class="fas fa-user-shield"></i>
+        ติดต่อ Admin
+      </div>
+    </div>
+  </div>
+
+  <div class="profile-card" (click)="$event.stopPropagation()">
     <h2 class="title">ข้อมูลผู้ใช้</h2>
 
     <!-- Loading State -->
@@ -14,44 +28,34 @@
 
     <!-- Profile Data -->
     <div *ngIf="!isLoading" class="profile-data">
+
       <div class="info-row">
-        <div class="label">User ID</div>
-        <div class="value">{{ userID || 'ไม่ระบุ' }}</div>
+        <div class="label">Username</div>
+        <input type="text" class="value" [value]="username || 'ไม่ระบุ'" readonly placeholder="ชื่อผู้ใช้" />
       </div>
 
       <div class="info-row">
-        <div class="label">ชื่อผู้ใช้</div>
-        <div class="value">{{ username || 'ไม่ระบุ' }}</div>
-      </div>
-
-
-      <div class="info-row">
-        <div class="label">อีเมล</div>
-        <div class="value">
-          {{ email || 'ไม่ระบุ' }}
+        <div class="label">Email</div>
+        <div class="email-container">
+          <input type="email" class="value" [value]="email || 'ไม่ระบุ'" readonly placeholder="อีเมล" />
           <span *ngIf="emailVerified" class="verified-badge">✓ ยืนยันแล้ว</span>
           <span *ngIf="!emailVerified && email" class="unverified-badge">⚠ ยังไม่ยืนยัน</span>
         </div>
       </div>
 
       <div class="info-row">
-        <div class="label">เบอร์โทรศัพท์</div>
-        <div class="value">{{ phoneNumber || 'ไม่ระบุ' }}</div>
+        <div class="label">Phone</div>
+        <input type="tel" class="value" [value]="phoneNumber || 'ไม่ระบุ'" readonly placeholder="เบอร์โทรศัพท์" />
       </div>
 
       <div class="info-row">
-        <div class="label">ประเภทผู้ใช้</div>
-        <div class="value">{{ userType || 'user' }}</div>
+        <div class="label">User Type</div>
+        <input type="text" class="value" [value]="userType || 'user'" readonly placeholder="ประเภทผู้ใช้" />
       </div>
     </div>
 
     <div class="button-group">
       <button class="edit-button" (click)="goToEditProfile()">แก้ไขข้อมูล</button>
-    </div>
-
-    <div class="admin" (click)="goToContactAdmin()">
-      <img src="https://cdn-icons-png.flaticon.com/512/9703/9703596.png" alt="admin" />
-      <div>ติดต่อ Admin</div>
     </div>
   </div>
 </div>

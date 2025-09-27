@@ -98,9 +98,6 @@
         <span [class]="usernameStatus.class">{{ usernameStatus.message }}</span>
       </div>
 
-      <label>ชื่อ-นามสกุล</label>
-      <input type="text" [(ngModel)]="fullName" placeholder="ชื่อ-นามสกุล" />
-
       <label>เบอร์โทรศัพท์</label>
       <input type="tel" [(ngModel)]="phoneNumber" placeholder="08X-XXX-XXXX" (input)="formatPhoneNumber($event)" />
 

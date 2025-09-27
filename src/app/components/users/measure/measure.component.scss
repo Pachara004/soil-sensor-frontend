@@ -1,14 +1,38 @@
-// Variables
-$primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-$success-gradient: linear-gradient(135deg, #4CAF50, #45a049);
-$warning-gradient: linear-gradient(135deg, #ff9800, #f57c00);
-$error-gradient: linear-gradient(135deg, #f44336, #d32f2f);
-$card-bg: rgba(255, 255, 255, 0.95);
-$glass-bg: rgba(255, 255, 255, 0.1);
-$border-radius: 20px;
+// IoT Soil Monitor Design System - Field Optimized Measure.scss
+$primary-gradient: linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%);
+$secondary-gradient: linear-gradient(135deg, #0277BD 0%, #29B6F6 100%);
+$success-gradient: linear-gradient(135deg, #4CAF50, #2E7D32);
+$warning-gradient: linear-gradient(135deg, #FB8C00, #FF9800);
+$error-gradient: linear-gradient(135deg, #E53935, #D32F2F);
+
+$primary-color: #2E7D32;
+$secondary-color: #4CAF50;
+$accent-color: #0277BD;
+$warning-color: #FB8C00;
+$error-color: #E53935;
+
+$main-bg: #F8F9FA;
+$card-bg: #FFFFFF;
+$glass-bg: rgba(255, 255, 255, 0.9);
+$field-bg: #F5F5F5;
+$indoor-bg: #FAFAFA;
+
+$text-primary: #212121;
+$text-secondary: #424242;
+$text-muted: #757575;
+
+$font-family: 'Inter', sans-serif;
+$border-radius-sm: 8px;
+$border-radius-md: 12px;
+$border-radius-lg: 16px;
+$border-radius-xl: 20px;
+
 $transition: all 0.3s ease;
-$shadow-light: 0 4px 16px rgba(0, 0, 0, 0.1);
-$shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
+$shadow-light: 0 2px 8px rgba(0, 0, 0, 0.08);
+$shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.12);
+$shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.15);
+$shadow-green: 0 4px 12px rgba(46, 125, 50, 0.2);
+$shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
 
 // Reset
 * {
@@ -20,16 +44,16 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
 .measure-container {
   min-height: 100vh;
   padding: 16px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: $font-family;
+  background: $main-bg;
 
   .card {
     max-width: 1200px;
     margin: 0 auto;
-    background: $primary-gradient;
-    border-radius: $border-radius;
+    background: $card-bg;
+    border-radius: $border-radius-md;
     box-shadow: $shadow-light;
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(0, 0, 0, 0.08);
     overflow: hidden;
   }
 }
@@ -38,10 +62,9 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
 .header {
   margin-bottom: 20px;
   padding: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: $border-radius;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
+  background: $glass-bg;
+  border-radius: $border-radius-md;
+  border: 1px solid rgba(0, 0, 0, 0.08);
 
   .user-summary {
     display: flex;
@@ -58,7 +81,7 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
       justify-content: center;
       color: white;
       font-size: 20px;
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+      box-shadow: $shadow-green;
     }
 
     .user-details {
@@ -68,13 +91,13 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
         margin: 0 0 5px 0;
         font-size: 18px;
         font-weight: 600;
-        color: #333;
+        color: $text-primary;
       }
 
       .user-email {
         margin: 0;
         font-size: 14px;
-        color: #666;
+        color: $text-muted;
       }
     }
   }
@@ -109,35 +132,39 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
   position: absolute;
   top: 20px;
   right: 20px;
-  z-index: 10;
+  z-index: 20;
   cursor: pointer;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  transition: $transition;
+
+  &:hover {
+    background: white;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
 
   i {
-    font-size: 20px;
-    color: #667eea;
-    padding: 10px;
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 50%;
-    transition: $transition;
-
-    &:hover {
-      background: white;
-      transform: scale(1.1);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-    }
+    font-size: 18px;
+    color: #666;
   }
 
   .menu-dropdown {
     position: absolute;
-    top: 50px;
+    top: 45px;
     right: 0;
     background: white;
-    border-radius: 12px;
+    border-radius: $border-radius-md;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-    border: 1px solid rgba(102, 126, 234, 0.1);
-    min-width: 200px;
+    min-width: 180px;
     overflow: hidden;
     animation: dropdownSlideIn 0.2s ease-out;
+    z-index: 1000;
 
     .menu-item {
       display: flex;
@@ -146,33 +173,74 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
       padding: 12px 16px;
       cursor: pointer;
       transition: $transition;
-      border-bottom: 1px solid #f0f0f0;
-
-      &:last-child {
-        border-bottom: none;
-      }
+      font-size: 14px;
+      color: #333;
 
       &:hover {
-        background: rgba(102, 126, 234, 0.05);
-        color: #667eea;
+        background: #f8f9fa;
       }
 
       i {
         font-size: 16px;
-        color: #667eea;
-        background: none;
-        padding: 0;
-        transform: none;
-        box-shadow: none;
+        color: #666;
+        width: 16px;
       }
     }
   }
 }
 
 .header {
-  height: 60px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 20px;
+  margin-top: 70px; // เว้นระยะจาก back button
+  padding: 20px;
+  background: $glass-bg;
+  border-radius: $border-radius-md;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+
+  .user-summary {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: $primary-gradient;
+    padding: 20px;
+    border-radius: $border-radius-md;
+    box-shadow: $shadow-green;
+
+    .user-avatar {
+      width: 60px;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+
+      i {
+        font-size: 24px;
+        color: white;
+      }
+    }
+
+    .user-details {
+      flex: 1;
+      color: white;
+
+      .user-name {
+        margin: 0 0 4px 0;
+        font-size: 20px;
+        font-weight: 700;
+        color: white;
+      }
+
+      .user-email {
+        margin: 0;
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.8);
+        font-weight: 400;
+      }
+    }
+  }
 }
 
 .title {
@@ -227,7 +295,7 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
 .device-info {
   margin: 20px;
   background: rgba(255, 255, 255, 0.95);
-  border-radius: $border-radius;
+  border-radius: $border-radius-md;
   padding: 24px;
   border: 1px solid rgba(102, 126, 234, 0.1);
   box-shadow: $shadow-light;
@@ -254,6 +322,26 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
       font-size: 15px;
     }
   }
+
+  // Device Warning
+  .device-warning {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: $border-radius-sm;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #856404;
+    font-size: 14px;
+    font-weight: 500;
+
+    i {
+      color: #ffc107;
+      font-size: 16px;
+    }
+  }
 }
 
 // Connection Status
@@ -262,7 +350,7 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
   margin: 20px;
   padding: 16px;
   background: rgba(255, 255, 255, 0.95);
-  border-radius: $border-radius;
+  border-radius: $border-radius-md;
   border: 1px solid rgba(102, 126, 234, 0.1);
 }
 
@@ -313,7 +401,7 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
   background: $success-gradient;
   color: white;
   border: none;
-  border-radius: $border-radius;
+  border-radius: $border-radius-md;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
@@ -415,13 +503,13 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
 // Map Container
 .map-container {
   margin: 20px;
-  border-radius: $border-radius;
+  border-radius: $border-radius-md;
   overflow: hidden;
   box-shadow: $shadow-light;
   border: 1px solid rgba(102, 126, 234, 0.1);
 
   .map {
-    border-radius: $border-radius;
+    border-radius: $border-radius-md;
   }
 }
 
@@ -450,14 +538,14 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
 
   .popup-content {
     background: white;
-    border-radius: $border-radius;
+    border-radius: $border-radius-md;
     width: 100%;
     max-width: 900px;
     max-height: 95vh; // 🔄 Adjusted: Increase to 95vh for better vertical fit and centering
     overflow-y: auto;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
     position: relative;
-    margin: 0 auto 0 150px; // ขยับมาทางซ้าย 200px
+    margin: 0 auto 0 300px; // ขยับมาทางขวา 100px (จาก 150px เป็น 50px)
     display: flex;
     flex-direction: column;
     animation: popupSlideIn 0.3s ease-out;
@@ -468,7 +556,7 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
       color: white;
       margin: 0;
       padding: 20px 30px;
-      border-radius: $border-radius $border-radius 0 0;
+      border-radius: $border-radius-md $border-radius-md 0 0;
       font-size: 20px;
       font-weight: 700;
       text-align: center;
@@ -623,7 +711,7 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
       button {
         padding: 12px 20px;
         border: none;
-        border-radius: $border-radius;
+        border-radius: $border-radius-md;
         font-weight: 600;
         cursor: pointer;
         transition: $transition;
@@ -779,10 +867,20 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
     width: calc(100% - 24px);
   }
 
-  // Card menu responsive
+  // ปรับ navbar ให้ไม่ซ้อนทับกัน
+  .back {
+    top: 15px;
+    left: 15px;
+    width: 35px;
+    height: 35px;
+    font-size: 18px;
+    z-index: 20;
+  }
+
   .card-menu {
     top: 15px;
     right: 15px;
+    z-index: 20;
 
     i {
       font-size: 18px;
@@ -798,6 +896,10 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
         font-size: 14px;
       }
     }
+  }
+
+  .header {
+    margin-top: 60px; // เพิ่ม margin-top เพื่อไม่ให้ซ้อนทับกับ navbar
   }
 
   // Popup responsive
@@ -900,10 +1002,20 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
     }
   }
 
-  // Card menu responsive สำหรับหน้าจอเล็ก
+  // ปรับ navbar สำหรับหน้าจอเล็ก
+  .back {
+    top: 12px;
+    left: 12px;
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    z-index: 20;
+  }
+
   .card-menu {
     top: 12px;
     right: 12px;
+    z-index: 20;
 
     i {
       font-size: 16px;
@@ -919,6 +1031,10 @@ $shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
         font-size: 13px;
       }
     }
+  }
+
+  .header {
+    margin-top: 50px; // เพิ่ม margin-top สำหรับหน้าจอเล็ก
   }
 }
 

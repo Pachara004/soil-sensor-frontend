@@ -31,31 +31,12 @@
 
     <!-- ✅ ปุ่มควบคุมการแสดง/ซ่อน -->
     <div class="control-buttons">
-      <button class="control-btn" (click)="toggleUserInfo()" [ngClass]="{ active: showUserInfo }">
-        {{ showUserInfo ? 'ซ่อนข้อมูลผู้ใช้' : 'แสดงข้อมูลผู้ใช้' }}
-      </button>
       <button class="control-btn" (click)="toggleDeviceInfo()" [ngClass]="{ active: showDeviceInfo }">
         {{ showDeviceInfo ? 'ซ่อนข้อมูลอุปกรณ์' : 'แสดงข้อมูลอุปกรณ์' }}
       </button>
       <button class="control-btn" (click)="toggleMainMap()" [ngClass]="{ active: showMainMap }">
         {{ showMainMap ? 'ซ่อนแผนที่' : 'แสดงแผนที่' }}
       </button>
-    </div>
-
-    <!-- ✅ ข้อมูล User -->
-    <div class="user-info" *ngIf="showUserInfo">
-      <div class="info-row">
-        <span class="label">ชื่อผู้ใช้:</span>
-        <span class="value">{{ userName || 'ไม่ระบุ' }}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">อีเมล:</span>
-        <span class="value">{{ userEmail || 'ไม่ระบุ' }}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">เบอร์โทร:</span>
-        <span class="value">{{ userPhone || 'ไม่ระบุ' }}</span>
-      </div>
     </div>
 
     <!-- ✅ ข้อมูล Device -->
@@ -78,6 +59,12 @@
           <span class="status-text">{{ deviceStatus === 'online' ? 'ออนไลน์' : 'ออฟไลน์' }}</span>
         </span>
       </div>
+
+      <!-- แสดงข้อความเตือนเมื่ออุปกรณ์ออฟไลน์ -->
+      <div class="device-warning" *ngIf="deviceStatus === 'offline'">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>อุปกรณ์ออฟไลน์ - ไม่สามารถบันทึกข้อมูลได้</span>
+      </div>
     </div>
 
     <!-- ✅ สถานะการเชื่อมต่อ Firebase -->
@@ -93,9 +80,11 @@
       </span>
     </div>
 
-    <button class="save-btn" (click)="saveMeasurement()" [disabled]="isLoading || !isLiveDataConnected">
-      <span *ngIf="!isLoading && isLiveDataConnected">วัดและบันทึกค่า</span>
+    <button class="save-btn" (click)="saveMeasurement()"
+      [disabled]="isLoading || !isLiveDataConnected || deviceStatus === 'offline'">
+      <span *ngIf="!isLoading && isLiveDataConnected && deviceStatus === 'online'">วัดและบันทึกค่า</span>
       <span *ngIf="!isLoading && !isLiveDataConnected">ไม่สามารถวัดได้ - ไม่เชื่อมต่อเซ็นเซอร์</span>
+      <span *ngIf="!isLoading && deviceStatus === 'offline'">ไม่สามารถวัดได้ - อุปกรณ์ออฟไลน์</span>
       <span *ngIf="isLoading">กำลังบันทึก...</span>
     </button>
 

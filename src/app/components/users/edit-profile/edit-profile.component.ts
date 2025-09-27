@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
@@ -11,7 +11,6 @@ import { NotificationService } from '../../../service/notification.service';
 
 interface UserData {
   email: string;
-  name: string;
   password: string;
   phoneNumber: string;
   type: string;
@@ -30,12 +29,12 @@ interface UserData {
 export class EditProfileComponent implements OnInit {
   userID: string | null = null;
   username: string = '';
-  name: string = '';
   email: string = '';
   phoneNumber: string = '';
   password: string = '';
   confirmPassword: string = '';
   isLoading: boolean = true;
+  showCardMenu = false;
   currentUser: any = null;
   private apiUrl: string;
 
@@ -89,13 +88,11 @@ export class EditProfileComponent implements OnInit {
         if (userResponse && userResponse.user) {
           const userData = userResponse.user;
           this.username = userData.user_name || userData.username || this.username;
-          this.name = userData.fullname || this.username; // ✅ ลบ user_fullname ออก
           this.email = userData.user_email || userData.email || this.email;
           this.phoneNumber = userData.user_phone || userData.phone || '';
           
           console.log('👤 User profile loaded:', {
             username: this.username,
-            name: this.name,
             email: this.email,
             phoneNumber: this.phoneNumber
           });
@@ -127,7 +124,6 @@ export class EditProfileComponent implements OnInit {
     try {
       const updates: Partial<UserData> = {
         username: this.username,
-        name: this.name,
         email: this.email,
         phoneNumber: this.phoneNumber,
       };
@@ -145,7 +141,6 @@ export class EditProfileComponent implements OnInit {
         JSON.stringify({
           userID: this.userID,
           username: this.username,
-          name: this.name,
           email: this.email,
           phoneNumber: this.phoneNumber,
         })
@@ -154,7 +149,6 @@ export class EditProfileComponent implements OnInit {
         'admin',
         JSON.stringify({
           username: this.username,
-          name: this.name,
         })
       );
 
@@ -173,5 +167,25 @@ export class EditProfileComponent implements OnInit {
 
   goToContactAdmin() {
     this.router.navigate(['/reports']);
+  }
+
+  goToHistory() {
+    this.router.navigate(['/history']);
+  }
+
+  toggleCardMenu() {
+    this.showCardMenu = !this.showCardMenu;
+  }
+
+  closeCardMenu() {
+    this.showCardMenu = false;
+  }
+
+  // ปิด menu เมื่อคลิกข้างนอก
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event) {
+    if (!(event.target as Element).closest('.card-menu')) {
+      this.closeCardMenu();
+    }
   }
 }

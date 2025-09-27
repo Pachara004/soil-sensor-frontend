@@ -5,6 +5,7 @@ import {
   ElementRef,
   AfterViewInit,
   OnDestroy,
+  HostListener,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -78,13 +79,17 @@ interface FertilizerRecommendation {
 })
 export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
   username: string = '';
+  userName: string = '';
+  userEmail: string = '';
   deviceId: string | null = null;
   devices: string[] = [];
+  deviceMap: { [key: string]: string } = {}; // Map device_name to device_id
   areas: AreaGroup[] = [];
   areaGroups: AreaGroup[] = [];
   selectedArea: AreaGroup | null = null;
   showAreaDetails = false;
   isLoading = true;
+  showCardMenu = false;
   map: Map | undefined;
   currentUser: any = null;
   @ViewChild('mapContainer') mapContainer!: ElementRef<HTMLElement>;
@@ -108,6 +113,8 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       if (user) {
         this.currentUser = user;
         this.username = user.displayName || user.email?.split('@')[0] || '';
+        this.userName = user.displayName || user.email?.split('@')[0] || '';
+        this.userEmail = user.email || '';
         console.log('✅ User authenticated:', this.username);
         
         // ดึงข้อมูล user และ device จาก backend
@@ -129,8 +136,11 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  onDeviceChange() {
-    // no-op stub; would reload data for selected device
+  async onDeviceChange() {
+    if (this.deviceId) {
+      console.log('📱 Device changed to:', this.deviceId);
+      await this.loadDeviceMeasurements();
+    }
   }
 
   async loadUserAndDeviceData() {
@@ -168,9 +178,16 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
         );
         
         if (devicesResponse && devicesResponse.length > 0) {
-          this.devices = devicesResponse.map(device => device.deviceid);
+          this.devices = devicesResponse.map(device => device.device_name || device.deviceid);
+          // สร้าง map สำหรับแปลง device_name กลับเป็น device_id
+          this.deviceMap = {};
+          devicesResponse.forEach(device => {
+            const deviceName = device.device_name || device.deviceid;
+            this.deviceMap[deviceName] = device.deviceid;
+          });
           this.deviceId = this.devices[0] || null;
           console.log('📱 Devices loaded:', this.devices);
+          console.log('📱 Device map:', this.deviceMap);
         }
       } catch (deviceError) {
         console.log('⚠️ Could not load devices from backend:', deviceError);
@@ -336,12 +353,14 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!this.currentUser || !this.deviceId) return;
     
     try {
-      console.log('📱 Loading measurements for device:', this.deviceId);
+      // แปลง device_name กลับเป็น device_id สำหรับ API call
+      const actualDeviceId = this.deviceMap[this.deviceId] || this.deviceId;
+      console.log('📱 Loading measurements for device:', this.deviceId, '->', actualDeviceId);
       const token = await this.currentUser.getIdToken();
       
       const response = await lastValueFrom(
         this.http.get<Measurement[]>(
-          `${this.apiUrl}/api/measurements/${this.deviceId}`,
+          `${this.apiUrl}/api/measurements/${actualDeviceId}`,
           {
             headers: { 'Authorization': `Bearer ${token}` }
           }
@@ -487,7 +506,9 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   viewMeasurementDetail(item: Measurement) {
-    const measurementData = { ...item, deviceId: this.deviceId };
+    // ใช้ device_id จริงสำหรับการส่งข้อมูล
+    const actualDeviceId = this.deviceMap[this.deviceId || ''] || this.deviceId;
+    const measurementData = { ...item, deviceId: actualDeviceId };
     localStorage.setItem('selectedMeasurement', JSON.stringify(measurementData));
     this.router.navigate(['/history-detail']);
   }
@@ -511,5 +532,21 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
 
   goToContactAdmin() {
     this.router.navigate(['/reports']);
+  }
+
+  toggleCardMenu() {
+    this.showCardMenu = !this.showCardMenu;
+  }
+
+  closeCardMenu() {
+    this.showCardMenu = false;
+  }
+
+  // ปิด menu เมื่อคลิกข้างนอก
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event) {
+    if (!(event.target as Element).closest('.card-menu')) {
+      this.closeCardMenu();
+    }
   }
 }

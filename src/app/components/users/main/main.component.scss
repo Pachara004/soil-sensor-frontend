@@ -1,10 +1,38 @@
-// Variables
-$primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-$success-gradient: linear-gradient(135deg, #4CAF50, #45a049);
-$card-bg: rgba(255, 255, 255, 0.95);
-$glass-bg: rgba(255, 255, 255, 0.1);
-$border-radius: 20px;
+// IoT Soil Monitor Design System - Field Optimized
+$primary-gradient: linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%);
+$secondary-gradient: linear-gradient(135deg, #0277BD 0%, #29B6F6 100%);
+$success-gradient: linear-gradient(135deg, #4CAF50, #2E7D32);
+$warning-gradient: linear-gradient(135deg, #FB8C00, #FF9800);
+$error-gradient: linear-gradient(135deg, #E53935, #D32F2F);
+
+$primary-color: #2E7D32;
+$secondary-color: #4CAF50;
+$accent-color: #0277BD;
+$warning-color: #FB8C00;
+$error-color: #E53935;
+
+$main-bg: #F8F9FA;
+$card-bg: #FFFFFF;
+$glass-bg: rgba(255, 255, 255, 0.9);
+$field-bg: #F5F5F5;
+$indoor-bg: #FAFAFA;
+
+$text-primary: #212121;
+$text-secondary: #424242;
+$text-muted: #757575;
+
+$font-family: 'Inter', sans-serif;
+$border-radius-sm: 8px;
+$border-radius-md: 12px;
+$border-radius-lg: 16px;
+$border-radius-xl: 20px;
+
 $transition: all 0.3s ease;
+$shadow-light: 0 2px 8px rgba(0, 0, 0, 0.08);
+$shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.12);
+$shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.15);
+$shadow-green: 0 4px 12px rgba(46, 125, 50, 0.2);
+$shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
 
 // Reset and base styles
 * {
@@ -18,8 +46,8 @@ $transition: all 0.3s ease;
   margin: 0 auto;
   padding: 20px;
   min-height: 100vh;
-  background: $primary-gradient;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: $main-bg;
+  font-family: $font-family;
 }
 
 // Header
@@ -28,43 +56,43 @@ $transition: all 0.3s ease;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
-  background: $glass-bg;
-  backdrop-filter: blur(10px);
-  border-radius: $border-radius;
+  background: $card-bg;
+  border-radius: $border-radius-md;
   padding: 20px 30px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: $shadow-light;
 
   .logo {
     display: flex;
     align-items: center;
     gap: 15px;
-    color: white;
+    color: $text-primary;
     font-size: 24px;
     font-weight: bold;
 
     i {
       font-size: 32px;
-      color: #4CAF50;
+      color: $primary-color;
     }
   }
 
   .logout-btn {
-    background: rgba(255, 255, 255, 0.2);
+    background: $secondary-gradient;
     color: white;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: none;
     padding: 12px 24px;
-    border-radius: 50px;
+    border-radius: 25px;
     cursor: pointer;
     transition: $transition;
     font-size: 14px;
     display: flex;
     align-items: center;
     gap: 8px;
+    box-shadow: $shadow-blue;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.3);
       transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      box-shadow: $shadow-hover;
     }
   }
 }
@@ -72,11 +100,11 @@ $transition: all 0.3s ease;
 // User Info Section
 .user-info {
   background: $card-bg;
-  border-radius: $border-radius;
+  border-radius: $border-radius-md;
   padding: 25px;
   margin-bottom: 30px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: $shadow-light;
+  border: 1px solid rgba(0, 0, 0, 0.08);
 
   .user-details {
     display: grid;
@@ -89,10 +117,10 @@ $transition: all 0.3s ease;
     display: flex;
     align-items: center;
     gap: 12px;
-    color: #333;
+    color: $text-primary;
 
     i {
-      color: #667eea;
+      color: $accent-color;
       font-size: 20px;
       width: 24px;
     }
@@ -100,10 +128,11 @@ $transition: all 0.3s ease;
     .label {
       font-weight: 600;
       margin-right: 8px;
+      color: $text-secondary;
     }
 
     .value {
-      color: #666;
+      color: $text-muted;
     }
   }
 }
@@ -111,10 +140,11 @@ $transition: all 0.3s ease;
 // Device Section
 .device-section {
   background: $card-bg;
-  border-radius: $border-radius;
+  border-radius: $border-radius-md;
   padding: 25px;
   margin-bottom: 30px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: $shadow-light;
+  border: 1px solid rgba(0, 0, 0, 0.08);
 
   .device-header {
     display: flex;
@@ -124,11 +154,11 @@ $transition: all 0.3s ease;
 
     i {
       font-size: 28px;
-      color: #4CAF50;
+      color: $primary-color;
     }
 
     h3 {
-      color: #333;
+      color: $text-primary;
       font-size: 20px;
     }
   }
@@ -148,7 +178,7 @@ $transition: all 0.3s ease;
     .device-select {
       padding: 12px 16px;
       border: 2px solid #e0e0e0;
-      border-radius: 12px;
+      border-radius: $border-radius-sm;
       font-size: 14px;
       background: white;
       cursor: pointer;
@@ -156,15 +186,15 @@ $transition: all 0.3s ease;
 
       &:focus {
         outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        border-color: $accent-color;
+        box-shadow: 0 0 0 3px rgba(2, 119, 189, 0.1);
       }
     }
 
     .device-name {
       font-size: 16px;
       font-weight: 600;
-      color: #333;
+      color: $text-primary;
       padding: 12px 16px;
     }
   }
@@ -181,19 +211,19 @@ $transition: all 0.3s ease;
 
     &.online {
       background: rgba(76, 175, 80, 0.1);
-      color: #4CAF50;
+      color: $primary-color;
 
       .status-dot {
-        background: #4CAF50;
+        background: $primary-color;
       }
     }
 
     &.offline {
-      background: rgba(244, 67, 54, 0.1);
-      color: #f44336;
+      background: rgba(229, 57, 53, 0.1);
+      color: $error-color;
 
       .status-dot {
-        background: #f44336;
+        background: $error-color;
       }
     }
 
@@ -215,17 +245,17 @@ $transition: all 0.3s ease;
 
   .action-card {
     background: $card-bg;
-    border-radius: $border-radius;
+    border-radius: $border-radius-md;
     padding: 25px;
     text-align: center;
     cursor: pointer;
     transition: $transition;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: $shadow-light;
+    border: 1px solid rgba(0, 0, 0, 0.08);
 
     &:hover {
       transform: translateY(-5px);
-      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+      box-shadow: $shadow-hover;
     }
 
     i {
@@ -237,13 +267,13 @@ $transition: all 0.3s ease;
     h4 {
       font-size: 18px;
       margin-bottom: 8px;
-      color: #333;
+      color: $text-primary;
     }
 
     p {
       font-size: 14px;
       opacity: 0.8;
-      color: #666;
+      color: $text-muted;
     }
 
     // Card variations
@@ -259,15 +289,15 @@ $transition: all 0.3s ease;
     }
 
     &.secondary i {
-      color: #667eea;
+      color: $accent-color;
     }
 
     &.success i {
-      color: #4CAF50;
+      color: $primary-color;
     }
 
     &.info i {
-      color: #2196F3;
+      color: $accent-color;
     }
   }
 }
@@ -275,19 +305,20 @@ $transition: all 0.3s ease;
 // Add Device Section
 .add-device {
   background: $card-bg;
-  border-radius: $border-radius;
+  border-radius: $border-radius-md;
   padding: 25px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: $shadow-light;
+  border: 1px solid rgba(0, 0, 0, 0.08);
 
   h3 {
-    color: #333;
+    color: $text-primary;
     margin-bottom: 20px;
     display: flex;
     align-items: center;
     gap: 12px;
 
     i {
-      color: #4CAF50;
+      color: $primary-color;
       font-size: 24px;
     }
   }
@@ -301,18 +332,18 @@ $transition: all 0.3s ease;
       flex: 1;
       padding: 14px 18px;
       border: 2px solid #e0e0e0;
-      border-radius: 12px;
+      border-radius: $border-radius-sm;
       font-size: 14px;
       transition: $transition;
 
       &:focus {
         outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        border-color: $accent-color;
+        box-shadow: 0 0 0 3px rgba(2, 119, 189, 0.1);
       }
 
       &::placeholder {
-        color: #999;
+        color: $text-muted;
       }
     }
 
@@ -321,7 +352,7 @@ $transition: all 0.3s ease;
       background: $success-gradient;
       color: white;
       border: none;
-      border-radius: 12px;
+      border-radius: $border-radius-sm;
       cursor: pointer;
       font-weight: 600;
       transition: $transition;
@@ -329,10 +360,11 @@ $transition: all 0.3s ease;
       align-items: center;
       gap: 8px;
       white-space: nowrap;
+      box-shadow: $shadow-green;
 
       &:hover:not(:disabled) {
         transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+        box-shadow: $shadow-hover;
       }
 
       &:disabled {
@@ -344,7 +376,7 @@ $transition: all 0.3s ease;
   }
 
   .claim-help {
-    color: #666;
+    color: $text-muted;
     font-size: 13px;
     margin-bottom: 15px;
     line-height: 1.4;
@@ -366,28 +398,28 @@ $transition: all 0.3s ease;
 
     &.ok {
       background: rgba(76, 175, 80, 0.1);
-      color: #4CAF50;
+      color: $primary-color;
 
       .status-dot {
-        background: #4CAF50;
+        background: $primary-color;
       }
     }
 
     &.warn {
-      background: rgba(255, 193, 7, 0.1);
-      color: #FF9800;
+      background: rgba(251, 140, 0, 0.1);
+      color: $warning-color;
 
       .status-dot {
-        background: #FF9800;
+        background: $warning-color;
       }
     }
 
     &.err {
-      background: rgba(244, 67, 54, 0.1);
-      color: #f44336;
+      background: rgba(229, 57, 53, 0.1);
+      color: $error-color;
 
       .status-dot {
-        background: #f44336;
+        background: $error-color;
       }
     }
   }

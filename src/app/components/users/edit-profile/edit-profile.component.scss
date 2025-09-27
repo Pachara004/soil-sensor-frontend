@@ -1,12 +1,71 @@
+.card-menu {
+  top: 15px;
+  right: 15px;
+  z-index: 20;
+
+  i {
+    font-size: 18px;
+    padding: 8px;
+  }
+
+  .menu-dropdown {
+    top: 45px;
+    min-width: 180px;
+
+    .menu-item {
+      padding: 10px 14px;
+      font-size: 13px;
+    }
+  }
+}
+
+// Edit Profile.scss - Updated to match Profile page design
+// Using the same design system as Profile.scss
+
+$primary-gradient: linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%);
+$secondary-gradient: linear-gradient(135deg, #0277BD 0%, #29B6F6 100%);
+$success-gradient: linear-gradient(135deg, #4CAF50, #2E7D32);
+$warning-gradient: linear-gradient(135deg, #FB8C00, #FF9800);
+$error-gradient: linear-gradient(135deg, #E53935, #D32F2F);
+
+$primary-color: #2E7D32;
+$secondary-color: #4CAF50;
+$accent-color: #0277BD;
+$warning-color: #FB8C00;
+$error-color: #E53935;
+
+$main-bg: #F8F9FA;
+$card-bg: #FFFFFF;
+$glass-bg: rgba(255, 255, 255, 0.9);
+$field-bg: #F5F5F5;
+$indoor-bg: #FAFAFA;
+
+$text-primary: #212121;
+$text-secondary: #424242;
+$text-muted: #757575;
+
+$font-family: 'Inter', sans-serif;
+$border-radius-sm: 8px;
+$border-radius-md: 12px;
+$border-radius-lg: 16px;
+$border-radius-xl: 20px;
+
+$transition: all 0.3s ease;
+$shadow-light: 0 2px 8px rgba(0, 0, 0, 0.08);
+$shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.12);
+$shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.15);
+$shadow-green: 0 4px 12px rgba(46, 125, 50, 0.2);
+$shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
+
 body,
 html {
   margin: 0;
   padding: 0;
-  font-family: 'Prompt', sans-serif;
-  background-color: #013828;
+  font-family: $font-family;
+  background: $main-bg;
 }
 
-// Loading State
+// Loading State - ใช้สไตล์เดียวกับหน้า Profile
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -18,14 +77,14 @@ html {
     width: 32px;
     height: 32px;
     border: 3px solid #f3f3f3;
-    border-top: 3px solid #00aaff;
+    border-top: 3px solid $primary-color;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-bottom: 15px;
   }
 
   p {
-    color: #666;
+    color: $text-muted;
     font-size: 14px;
     margin: 0;
   }
@@ -41,248 +100,317 @@ html {
   }
 }
 
-// Profile Container
+// Profile Container - เหมือนหน้า Profile
 .profile-container {
-  min-height: 100vh;
+  width: 100vw;
+  height: 100vh;
+  background: $main-bg;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background-color: #013828;
-}
-
-.profile-card {
-  background: white;
-  border-radius: 20px;
-  padding: 30px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  width: 100%;
-  max-width: 500px;
+  box-sizing: border-box;
+  font-family: $font-family;
   position: relative;
 }
 
-// Back Button
+// Back Arrow - เหมือนหน้า measure
 .back {
   position: absolute;
   top: 20px;
   left: 20px;
+  font-size: 24px;
+  color: #667eea;
   cursor: pointer;
-  color: #666;
-  font-size: 18px;
-  transition: color 0.3s ease;
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  transition: $transition;
 
   &:hover {
-    color: #00aaff;
+    background: white;
+    transform: translateX(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
   }
 }
 
-// Header
-.user-id {
+// Card Menu - จุดสามจุดที่มุมขวาบน
+.card-menu {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 20;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  transition: $transition;
+
+  &:hover {
+    background: white;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  i {
+    font-size: 18px;
+    color: #666;
+  }
+
+  .menu-dropdown {
+    position: absolute;
+    top: 45px;
+    right: 0;
+    background: white;
+    border-radius: $border-radius-md;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    min-width: 180px;
+    overflow: hidden;
+    animation: dropdownSlideIn 0.2s ease-out;
+    z-index: 1000;
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: $transition;
+      font-size: 14px;
+      color: #333;
+
+      &:hover {
+        background: #f8f9fa;
+      }
+
+      i {
+        font-size: 16px;
+        color: #666;
+        width: 16px;
+      }
+    }
+  }
+}
+
+
+
+
+// Dropdown Animation
+@keyframes dropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Profile Card - เหมือนหน้า Profile
+.profile-card {
+  width: 100%;
+  max-width: 500px;
+  min-width: 320px;
+  background: $card-bg;
+  border-radius: $border-radius-md;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 30px;
+  position: relative;
   text-align: center;
-  color: #666;
+  box-shadow: $shadow-light;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  transition: $transition;
+
+  &:hover {
+    box-shadow: $shadow-medium;
+  }
+}
+
+// Header Section - ลบออกเพราะใช้ back button นอก card แทน
+
+// User ID Badge - เหมือนหน้า Profile
+.user-id {
+  background: $primary-gradient;
+  color: white;
+  padding: 12px 20px;
+  margin: 0 auto 25px auto;
+  font-weight: 600;
+  border-radius: 25px;
+  width: fit-content;
   font-size: 14px;
-  margin-bottom: 10px;
-  margin-top: 20px;
+  box-shadow: $shadow-green;
+  letter-spacing: 0.5px;
+  max-width: 90%;
+  word-break: break-all;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  &::before {
+    content: '📝';
+    font-size: 16px;
+  }
 }
 
 .title {
-  text-align: center;
-  color: #333;
-  font-size: 24px;
-  font-weight: 600;
-  margin-bottom: 30px;
+  margin: 0 0 30px 0;
+  font-size: 20px;
+  font-weight: bold;
+  color: $text-primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+
+  &::before {
+    content: '';
+    width: 40px;
+    height: 2px;
+    background: $primary-gradient;
+    border-radius: 1px;
+  }
+
+  &::after {
+    content: '';
+    width: 40px;
+    height: 2px;
+    background: $primary-gradient;
+    border-radius: 1px;
+  }
 }
 
-// Profile Form
+// Profile Form - ปรับให้เหมือนกับ info rows ในหน้า Profile
 .profile-form {
   .info-row {
+    display: flex;
+    flex-direction: column;
     margin-bottom: 20px;
+    padding: 18px 20px;
+    background: $card-bg;
+    border-radius: $border-radius-sm;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    transition: $transition;
+    text-align: left;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: $shadow-light;
+      border-color: $primary-color;
+    }
 
     .label {
-      display: block;
-      color: #333;
-      font-weight: 500;
+      font-weight: 600;
       margin-bottom: 8px;
-      font-size: 14px;
+      font-size: 12px;
+      color: $text-secondary;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      &::before {
+        font-size: 16px;
+      }
     }
 
     .value {
       width: 100%;
       padding: 12px 16px;
-      border: 2px solid #e1e5e9;
-      border-radius: 10px;
-      font-size: 16px;
-      transition: border-color 0.3s ease;
+      border: 2px solid rgba(0, 0, 0, 0.08);
+      border-radius: $border-radius-sm;
+      font-size: 14px;
+      color: $text-primary;
+      font-weight: 500;
+      transition: $transition;
       box-sizing: border-box;
+      background: white;
 
       &:focus {
         outline: none;
-        border-color: #00aaff;
+        border-color: $primary-color;
+        box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
       }
 
       &[readonly] {
-        background-color: #f8f9fa;
-        color: #666;
+        background-color: $field-bg;
+        color: $text-muted;
         cursor: not-allowed;
+        border-color: rgba(0, 0, 0, 0.05);
       }
 
       &::placeholder {
-        color: #999;
+        color: $text-muted;
         font-size: 14px;
       }
     }
-  }
-}
 
-// Button Group
-.button-group {
-  display: flex;
-  justify-content: center;
-  margin-top: 30px;
-  margin-bottom: 20px;
+    // Different colors for different info types - เหมือนหน้า Profile
+    &:nth-child(1) {
+      background: rgba(232, 245, 233, 0.3);
 
-  .edit-button {
-    background: linear-gradient(135deg, #00aaff, #0088cc);
-    color: white;
-    border: none;
-    padding: 12px 30px;
-    border-radius: 25px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    min-width: 120px;
-
-    &:hover {
-      background: linear-gradient(135deg, #0088cc, #006699);
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(0, 170, 255, 0.3);
-    }
-
-    &:active {
-      transform: translateY(0);
-    }
-  }
-}
-
-// Admin Contact
-.admin {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: #666;
-  font-size: 14px;
-  cursor: pointer;
-  transition: color 0.3s ease;
-  margin-top: 20px;
-
-  &:hover {
-    color: #00aaff;
-  }
-
-  img {
-    width: 20px;
-    height: 20px;
-  }
-}
-
-// Responsive Design
-@media (max-width: 768px) {
-  .profile-container {
-    padding: 15px;
-  }
-
-  .profile-card {
-    padding: 20px;
-    border-radius: 15px;
-  }
-
-  .title {
-    font-size: 20px;
-    margin-bottom: 25px;
-  }
-
-  .profile-form {
-    .info-row {
-      margin-bottom: 15px;
-
-      .value {
-        padding: 10px 14px;
-        font-size: 14px;
+      .label::before {
+        content: '👤';
+        color: $primary-color;
       }
     }
-  }
 
-  .button-group {
-    margin-top: 25px;
+    &:nth-child(2) {
+      background: rgba(227, 242, 253, 0.3);
 
-    .edit-button {
-      padding: 10px 25px;
-      font-size: 14px;
-    }
-  }
-}
-
-@media (max-width: 480px) {
-  .profile-container {
-    padding: 10px;
-  }
-
-  .profile-card {
-    padding: 15px;
-    border-radius: 10px;
-  }
-
-  .back {
-    top: 15px;
-    left: 15px;
-    font-size: 16px;
-  }
-
-  .user-id {
-    font-size: 12px;
-    margin-top: 15px;
-  }
-
-  .title {
-    font-size: 18px;
-    margin-bottom: 20px;
-  }
-
-  .profile-form {
-    .info-row {
-      margin-bottom: 12px;
-
-      .label {
-        font-size: 13px;
-        margin-bottom: 6px;
-      }
-
-      .value {
-        padding: 8px 12px;
-        font-size: 13px;
+      .label::before {
+        content: '📧';
+        color: $accent-color;
       }
     }
-  }
 
-  .button-group {
-    margin-top: 20px;
+    &:nth-child(3) {
+      background: rgba(255, 243, 224, 0.3);
 
-    .edit-button {
-      padding: 8px 20px;
-      font-size: 13px;
-      min-width: 100px;
+      .label::before {
+        content: '📱';
+        color: $warning-color;
+      }
     }
-  }
 
-  .admin {
-    font-size: 12px;
-    margin-top: 15px;
+    &:nth-child(4) {
+      background: rgba(200, 230, 201, 0.3);
 
-    img {
-      width: 16px;
-      height: 16px;
+      .label::before {
+        content: '🏢';
+        color: $secondary-color;
+      }
+    }
+
+    &:nth-child(5) {
+      background: rgba(255, 235, 238, 0.3);
+
+      .label::before {
+        content: '📍';
+        color: $error-color;
+      }
+    }
+
+    &:nth-child(6) {
+      background: rgba(240, 248, 255, 0.3);
+
+      .label::before {
+        content: '🔒';
+        color: $accent-color;
+      }
     }
   }
 }
@@ -290,22 +418,89 @@ html {
 // Form Validation Styles
 .info-row {
   .value {
-    &.ng-invalid.ng-touched {
-      border-color: #ff4757;
+
+    &.ng-invalid.ng-touched,
+    &:invalid {
+      border-color: $error-color;
+      box-shadow: 0 0 0 3px rgba(229, 57, 53, 0.1);
     }
 
-    &.ng-valid.ng-touched {
-      border-color: #2ed573;
+    &.ng-valid.ng-touched,
+    &:valid {
+      border-color: $secondary-color;
     }
   }
 }
 
-// Focus States
-.info-row .value:focus {
-  box-shadow: 0 0 0 3px rgba(0, 170, 255, 0.1);
+// Button Group - เหมือนหน้า Profile
+.button-group {
+  margin-top: 30px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 15px;
 }
 
-// Animation for form elements
+.edit-button {
+  background: $primary-gradient;
+  color: white;
+  border: none;
+  padding: 14px 20px;
+  border-radius: $border-radius-sm;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  transition: $transition;
+  box-shadow: $shadow-green;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: $shadow-hover;
+  }
+
+  &:active {
+    transform: translateY(-1px);
+  }
+
+  i {
+    font-size: 16px;
+  }
+}
+
+// Admin Contact - ปรับสไตล์ให้สอดคล้อง
+.admin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: $text-muted;
+  font-size: 14px;
+  cursor: pointer;
+  transition: $transition;
+  margin-top: 20px;
+  padding: 12px 16px;
+  border-radius: $border-radius-sm;
+  background: rgba(0, 0, 0, 0.02);
+
+  &:hover {
+    color: $accent-color;
+    background: rgba(2, 119, 189, 0.05);
+    transform: translateY(-1px);
+  }
+
+  img {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+  }
+}
+
+// Animation for form elements - ปรับปรุง
 .profile-form .info-row {
   animation: fadeInUp 0.5s ease forwards;
   opacity: 0;
@@ -322,5 +517,305 @@ html {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+// Pulse animation
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+// Responsive Design - เหมือนหน้า Profile
+@media (max-width: 768px) {
+  .profile-container {
+    padding: 10px;
+  }
+
+  .back {
+    top: 15px;
+    left: 15px;
+    width: 35px;
+    height: 35px;
+    font-size: 18px;
+    z-index: 20;
+  }
+
+  .card-menu {
+    top: 15px;
+    right: 15px;
+    z-index: 20;
+
+    i {
+      font-size: 18px;
+      padding: 8px;
+    }
+
+    .menu-dropdown {
+      top: 45px;
+      min-width: 180px;
+
+      .menu-item {
+        padding: 10px 14px;
+        font-size: 13px;
+      }
+    }
+  }
+
+  .profile-card {
+    padding: 20px;
+    max-width: 100%;
+  }
+
+  .profile-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+    margin-bottom: 20px;
+
+    .profile-logo {
+      font-size: 16px;
+
+      i {
+        font-size: 20px;
+      }
+    }
+  }
+
+  .user-id {
+    font-size: 12px;
+    padding: 10px 16px;
+    margin-bottom: 20px;
+  }
+
+  .title {
+    font-size: 18px;
+    margin-bottom: 25px;
+
+    &::before,
+    &::after {
+      width: 30px;
+    }
+  }
+
+  .profile-form {
+    .info-row {
+      padding: 15px;
+      margin-bottom: 15px;
+
+      .label {
+        font-size: 11px;
+        margin-bottom: 6px;
+      }
+
+      .value {
+        padding: 10px 14px;
+        font-size: 14px;
+      }
+    }
+  }
+
+  .button-group {
+    grid-template-columns: 1fr;
+    margin-top: 25px;
+  }
+
+  .edit-button {
+    padding: 12px 18px;
+    font-size: 13px;
+  }
+
+  .admin {
+    font-size: 12px;
+    margin-top: 15px;
+    padding: 10px 12px;
+
+    img {
+      width: 16px;
+      height: 16px;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-container {
+    padding: 5px;
+  }
+
+  .back {
+    top: 12px;
+    left: 12px;
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    z-index: 20;
+  }
+
+  .card-menu {
+    top: 12px;
+    right: 12px;
+    z-index: 20;
+
+    i {
+      font-size: 16px;
+      padding: 6px;
+    }
+
+    .menu-dropdown {
+      top: 40px;
+      min-width: 160px;
+
+      .menu-item {
+        padding: 8px 12px;
+        font-size: 12px;
+      }
+    }
+  }
+
+  .profile-card {
+    padding: 15px;
+    min-width: 280px;
+  }
+
+  .profile-header {
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+
+    .profile-logo {
+      font-size: 14px;
+
+      i {
+        font-size: 18px;
+      }
+    }
+
+    .back-btn {
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+  }
+
+  .user-id {
+    font-size: 11px;
+    padding: 8px 12px;
+
+    &::before {
+      font-size: 14px;
+    }
+  }
+
+  .title {
+    font-size: 16px;
+    margin-bottom: 20px;
+  }
+
+  .profile-form {
+    .info-row {
+      padding: 12px;
+      margin-bottom: 12px;
+
+      .label {
+        font-size: 10px;
+        margin-bottom: 6px;
+      }
+
+      .value {
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+    }
+  }
+
+  .edit-button {
+    padding: 10px 16px;
+    font-size: 12px;
+  }
+
+  .admin {
+    font-size: 11px;
+    padding: 8px 10px;
+  }
+
+  .loading-state {
+    padding: 20px 15px;
+
+    .spinner {
+      width: 28px;
+      height: 28px;
+    }
+
+    p {
+      font-size: 12px;
+    }
+  }
+}
+
+// Very small screens
+@media (max-width: 320px) {
+  .profile-container {
+    padding: 3px;
+  }
+
+  .profile-card {
+    padding: 12px;
+    min-width: 260px;
+  }
+
+  .user-id {
+    font-size: 10px;
+    padding: 6px 10px;
+  }
+
+  .title {
+    font-size: 14px;
+  }
+
+  .profile-form {
+    .info-row {
+      padding: 10px;
+
+      .label {
+        font-size: 9px;
+      }
+
+      .value {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+    }
+  }
+
+  .edit-button {
+    font-size: 11px;
+    padding: 8px 12px;
+  }
+}
+
+// Landscape orientation for mobile
+@media screen and (max-height: 600px) and (orientation: landscape) {
+  .profile-card {
+    max-height: calc(100vh - 10px);
+    overflow-y: auto;
+  }
+
+  .title {
+    margin: 10px 0 15px 0;
+  }
+
+  .profile-form .info-row {
+    margin-bottom: 12px;
+  }
+
+  .button-group {
+    margin-top: 20px;
   }
 }

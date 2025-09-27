@@ -7,6 +7,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Auth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from '@angular/fire/auth';
 import { NotificationService } from '../../service/notification.service';
+import { AuthService } from '../../service/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -25,7 +26,8 @@ export class LoginComponent {
     private http: HttpClient, 
     private router: Router, 
     private auth: Auth,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private authService: AuthService
   ) {}
 
   async loginuser(email: string, password: string, event: Event) {
@@ -69,9 +71,16 @@ export class LoginComponent {
     this.isLoading = true;
 
     try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(this.auth, provider);
-      this.router.navigate(['/main']);
+      // ใช้ AuthService เพื่อให้มีการสร้างข้อมูลใน PostgreSQL
+      const result = await this.authService.loginWithGoogle();
+      
+      if (result) {
+        console.log('✅ Google login successful with PostgreSQL data:', result);
+        this.notificationService.showNotification('success', 'เข้าสู่ระบบสำเร็จ', 'ยินดีต้อนรับ!');
+        this.router.navigate(['/main']);
+      } else {
+        throw new Error('No response from backend');
+      }
     } catch (error: any) {
       console.error('❌ Google login error:', error);
       this.notificationService.showNotification('error', 'Google Sign-in ล้มเหลว', 'เข้าสู่ระบบด้วย Google ล้มเหลว');

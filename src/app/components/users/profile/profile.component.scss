@@ -1,12 +1,40 @@
-body,
-html {
-    margin: 0;
-    padding: 0;
-    font-family: 'Prompt', sans-serif;
-    background-color: #013828;
-}
+// IoT Soil Monitor Design System - Field Optimized Profile.scss
+$primary-gradient: linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%);
+$secondary-gradient: linear-gradient(135deg, #0277BD 0%, #29B6F6 100%);
+$success-gradient: linear-gradient(135deg, #4CAF50, #2E7D32);
+$warning-gradient: linear-gradient(135deg, #FB8C00, #FF9800);
+$error-gradient: linear-gradient(135deg, #E53935, #D32F2F);
 
-// Loading State
+$primary-color: #2E7D32;
+$secondary-color: #4CAF50;
+$accent-color: #0277BD;
+$warning-color: #FB8C00;
+$error-color: #E53935;
+
+$main-bg: #F8F9FA;
+$card-bg: #FFFFFF;
+$glass-bg: rgba(255, 255, 255, 0.9);
+$field-bg: #F5F5F5;
+$indoor-bg: #FAFAFA;
+
+$text-primary: #212121;
+$text-secondary: #424242;
+$text-muted: #757575;
+
+$font-family: 'Inter', sans-serif;
+$border-radius-sm: 8px;
+$border-radius-md: 12px;
+$border-radius-lg: 16px;
+$border-radius-xl: 20px;
+
+$transition: all 0.3s ease;
+$shadow-light: 0 2px 8px rgba(0, 0, 0, 0.08);
+$shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.12);
+$shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.15);
+$shadow-green: 0 4px 12px rgba(46, 125, 50, 0.2);
+$shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
+
+// Loading State - ใช้สไตล์เดียวกับหน้า main
 .loading-state {
     display: flex;
     flex-direction: column;
@@ -18,14 +46,14 @@ html {
         width: 32px;
         height: 32px;
         border: 3px solid #f3f3f3;
-        border-top: 3px solid #00aaff;
+        border-top: 3px solid $primary-color;
         border-radius: 50%;
         animation: spin 1s linear infinite;
         margin-bottom: 15px;
     }
 
     p {
-        color: #666;
+        color: $text-muted;
         font-size: 14px;
         margin: 0;
     }
@@ -41,336 +69,646 @@ html {
     }
 }
 
-// Profile Data
-.profile-data {
-    .info-row {
-        .value {
-            .verified-badge {
-                display: inline-block;
-                background-color: #4CAF50;
-                color: white;
-                padding: 2px 6px;
-                border-radius: 10px;
-                font-size: 10px;
-                margin-left: 6px;
-                font-weight: 500;
+
+// Profile Container - ใช้พื้นหลังเดียวกับหน้า main
+.profile-container {
+    width: 100vw;
+    height: 100vh;
+    background: $main-bg;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+    font-family: $font-family;
+    position: relative;
+}
+
+// Back Arrow - เหมือนหน้า measure
+.back {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 24px;
+    color: #667eea;
+    cursor: pointer;
+    z-index: 10;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 50%;
+    transition: $transition;
+
+    &:hover {
+        background: white;
+        transform: translateX(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+}
+
+// Card Menu - จุดสามจุดที่มุมขวาบน
+.card-menu {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 20;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 50%;
+    transition: $transition;
+
+    &:hover {
+        background: white;
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    i {
+        font-size: 18px;
+        color: #666;
+    }
+
+    .menu-dropdown {
+        position: absolute;
+        top: 45px;
+        right: 0;
+        background: white;
+        border-radius: $border-radius-md;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        min-width: 180px;
+        overflow: hidden;
+        animation: dropdownSlideIn 0.2s ease-out;
+        z-index: 1000;
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: $transition;
+            font-size: 14px;
+            color: #333;
+
+            &:hover {
+                background: #f8f9fa;
             }
 
-            .unverified-badge {
-                display: inline-block;
-                background-color: #FF9800;
-                color: white;
-                padding: 2px 6px;
-                border-radius: 10px;
-                font-size: 10px;
-                margin-left: 6px;
-                font-weight: 500;
+            i {
+                font-size: 16px;
+                color: #666;
+                width: 16px;
             }
         }
     }
 }
 
-.profile-container {
-    width: 100vw;
-    height: 100vh;
-    background-color: #013828;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px;
-    box-sizing: border-box;
-}
+// Dropdown Animation
+@keyframes dropdownSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
 
-.profile-card {
-    width: 100%;
-    max-width: 420px;
-    min-width: 280px;
-    background-color: white;
-    border-radius: clamp(20px, 4vw, 30px);
-    border: 3px solid #00aaff;
-    padding: clamp(20px, 4vw, 30px);
-    position: relative;
-    text-align: center;
-    box-shadow: 0 0 15px rgba(0, 170, 255, 0.3);
-    animation: subtle-float 6s ease-in-out infinite;
-    max-height: calc(100vh - 20px);
-    overflow-y: auto;
-    box-sizing: border-box;
-}
-
-.back {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    font-size: clamp(14px, 3vw, 16px);
-    cursor: pointer;
-    color: #002e24;
-    padding: 6px;
-    border-radius: 50%;
-    transition: all 0.3s ease;
-    z-index: 10;
-
-    &:hover {
-        background-color: #f0f0f0;
-        transform: scale(1.1);
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
+// Profile Card - ปรับให้เหมือนกับ card ในหน้า main
+.profile-card {
+    width: 100%;
+    max-width: 500px;
+    min-width: 320px;
+    background: $card-bg;
+    border-radius: $border-radius-md;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 30px;
+    position: relative;
+    text-align: center;
+    box-shadow: $shadow-light;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    box-sizing: border-box;
+    transition: $transition;
+
+    &:hover {
+        box-shadow: $shadow-medium;
+    }
+}
+
+// Header Section - เพิ่ม header ที่คล้ายหน้า main
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+
+    .profile-logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: $text-primary;
+        font-size: 18px;
+        font-weight: bold;
+
+        i {
+            font-size: 24px;
+            color: $primary-color;
+        }
+    }
+
+    .back-btn {
+        background: $secondary-gradient;
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: $transition;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: $shadow-blue;
+        font-weight: 600;
+
+        &:hover {
+            transform: translateY(-2px);
+            box-shadow: $shadow-hover;
+        }
+
+        i {
+            font-size: 16px;
+        }
+    }
+}
+
+// User ID Badge - ปรับให้เหมือน status indicator
 .user-id {
-    background: linear-gradient(135deg, #424242);
+    background: $primary-gradient;
     color: white;
-    padding: 8px 12px;
-    margin: 0 auto 15px auto;
+    padding: 12px 20px;
+    margin: 0 auto 25px auto;
     font-weight: 600;
-    border-radius: 15px;
+    border-radius: 25px;
     width: fit-content;
-    font-size: clamp(12px, 2.8vw, 14px);
-    box-shadow: 0 3px 12px rgba(0, 170, 255, 0.3);
-    letter-spacing: 0.3px;
+    font-size: 14px;
+    box-shadow: $shadow-green;
+    letter-spacing: 0.5px;
     max-width: 90%;
     word-break: break-all;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    &::before {
+        content: '🌱';
+        font-size: 16px;
+    }
 }
 
 .title {
-    margin: 10px 0 20px 0;
-    font-size: clamp(16px, 3.5vw, 18px);
+    margin: 0 0 30px 0;
+    font-size: 20px;
     font-weight: bold;
-    color: #002e24;
+    color: $text-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+
+    &::before {
+        content: '';
+        width: 40px;
+        height: 2px;
+        background: $primary-gradient;
+        border-radius: 1px;
+    }
+
+    &::after {
+        content: '';
+        width: 40px;
+        height: 2px;
+        background: $primary-gradient;
+        border-radius: 1px;
+    }
 }
 
+// Info Rows - ปรับให้เหมือน user info section ในหน้า main
 .info-row {
     display: flex;
     flex-direction: column;
-    margin-bottom: 15px;
-    position: relative;
+    margin-bottom: 20px;
+    padding: 18px 20px;
+    background: $card-bg;
+    border-radius: $border-radius-sm;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    transition: $transition;
+    gap: 8px;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: $shadow-light;
+        border-color: $primary-color;
+    }
+
 
     .label {
         font-weight: 600;
-        margin-bottom: 6px;
-        font-size: clamp(11px, 2.5vw, 13px);
-        color: #002e24;
-        text-align: left;
-        padding-left: 12px;
-        position: relative;
+        margin-bottom: 4px;
+        font-size: 12px;
+        color: $text-secondary;
         text-transform: uppercase;
-        letter-spacing: 0.3px;
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
 
         &::before {
-            content: "";
-            position: absolute;
-            left: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 3px;
-            height: 16px;
-            background: linear-gradient(45deg, #00aaff, #0088cc);
-            border-radius: 2px;
+            font-size: 16px;
         }
     }
 
     .value {
-        background: linear-gradient(145deg, #f8f9fa, #e9ecef);
-        padding: 10px 14px;
-        border-radius: 12px;
-        text-align: center;
-        min-height: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: clamp(12px, 2.8vw, 14px);
-        width: calc(100% - 20px);
-        margin: 0 auto;
-        box-sizing: border-box;
-        border: 2px solid transparent;
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
+        font-size: 14px;
+        color: $text-primary;
         font-weight: 500;
-        color: #2c3e50;
         word-break: break-word;
 
-        &::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, #00aaff, #0088cc, #00aaff);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
+        // สำหรับ input fields
+        &[type="text"],
+        &[type="email"],
+        &[type="tel"] {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: $border-radius-sm;
+            padding: 12px 16px;
+            font-size: 14px;
+            color: $text-primary;
+            font-weight: 500;
+            width: 100%;
+            box-sizing: border-box;
+            transition: $transition;
 
-        &:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(0, 170, 255, 0.15);
-            border-color: #00aaff;
+            &:focus {
+                outline: none;
+                border-color: $primary-color;
+                box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+            }
 
-            &::before {
-                opacity: 1;
+            &[readonly] {
+                background: rgba(248, 249, 250, 0.8);
+                color: $text-secondary;
+                cursor: default;
             }
         }
     }
 
-    // Different colors for different types of info
-    &:nth-child(1) .value {
-        background: linear-gradient(145deg, #fff5f5, #fed7d7);
-        border-left: 3px solid #fc8181;
+    // Email container สำหรับ badge
+    .email-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+
+        .value {
+            flex: 1;
+        }
+
+        .verified-badge,
+        .unverified-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .verified-badge {
+            background: $success-gradient;
+            color: white;
+            box-shadow: $shadow-green;
+        }
+
+        .unverified-badge {
+            background: $warning-gradient;
+            color: white;
+            box-shadow: 0 2px 8px rgba(251, 140, 0, 0.3);
+        }
     }
 
-    &:nth-child(2) .value {
-        background: linear-gradient(145deg, #f0fff4, #c6f6d5);
-        border-left: 3px solid #68d391;
+    // Different colors for different info types - สไตล์เดียวกับหน้า edit-profile
+    &:nth-child(1) {
+        background: rgba(232, 245, 233, 0.3);
+
+        .label::before {
+            content: '👤';
+            color: $primary-color;
+        }
     }
 
-    &:nth-child(3) .value {
-        background: linear-gradient(145deg, #fffbf0, #feebc8);
-        border-left: 3px solid #f6ad55;
+    &:nth-child(2) {
+        background: rgba(227, 242, 253, 0.3);
+
+        .label::before {
+            content: '📧';
+            color: $accent-color;
+        }
     }
 
-    &:nth-child(4) .value {
-        background: linear-gradient(145deg, #f0f8ff, #bee3f8);
-        border-left: 3px solid #63b3ed;
+    &:nth-child(3) {
+        background: rgba(255, 243, 224, 0.3);
+
+        .label::before {
+            content: '📱';
+            color: $warning-color;
+        }
     }
 
-    &:nth-child(5) .value {
-        background: linear-gradient(145deg, #faf5ff, #e9d8fd);
-        border-left: 3px solid #b794f6;
+    &:nth-child(4) {
+        background: rgba(200, 230, 201, 0.3);
+
+        .label::before {
+            content: '👥';
+            color: $secondary-color;
+        }
     }
 }
 
+// Button Group - ปรับให้เหมือน action cards
 .button-group {
-    margin-top: 20px;
+    margin-top: 30px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 15px;
 }
 
 .edit-button {
-    background: linear-gradient(135deg, #00aaff, #0088cc);
+    background: $primary-gradient;
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 20px;
+    padding: 14px 20px;
+    border-radius: $border-radius-sm;
     font-weight: 600;
     cursor: pointer;
-    font-size: clamp(12px, 2.8vw, 14px);
-    transition: all 0.3s ease;
-    box-shadow: 0 3px 12px rgba(0, 170, 255, 0.3);
+    font-size: 14px;
+    transition: $transition;
+    box-shadow: $shadow-green;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 
     &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 18px rgba(0, 170, 255, 0.4);
-        background: linear-gradient(135deg, #0088cc, #006699);
+        transform: translateY(-3px);
+        box-shadow: $shadow-hover;
+    }
+
+    i {
+        font-size: 16px;
     }
 }
 
-.admin {
-    position: absolute;
-    bottom: 12px;
-    right: 12px;
-    text-align: center;
-    font-size: clamp(10px, 2.2vw, 12px);
-    cursor: pointer;
-    transition: all 0.3s ease;
 
-    img {
-        width: clamp(20px, 4vw, 24px);
-        height: clamp(20px, 4vw, 24px);
-        margin-bottom: 2px;
-    }
-
-    &:hover {
-        transform: scale(1.05);
-        color: #00aaff;
-    }
-}
-
-// Subtle animation for the entire card
-@keyframes subtle-float {
-
-    0%,
-    100% {
-        transform: translateY(0px);
+// Animations - เดียวกับหน้า main
+@keyframes pulse {
+    0% {
+        opacity: 1;
     }
 
     50% {
-        transform: translateY(-3px);
+        opacity: 0.5;
+    }
+
+    100% {
+        opacity: 1;
     }
 }
 
-// Media Queries for better responsive design
-
-// Small mobile devices (320px - 480px)
-@media screen and (max-width: 480px) {
+// Responsive Design - ปรับให้สอดคล้องกับหน้า main
+@media (max-width: 768px) {
     .profile-container {
-        padding: 8px;
-    }
-
-    .profile-card {
-        padding: 16px;
-        border-radius: 16px;
-        border-width: 2px;
-        max-height: calc(100vh - 16px);
+        padding: 10px;
     }
 
     .back {
-        top: 8px;
-        left: 8px;
-        padding: 4px;
+        top: 15px;
+        left: 15px;
+        width: 35px;
+        height: 35px;
+        font-size: 18px;
+        z-index: 20;
+    }
+
+    .card-menu {
+        top: 15px;
+        right: 15px;
+        z-index: 20;
+
+        i {
+            font-size: 18px;
+            padding: 8px;
+        }
+
+        .menu-dropdown {
+            top: 45px;
+            min-width: 180px;
+
+            .menu-item {
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+        }
+    }
+
+    .profile-card {
+        padding: 20px;
+        max-width: 100%;
+    }
+
+    .profile-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+        margin-bottom: 20px;
+
+        .profile-logo {
+            font-size: 16px;
+
+            i {
+                font-size: 20px;
+            }
+        }
     }
 
     .user-id {
-        padding: 6px 10px;
-        font-size: 11px;
-        margin-bottom: 12px;
+        font-size: 12px;
+        padding: 10px 16px;
+        margin-bottom: 20px;
     }
 
     .title {
-        margin-bottom: 16px;
-        font-size: 15px;
+        font-size: 18px;
+        margin-bottom: 25px;
+
+        &::before,
+        &::after {
+            width: 30px;
+        }
     }
 
     .info-row {
-        margin-bottom: 12px;
+        flex-direction: column;
+        text-align: center;
+        padding: 15px;
+        gap: 10px;
 
-        .label {
-            padding-left: 10px;
-            margin-bottom: 4px;
-            font-size: 10px;
+        .icon {
+            font-size: 24px;
+        }
 
-            &::before {
-                width: 2px;
-                height: 12px;
+        .content {
+            text-align: center;
+        }
+    }
+
+    .button-group {
+        grid-template-columns: 1fr;
+        margin-top: 25px;
+    }
+
+    .edit-button {
+        padding: 12px 18px;
+        font-size: 13px;
+    }
+
+}
+
+@media (max-width: 480px) {
+    .profile-container {
+        padding: 5px;
+    }
+
+    .back {
+        top: 12px;
+        left: 12px;
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+        z-index: 20;
+    }
+
+    .card-menu {
+        top: 12px;
+        right: 12px;
+        z-index: 20;
+
+        i {
+            font-size: 16px;
+            padding: 6px;
+        }
+
+        .menu-dropdown {
+            top: 40px;
+            min-width: 160px;
+
+            .menu-item {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+        }
+    }
+
+    .profile-card {
+        padding: 15px;
+        min-width: 280px;
+    }
+
+    .profile-header {
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+
+        .profile-logo {
+            font-size: 14px;
+
+            i {
+                font-size: 18px;
             }
         }
 
-        .value {
-            padding: 8px 10px;
-            min-height: 14px;
+        .back-btn {
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+    }
+
+    .user-id {
+        font-size: 11px;
+        padding: 8px 12px;
+
+        &::before {
+            font-size: 14px;
+        }
+    }
+
+    .title {
+        font-size: 16px;
+        margin-bottom: 20px;
+    }
+
+    .info-row {
+        padding: 12px;
+        margin-bottom: 15px;
+        gap: 6px;
+
+        .label {
             font-size: 11px;
-            border-radius: 10px;
+            margin-bottom: 2px;
+        }
+
+        .value {
+            font-size: 12px;
+
+            &[type="text"],
+            &[type="email"],
+            &[type="tel"] {
+                padding: 10px 12px;
+                font-size: 12px;
+            }
+        }
+
+        .email-container {
+
+            .verified-badge,
+            .unverified-badge {
+                font-size: 8px;
+                padding: 2px 6px;
+            }
         }
     }
 
     .edit-button {
-        padding: 8px 16px;
-        font-size: 11px;
-        border-radius: 16px;
-    }
-
-    .admin {
-        bottom: 8px;
-        right: 8px;
-        font-size: 9px;
-
-        img {
-            width: 18px;
-            height: 18px;
-        }
+        padding: 10px 16px;
+        font-size: 12px;
     }
 
     .loading-state {
-        padding: 20px 16px;
+        padding: 20px 15px;
 
         .spinner {
             width: 28px;
@@ -387,61 +725,26 @@ html {
         .verified-badge,
         .unverified-badge {
             font-size: 8px;
-            padding: 1px 4px;
+            padding: 2px 6px;
             margin-left: 4px;
         }
     }
 }
 
-// Large mobile devices (481px - 768px)
-@media screen and (min-width: 481px) and (max-width: 768px) {
-    .profile-card {
-        max-width: 380px;
-        padding: 24px;
-    }
-
-    .info-row .value {
-        width: calc(100% - 16px);
-    }
-}
-
-// Tablet devices (769px - 1024px)
-@media screen and (min-width: 769px) and (max-width: 1024px) {
-    .profile-card {
-        max-width: 400px;
-        padding: 28px;
-    }
-}
-
-// Desktop and larger screens (1025px+)
-@media screen and (min-width: 1025px) {
-    .profile-card {
-        max-width: 420px;
-        padding: 30px;
-    }
-
-    // Hover effects work better on desktop
-    .profile-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0 25px rgba(0, 170, 255, 0.4);
-    }
-}
-
-// Very small screens (below 320px)
-@media screen and (max-width: 320px) {
+// Very small screens
+@media (max-width: 320px) {
     .profile-container {
-        padding: 5px;
+        padding: 3px;
     }
 
     .profile-card {
         padding: 12px;
         min-width: 260px;
-        max-height: calc(100vh - 10px);
     }
 
     .user-id {
         font-size: 10px;
-        padding: 4px 8px;
+        padding: 6px 10px;
     }
 
     .title {
@@ -449,19 +752,38 @@ html {
     }
 
     .info-row {
+        padding: 10px;
+        gap: 4px;
+
         .label {
-            font-size: 9px;
+            font-size: 10px;
+            margin-bottom: 2px;
         }
 
         .value {
-            font-size: 10px;
-            padding: 6px 8px;
+            font-size: 11px;
+
+            &[type="text"],
+            &[type="email"],
+            &[type="tel"] {
+                padding: 8px 10px;
+                font-size: 11px;
+            }
+        }
+
+        .email-container {
+
+            .verified-badge,
+            .unverified-badge {
+                font-size: 7px;
+                padding: 1px 4px;
+            }
         }
     }
 
     .edit-button {
-        font-size: 10px;
-        padding: 6px 12px;
+        font-size: 11px;
+        padding: 8px 12px;
     }
 }
 
@@ -470,18 +792,17 @@ html {
     .profile-card {
         max-height: calc(100vh - 10px);
         overflow-y: auto;
-        animation: none; // Disable floating animation on small landscape screens
     }
 
     .title {
-        margin: 8px 0 12px 0;
+        margin: 10px 0 15px 0;
     }
 
     .info-row {
-        margin-bottom: 10px;
+        margin-bottom: 12px;
     }
 
     .button-group {
-        margin-top: 15px;
+        margin-top: 20px;
     }
 }
