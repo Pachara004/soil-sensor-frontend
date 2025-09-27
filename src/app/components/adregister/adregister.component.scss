@@ -1,5 +1,41 @@
+// IoT Soil Monitor Design System - Field Optimized
+$primary-gradient: linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%);
+$secondary-gradient: linear-gradient(135deg, #0277BD 0%, #29B6F6 100%);
+$success-gradient: linear-gradient(135deg, #4CAF50, #2E7D32);
+$warning-gradient: linear-gradient(135deg, #FB8C00, #FF9800);
+$error-gradient: linear-gradient(135deg, #E53935, #D32F2F);
+
+$primary-color: #2E7D32;
+$secondary-color: #4CAF50;
+$accent-color: #0277BD;
+$warning-color: #FB8C00;
+$error-color: #E53935;
+
+$main-bg: #F8F9FA;
+$card-bg: #FFFFFF;
+$glass-bg: rgba(255, 255, 255, 0.9);
+$field-bg: #F5F5F5;
+$indoor-bg: #FAFAFA;
+
+$text-primary: #212121;
+$text-secondary: #424242;
+$text-muted: #757575;
+
+$font-family: 'Inter', sans-serif;
+$border-radius-sm: 8px;
+$border-radius-md: 12px;
+$border-radius-lg: 16px;
+$border-radius-xl: 20px;
+
+$transition: all 0.3s ease;
+$shadow-light: 0 2px 8px rgba(0, 0, 0, 0.08);
+$shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.12);
+$shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.15);
+$shadow-green: 0 4px 12px rgba(46, 125, 50, 0.2);
+$shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
+
 .container {
-  background: #1A4331;
+  background: $main-bg;
   min-height: 100vh;
   display: flex;
   justify-content: center;
@@ -9,16 +45,16 @@
 }
 
 .card {
-  background-color: white;
-  border-radius: 30px;
+  background: $card-bg;
+  border-radius: $border-radius-md;
   padding: 40px;
   width: 100%;
-  border: 4px solid #00aaff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   max-width: 450px;
-  box-shadow: 0px 15px 35px rgba(0, 0, 0, 0.2);
+  box-shadow: $shadow-light;
   box-sizing: border-box;
   position: relative;
-  transition: transform 0.3s ease;
+  transition: $transition;
 
   &:hover {
     transform: translateY(-5px);
@@ -246,6 +282,28 @@ input[type="password"] {
   }
 }
 
+// Reference Info
+.reference-info {
+  background-color: #f0f9ff;
+  border: 1px solid #0ea5e9;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin: 15px 0;
+  text-align: center;
+
+  .reference-text {
+    color: #0369a1;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 0;
+
+    strong {
+      color: #0c4a6e;
+      font-weight: 700;
+    }
+  }
+}
+
 // Resend Container
 .resend-container {
   text-align: center;
@@ -272,6 +330,52 @@ input[type="password"] {
     color: #10b981;
     font-size: 14px;
   }
+
+  .loading {
+    color: #f59e0b;
+    font-size: 14px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+}
+
+// Email Status
+.email-status {
+  margin-top: 10px;
+  margin-bottom: 10px;
+
+  .error {
+    color: #ef4444;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 12px;
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    border-left: 4px solid #ef4444;
+  }
+
+  .success {
+    color: #10b981;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 12px;
+    background-color: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    border-left: 4px solid #10b981;
+  }
+
+  .loading {
+    color: #f59e0b;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 12px;
+    background-color: #fffbeb;
+    border: 1px solid #fed7aa;
+    border-radius: 8px;
+    border-left: 4px solid #f59e0b;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
 }
 
 // Error Messages
@@ -289,8 +393,10 @@ input[type="password"] {
 }
 
 // Buttons
-.primary-btn, .otp-btn, .confirm-btn {
-  background: linear-gradient(135deg, #00aaff 0%, #0088cc 100%);
+.primary-btn,
+.otp-btn,
+.confirm-btn {
+  background: $primary-gradient;
   color: white;
   font-weight: bold;
   padding: 16px 0;
@@ -409,6 +515,7 @@ input[type="password"] {
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -420,6 +527,7 @@ input[type="password"] {
     opacity: 0;
     transform: translateX(20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -427,11 +535,33 @@ input[type="password"] {
 }
 
 @keyframes shake {
-  0%, 20%, 40%, 60%, 80% {
+
+  0%,
+  20%,
+  40%,
+  60%,
+  80% {
     transform: translateX(0);
   }
-  10%, 30%, 50%, 70%, 90% {
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
     transform: translateX(-5px);
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
   }
 }
 
@@ -472,7 +602,9 @@ input[type="password"] {
     font-size: 18px;
   }
 
-  .primary-btn, .otp-btn, .confirm-btn {
+  .primary-btn,
+  .otp-btn,
+  .confirm-btn {
     font-size: 14px;
     padding: 14px 0;
   }
@@ -494,6 +626,210 @@ input[type="password"] {
       width: 30px;
       height: 35px;
       font-size: 16px;
+    }
+  }
+}
+
+// Notification Popup Styles
+.notification-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(5px);
+  animation: fadeInOverlay 0.3s ease-out;
+
+  .notification-popup {
+    background: white;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 450px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    animation: slideInPopup 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    .notification-header {
+      padding: 25px 30px 20px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+
+      &.success {
+        background: linear-gradient(135deg, #4CAF50, #45a049);
+        color: white;
+      }
+
+      &.error {
+        background: linear-gradient(135deg, #f44336, #d32f2f);
+        color: white;
+      }
+
+      &.warning {
+        background: linear-gradient(135deg, #ff9800, #f57c00);
+        color: white;
+      }
+
+      &.info {
+        background: linear-gradient(135deg, #2196F3, #1976D2);
+        color: white;
+      }
+
+      .notification-icon {
+        font-size: 24px;
+        flex-shrink: 0;
+      }
+
+      .notification-title {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+        flex: 1;
+      }
+
+      .close-btn {
+        background: none;
+        border: none;
+        color: inherit;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.2);
+          transform: scale(1.1);
+        }
+
+        i {
+          font-size: 16px;
+        }
+      }
+    }
+
+    .notification-body {
+      padding: 25px 30px 30px;
+
+      .notification-message {
+        margin: 0 0 25px 0;
+        font-size: 16px;
+        line-height: 1.6;
+        color: #333;
+        white-space: pre-line;
+      }
+
+      .notification-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+
+        button {
+          padding: 12px 24px;
+          border: none;
+          border-radius: 25px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          min-width: 100px;
+
+          &.btn-primary {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+
+            &:hover {
+              background: linear-gradient(135deg, #45a049, #3d8b40);
+              transform: translateY(-2px);
+              box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+            }
+          }
+
+          &.btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+            border: 1px solid #ddd;
+
+            &:hover {
+              background: #e0e0e0;
+              transform: translateY(-2px);
+              box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Animations
+@keyframes fadeInOverlay {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInPopup {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+// Responsive Design for Notification
+@media (max-width: 768px) {
+  .notification-overlay {
+    padding: 20px;
+
+    .notification-popup {
+      max-width: 100%;
+
+      .notification-header {
+        padding: 20px 25px 15px;
+
+        .notification-title {
+          font-size: 18px;
+        }
+
+        .notification-icon {
+          font-size: 20px;
+        }
+      }
+
+      .notification-body {
+        padding: 20px 25px 25px;
+
+        .notification-message {
+          font-size: 15px;
+        }
+
+        .notification-actions {
+          flex-direction: column;
+
+          button {
+            width: 100%;
+            min-width: auto;
+          }
+        }
+      }
     }
   }
 }

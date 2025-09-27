@@ -116,6 +116,12 @@ export class ReportsComponent {
       return;
     }
 
+    // ตรวจสอบ authentication
+    if (!this.currentUser) {
+      this.notificationService.showNotification('error', 'ไม่พบข้อมูลผู้ใช้', 'กรุณาเข้าสู่ระบบใหม่');
+      return;
+    }
+
     this.isUploading = true;
 
     try {
@@ -137,8 +143,25 @@ export class ReportsComponent {
         userEmail: this.currentUser?.email || null
       };
 
+      // ดึง Firebase ID token
+      const token = await this.currentUser.getIdToken();
+      
+      if (!token) {
+        throw new Error('ไม่สามารถรับ Firebase token ได้');
+      }
+      
+      // Debug logging
+      console.log('🔑 Firebase Token:', token.substring(0, 20) + '...');
+      console.log('📊 Report Data:', reportData);
+      console.log('🌐 API URL:', `${this.apiUrl}/api/reports`);
+      
       await this.http
-        .post(`${this.apiUrl}/api/reports`, reportData)
+        .post(`${this.apiUrl}/api/reports`, reportData, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
         .toPromise();
 
       this.notificationService.showNotification('success', 'ส่งเรื่องสำเร็จ!', 'ทีมงานจะติดต่อกลับโดยเร็ว', true, 'กลับ', () => {

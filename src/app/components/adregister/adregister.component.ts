@@ -13,6 +13,8 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { NotificationService } from '../../service/notification.service';
+import { AuthService } from '../../service/auth.service';
+import { Constants } from '../../config/constants';
 
 @Component({
   selector: 'app-register',
@@ -54,7 +56,9 @@ export class AdregisterComponent {
     private router: Router,
     private database: Database,
     private http: HttpClient,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private authService: AuthService,
+    private constants: Constants
   ) {}
 
   goBack() {
@@ -303,6 +307,7 @@ export class AdregisterComponent {
 
     this.isRegistering = true;
     try {
+      // สร้าง Firebase user
       const userCredential = await createUserWithEmailAndPassword(
         this.auth,
         this.email,
@@ -310,20 +315,32 @@ export class AdregisterComponent {
       );
       const user = userCredential.user;
 
-      await set(ref(this.database, `users/${this.username}`), {
-        uid: user.uid,
-        email: this.email,
-        username: this.username,
-        fullName: this.fullName,
-        phoneNumber: this.phoneNumber.replace(/\D/g, ''),
-        type: this.userType, // 'admin'
-        isAdmin: true,
-        provider: 'password',
-        createdAt: Date.now(),
-        emailVerified: false,
-      });
-
+      // ส่งอีเมลยืนยัน
       await sendEmailVerification(user);
+
+      // สร้างข้อมูลใน PostgreSQL ผ่าน backend API
+      const token = await user.getIdToken();
+      
+      const userData = {
+        firebase_uid: user.uid,
+        user_email: this.email,
+        user_name: this.username,
+        user_phone: this.phoneNumber.replace(/\D/g, ''),
+        role: 'admin', // admin role สำหรับ adregister
+        emailVerified: false
+      };
+
+      // ส่งข้อมูลไปยัง backend
+      const response = await this.http
+        .post(`${this.constants.API_ENDPOINT}/api/auth/register`, userData, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        .toPromise();
+
+      console.log('✅ Admin registration successful with PostgreSQL data:', response);
 
       this.notificationService.showNotification('success', 'สมัครแอดมินสำเร็จ!', 'กรุณายืนยันอีเมลด้วยหากระบบกำหนด', true, 'ไปหน้า Admin', () => {
         this.router.navigate(['/adminmain']);
@@ -366,26 +383,17 @@ export class AdregisterComponent {
 
   async registerWithGoogle() {
     try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(this.auth, provider);
-      const user = result.user;
-
-      const username = user.email?.split('@')[0] || 'user' + Date.now();
-
-      await set(ref(this.database, `users/${username}`), {
-        uid: user.uid,
-        email: user.email,
-        username,
-        fullName: user.displayName || '',
-        phoneNumber: '',
-        type: this.userType, // 'admin'
-        isAdmin: true,
-        provider: 'google',
-        createdAt: Date.now(),
-        emailVerified: user.emailVerified,
-      });
-
-      this.router.navigate(['/adminmain']);
+      // ใช้ AuthService เพื่อให้มีการสร้างข้อมูลใน PostgreSQL
+      const result = await this.authService.loginWithGoogle();
+      
+      if (result) {
+        console.log('✅ Google admin registration successful with PostgreSQL data:', result);
+        this.notificationService.showNotification('success', 'สมัครแอดมินสำเร็จ!', 'ยินดีต้อนรับ! ข้อมูลแอดมินของคุณถูกสร้างในระบบแล้ว', true, 'ไปหน้า Admin', () => {
+          this.router.navigate(['/adminmain']);
+        });
+      } else {
+        throw new Error('No response from backend');
+      }
     } catch (err: any) {
       console.error('Google sign-in error:', err);
       this.notificationService.showNotification('error', 'Google Sign-in ล้มเหลว', 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้');

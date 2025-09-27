@@ -132,6 +132,7 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
 .input-group {
   margin-bottom: 25px;
   position: relative;
+  padding: 0 5px; // เพิ่ม padding เพื่อไม่ให้ input ติดขอบ
 
   label {
     display: block;
@@ -168,6 +169,8 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
     transition: $transition;
     resize: none;
     position: relative;
+    box-sizing: border-box; // เพิ่ม box-sizing
+    margin: 0; // เพิ่ม margin: 0 เพื่อไม่ให้ติดขอบ
 
     &:focus {
       outline: none;
@@ -501,11 +504,14 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
 
   .input-group {
     margin-bottom: 20px;
+    padding: 0 3px; // ลด padding ใน tablet
 
     input[type="text"],
     textarea {
       padding: 14px 16px;
       font-size: 14px;
+      box-sizing: border-box; // เพิ่ม box-sizing
+      margin: 0; // เพิ่ม margin: 0
     }
 
     textarea {
@@ -567,6 +573,7 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
 
   .input-group {
     margin-bottom: 18px;
+    padding: 0 2px; // ลด padding ใน mobile
 
     label {
       font-size: 13px;
@@ -577,6 +584,8 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
       padding: 12px 14px;
       font-size: 14px;
       border-radius: $border-radius-sm;
+      box-sizing: border-box; // เพิ่ม box-sizing
+      margin: 0; // เพิ่ม margin: 0
     }
 
     textarea {
