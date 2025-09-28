@@ -1,27 +1,84 @@
 <div class="mail-container">
+  <i class="fas fa-arrow-left back-btn" (click)="goBack()"></i>
   <div class="card">
-    <button class="back-btn" (click)="goBack()">
-      <i class="fas fa-arrow-left"></i> กลับ
-    </button>
-    <img class="chip-icon" src="https://cdn.iconscout.com/icon/premium/png-256-thumb/soil-sensor-4449978-3688706.png" alt="Soil Sensor Icon">
-    <h2 class="mail-title">กล่องข้อความผู้ใช้</h2>
+    <div class="header-section">
+      <h2 class="mail-title">กล่องข้อความผู้ใช้</h2>
+      <div class="header-actions">
+        <button class="search-images-btn" (click)="searchRealImagesInFirebase()" [disabled]="loading">
+          <i class="fas fa-search"></i>
+          ค้นหาภาพจริง
+        </button>
+        <button class="upload-test-btn" (click)="uploadTestFileToFirebase()" [disabled]="loading">
+          <i class="fas fa-upload"></i>
+          อัปโหลดทดสอบ
+        </button>
+        <button class="test-firebase-btn" (click)="testFirebaseStorageConnection()" [disabled]="loading">
+          <i class="fas fa-cloud"></i>
+          ทดสอบ Firebase
+        </button>
+        <button class="refresh-btn" (click)="refreshReports()" [disabled]="loading">
+          <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i>
+          <span *ngIf="!loading">รีเฟรช</span>
+          <span *ngIf="loading">กำลังโหลด...</span>
+        </button>
+      </div>
+    </div>
 
-    <div class="mail-list">
-      <div *ngFor="let report of reports" class="mail-item">
+    <!-- ✅ Loading indicator -->
+    <div *ngIf="loading" class="loading">
+      <i class="fas fa-spinner fa-spin"></i> กำลังโหลดรายงานจาก PostgreSQL...
+    </div>
+
+    <div class="mail-list" *ngIf="!loading">
+      <div *ngFor="let report of reports" class="mail-item" [class.unread]="report.status === 'new'">
         <div class="mail-info">
-          <div class="subject">{{ report.subject }}</div>
-          <div class="meta">
-            ผู้ใช้: {{ report.username }} | {{ report.timestamp | date:'short' }}
+          <div class="subject-row">
+            <div class="subject">{{ report.subject }}</div>
+            <div class="status-badge" [ngClass]="'status-' + (report.status || 'new')">
+              {{ report.status === 'new' ? 'ใหม่' : report.status === 'read' ? 'อ่านแล้ว' : report.status === 'resolved' ? 'แก้ไขแล้ว' : 'ใหม่' }}
+            </div>
+            <div class="priority-badge" [ngClass]="'priority-' + (report.priority || 'medium')">
+              {{ report.priority === 'high' ? 'สูง' : report.priority === 'medium' ? 'ปานกลาง' : report.priority === 'low' ? 'ต่ำ' : 'ปานกลาง' }}
+            </div>
           </div>
-          <div class="message">{{ report.message | slice:0:100 }}{{ report.message.length > 100 ? '...' : '' }}</div>
+          <div class="meta">
+            <i class="fas fa-user"></i> {{ report.username }}
+            <span *ngIf="report.user_email"> ({{ report.user_email }})</span>
+            <i class="fas fa-clock"></i> {{ report.timestamp | date:'short' }}
+            <span *ngIf="report.device_info">
+              <i class="fas fa-microchip"></i> {{ report.device_info.device_id }}
+            </span>
+          </div>
+          <div class="message">{{ report.message | slice:0:150 }}{{ report.message.length > 150 ? '...' : '' }}</div>
+          <div *ngIf="report.images && report.images.length > 0" class="image-preview">
+            <div class="preview-thumbnails">
+              <img *ngFor="let image of report.images | slice:0:3; let i = index" 
+                   [src]="image" 
+                   [alt]="'Preview ' + (i + 1)"
+                   class="thumbnail"
+                   (click)="viewImage(image)"
+                   (error)="$event.target.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI0UwRTBFMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiM3NTc1NzUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JTUc8L3RleHQ+PC9zdmc+'">
+              <div *ngIf="report.images.length > 3" class="more-images">
+                +{{ report.images.length - 3 }}
+              </div>
+            </div>
+            <div class="image-count">
+              <i class="fas fa-image"></i> {{ report.images.length }} ภาพ
+            </div>
+          </div>
         </div>
         <div class="mail-actions">
-          <button class="view-btn" (click)="openReportModal(report)">ดูรายละเอียด</button>
-          <button class="delete-btn" (click)="deleteReport(report.key)">ลบ</button>
+          <button class="view-btn" (click)="openReportModal(report)">
+            <i class="fas fa-eye"></i> ดูรายละเอียด
+          </button>
+          <button class="delete-btn" (click)="deleteReport(report.key)">
+            <i class="fas fa-trash"></i> ลบ
+          </button>
         </div>
       </div>
       <div *ngIf="reports.length === 0" class="no-data">
-        <p>ไม่พบข้อความ</p>
+        <i class="fas fa-inbox"></i>
+        <p>ไม่พบรายงานจากผู้ใช้</p>
       </div>
     </div>
   </div>
@@ -29,17 +86,104 @@
   <div *ngIf="selectedReport" class="modal-overlay" (click)="closeReportModal()">
     <div class="report-modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h3>{{ selectedReport.subject }}</h3>
+        <div class="header-info">
+          <h3>{{ selectedReport.subject }}</h3>
+          <div class="header-badges">
+            <div class="status-badge" [ngClass]="'status-' + (selectedReport.status || 'new')">
+              {{ selectedReport.status === 'new' ? 'ใหม่' : selectedReport.status === 'read' ? 'อ่านแล้ว' : selectedReport.status === 'resolved' ? 'แก้ไขแล้ว' : 'ใหม่' }}
+            </div>
+            <div class="priority-badge" [ngClass]="'priority-' + (selectedReport.priority || 'medium')">
+              {{ selectedReport.priority === 'high' ? 'สูง' : selectedReport.priority === 'medium' ? 'ปานกลาง' : selectedReport.priority === 'low' ? 'ต่ำ' : 'ปานกลาง' }}
+            </div>
+          </div>
+        </div>
         <button class="close-btn" (click)="closeReportModal()">×</button>
       </div>
+      
       <div class="modal-body">
-        <p><strong>ผู้ใช้:</strong> {{ selectedReport.username }}</p>
-        <p><strong>วันที่:</strong> {{ selectedReport.timestamp | date:'medium' }}</p>
-        <p><strong>ข้อความ:</strong> {{ selectedReport.message }}</p>
+        <div class="report-info">
+          <div class="info-row">
+            <i class="fas fa-user"></i>
+            <strong>ผู้ใช้:</strong> {{ selectedReport.username }}
+            <span *ngIf="selectedReport.user_email"> ({{ selectedReport.user_email }})</span>
+          </div>
+          <div class="info-row">
+            <i class="fas fa-clock"></i>
+            <strong>วันที่:</strong> {{ selectedReport.timestamp | date:'medium' }}
+          </div>
+          <div *ngIf="selectedReport.device_info" class="info-row">
+            <i class="fas fa-microchip"></i>
+            <strong>อุปกรณ์:</strong> {{ selectedReport.device_info.device_id }}
+            <span *ngIf="selectedReport.device_info.location"> - {{ selectedReport.device_info.location }}</span>
+          </div>
+        </div>
+
+        <div class="report-message">
+          <h4><i class="fas fa-comment"></i> ข้อความรายงาน</h4>
+          <p>{{ selectedReport.message }}</p>
+        </div>
+
+        <!-- ✅ ส่วนแสดงภาพประกอบ -->
+        <div *ngIf="selectedReport.images && selectedReport.images.length > 0" class="report-images">
+          <h4><i class="fas fa-images"></i> ภาพประกอบ ({{ selectedReport.images.length }} ภาพ)</h4>
+          <div class="image-gallery">
+            <div *ngFor="let image of selectedReport.images; let i = index" class="image-item">
+              <img [src]="image" [alt]="'ภาพประกอบ ' + (i + 1)" (click)="viewImage(image)">
+              <div class="image-actions">
+                <button class="view-image-btn" (click)="viewImage(image)">
+                  <i class="fas fa-expand"></i> ดูขนาดเต็ม
+                </button>
+                <button class="download-btn" (click)="downloadImage(image, 'report_image_' + (i + 1) + '.jpg')">
+                  <i class="fas fa-download"></i> ดาวน์โหลด
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+      
       <div class="modal-footer">
-        <button class="delete-btn" (click)="deleteReport(selectedReport.key)">ลบ</button>
-        <button class="close-btn" (click)="closeReportModal()">ปิด</button>
+        <div class="status-actions">
+          <button *ngIf="selectedReport.status !== 'read'" class="mark-read-btn" (click)="updateReportStatus(selectedReport.key, 'read')">
+            <i class="fas fa-check"></i> ทำเครื่องหมายว่าอ่านแล้ว
+          </button>
+          <button *ngIf="selectedReport.status !== 'resolved'" class="resolve-btn" (click)="updateReportStatus(selectedReport.key, 'resolved')">
+            <i class="fas fa-check-circle"></i> แก้ไขแล้ว
+          </button>
+        </div>
+        <div class="main-actions">
+          <button class="delete-btn" (click)="deleteReport(selectedReport.key)">
+            <i class="fas fa-trash"></i> ลบ
+          </button>
+          <button class="close-btn" (click)="closeReportModal()">
+            <i class="fas fa-times"></i> ปิด
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ Image Viewer Modal -->
+  <div *ngIf="showImageModal" class="image-modal-overlay" (click)="closeImageModal()">
+    <div class="image-modal" (click)="$event.stopPropagation()">
+      <div class="image-modal-header">
+        <h3>ภาพประกอบรายงาน</h3>
+        <button class="close-btn" (click)="closeImageModal()">×</button>
+      </div>
+      <div class="image-modal-body">
+        <img *ngIf="selectedImage" [src]="selectedImage" [alt]="'ภาพประกอบรายงาน'" class="modal-image">
+        <div *ngIf="!selectedImage" class="image-loading">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>กำลังโหลดภาพ...</p>
+        </div>
+      </div>
+      <div class="image-modal-footer">
+        <button class="download-btn" (click)="downloadImage(selectedImage!, 'report_image.jpg')" *ngIf="selectedImage">
+          <i class="fas fa-download"></i> ดาวน์โหลด
+        </button>
+        <button class="close-btn" (click)="closeImageModal()">
+          <i class="fas fa-times"></i> ปิด
+        </button>
       </div>
     </div>
   </div>

@@ -152,21 +152,59 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       // ดึงข้อมูล user และ device จาก backend
       const token = await this.currentUser.getIdToken();
       
-      // ดึงข้อมูล user
-      try {
-        const userResponse = await lastValueFrom(
-          this.http.get<any>(`${this.apiUrl}/api/auth/me`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
-        );
-        
-        if (userResponse && userResponse.user) {
-          const userData = userResponse.user;
-          this.username = userData.user_name || userData.username || this.username;
-          console.log('👤 User data loaded:', this.username);
+      // ดึงข้อมูล user จาก PostgreSQL
+      let userDataFound = false;
+      const userEndpoints = [
+        '/api/auth/me',
+        '/api/user/profile',
+        '/api/user/me',
+        '/api/profile'
+      ];
+
+      for (const endpoint of userEndpoints) {
+        try {
+          console.log(`🔍 Trying user endpoint: ${endpoint}`);
+          const userResponse = await lastValueFrom(
+            this.http.get<any>(`${this.apiUrl}${endpoint}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            })
+          );
+          
+          let userData = userResponse;
+          if (userResponse.user) {
+            userData = userResponse.user;
+          }
+          
+          if (userData && (userData.user_name || userData.username)) {
+            // ✅ ตั้งค่า username และ userName จาก PostgreSQL
+            this.username = userData.user_name || userData.username || this.username;
+            this.userName = userData.user_name || userData.username || this.userName;
+            this.userEmail = userData.user_email || userData.email || this.userEmail;
+            console.log(`✅ User data loaded from PostgreSQL ${endpoint}:`, {
+              username: this.username,
+              userName: this.userName,
+              userEmail: this.userEmail
+            });
+            userDataFound = true;
+            break; // หยุดเมื่อเจอ endpoint ที่ทำงานได้
+          }
+        } catch (userError: any) {
+          console.log(`❌ User endpoint ${endpoint} failed:`, userError.status);
+          continue; // ลอง endpoint ถัดไป
         }
-      } catch (userError) {
-        console.log('⚠️ Could not load user data from backend:', userError);
+      }
+
+      if (!userDataFound) {
+        console.log('⚠️ No PostgreSQL user data found, using Firebase data');
+        // ✅ ถ้าไม่สามารถดึงข้อมูลจาก backend ได้ ให้ใช้ข้อมูลจาก Firebase
+        this.username = this.currentUser.displayName || this.currentUser.email?.split('@')[0] || 'ไม่ระบุ';
+        this.userName = this.currentUser.displayName || this.currentUser.email?.split('@')[0] || 'ไม่ระบุ';
+        this.userEmail = this.currentUser.email || 'ไม่ระบุ';
+        console.log('👤 Using Firebase data as fallback:', {
+          username: this.username,
+          userName: this.userName,
+          userEmail: this.userEmail
+        });
       }
       
       // ดึงข้อมูล device
