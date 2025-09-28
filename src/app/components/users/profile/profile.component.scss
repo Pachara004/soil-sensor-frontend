@@ -484,6 +484,35 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
     }
 }
 
+.change-password-button {
+    background: $secondary-color;
+    color: white;
+    border: none;
+    padding: 14px 20px;
+    border-radius: $border-radius-sm;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+    transition: $transition;
+    box-shadow: $shadow-green;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    &:hover {
+        background: darken($secondary-color, 10%);
+        transform: translateY(-3px);
+        box-shadow: $shadow-hover;
+    }
+
+    i {
+        font-size: 16px;
+    }
+}
+
 
 // Animations - เดียวกับหน้า main
 @keyframes pulse {

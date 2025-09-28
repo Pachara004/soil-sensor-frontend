@@ -1,5 +1,6 @@
 import { Component, ViewChildren, QueryList, ElementRef } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
+import { Location } from '@angular/common';
 import {
   Auth,
   createUserWithEmailAndPassword,
@@ -70,6 +71,7 @@ export class AdregisterComponent { // cSpell:ignore Adregister
     private http: HttpClient,
     private router: Router,
     private route: ActivatedRoute,
+    private location: Location,
     private auth: Auth,
     private constants: Constants,
     private authService: AuthService
@@ -87,7 +89,8 @@ export class AdregisterComponent { // cSpell:ignore Adregister
     if (this.step > 1) {
       this.step--;
     } else {
-      this.router.navigate(['/']);
+      // ใช้ history.back() แทนการ navigate ไปหน้าเฉพาะ
+      this.location.back();
     }
   }
 

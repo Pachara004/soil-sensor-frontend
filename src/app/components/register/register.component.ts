@@ -1,5 +1,6 @@
 import { Component, ViewChildren, QueryList, ElementRef } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
+import { Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -59,6 +60,7 @@ export class RegisterComponent {
     private http: HttpClient,
     private router: Router,
     private route: ActivatedRoute,
+    private location: Location,
     private auth: Auth,
     private constants: Constants,
     private authService: AuthService
@@ -81,7 +83,8 @@ export class RegisterComponent {
     if (this.step > 1) {
       this.step--;
     } else {
-      this.router.navigate(['/']);
+      // ใช้ history.back() แทนการ navigate ไปหน้าเฉพาะ
+      this.location.back();
     }
   }
 

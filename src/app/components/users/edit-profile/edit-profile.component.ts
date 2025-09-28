@@ -116,52 +116,81 @@ export class EditProfileComponent implements OnInit {
       return;
     }
 
-    if (!this.userID || !this.username) {
-      this.notificationService.showNotification('error', 'ข้อมูลไม่ครบถ้วน', 'ไม่พบรหัสผู้ใช้หรือชื่อผู้ใช้');
+    if (!this.currentUser || !this.username) {
+      this.notificationService.showNotification('error', 'ข้อมูลไม่ครบถ้วน', 'ไม่พบข้อมูลผู้ใช้หรือชื่อผู้ใช้');
       return;
     }
 
     try {
-      const updates: Partial<UserData> = {
-        username: this.username,
-        email: this.email,
-        phoneNumber: this.phoneNumber,
+      console.log('💾 Saving profile data...');
+      
+      // ✅ ดึง Firebase ID token
+      const token = await this.currentUser.getIdToken();
+      console.log('🔑 Firebase ID token obtained for save profile');
+      
+      // ✅ เตรียมข้อมูลสำหรับอัปเดต
+      const updateData: any = {
+        user_name: this.username,
+        user_email: this.email,
+        user_phone: this.phoneNumber
       };
+      
+      // ✅ ถ้ามีรหัสผ่านใหม่ ให้เพิ่มเข้าไป
       if (this.password) {
-        updates.password = this.password;
+        updateData.user_password = this.password;
       }
-
-      await this.http
-        .put(`${this.apiUrl}/api/users/${this.username}`, updates)
-        .toPromise();
-
-      // อัปเดต localStorage
-      localStorage.setItem(
-        'user',
-        JSON.stringify({
-          userID: this.userID,
-          username: this.username,
-          email: this.email,
-          phoneNumber: this.phoneNumber,
+      
+      console.log('📤 Sending update data:', updateData);
+      
+      // ✅ ใช้ endpoint ที่มีอยู่จริง - ต้องใช้ userid แทน username
+      // ดึง userid จาก backend ก่อน
+      let userid = null;
+      try {
+        const userResponse = await lastValueFrom(
+          this.http.get<any>(`${this.apiUrl}/api/auth/me`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        );
+        userid = userResponse.user?.userid || userResponse.userid;
+        console.log('👤 User ID from backend:', userid);
+      } catch (userError) {
+        console.error('❌ Could not get user ID:', userError);
+        this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'ไม่สามารถดึงข้อมูลผู้ใช้ได้');
+        return;
+      }
+      
+      if (!userid) {
+        this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'ไม่พบรหัสผู้ใช้');
+        return;
+      }
+      
+      const response = await lastValueFrom(
+        this.http.put<any>(`${this.apiUrl}/api/users/${userid}`, updateData, {
+          headers: { 'Authorization': `Bearer ${token}` }
         })
       );
-      localStorage.setItem(
-        'admin',
-        JSON.stringify({
-          username: this.username,
-        })
-      );
-
+      
+      console.log('✅ Profile updated successfully:', response);
+      
       this.notificationService.showNotification('success', 'บันทึกข้อมูลสำเร็จ!', 'ข้อมูลของคุณได้รับการอัปเดตแล้ว', true, 'กลับ', () => {
         this.location.back();
       });
-    } catch (error) {
-      console.error('ข้อผิดพลาดในการบันทึก:', error);
-      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการบันทึก');
+    } catch (error: any) {
+      console.error('❌ Error saving profile:', error);
+      
+      let errorMessage = 'เกิดข้อผิดพลาดในการบันทึก';
+      if (error.error?.message) {
+        errorMessage = error.error.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', errorMessage);
     }
   }
 
   goBack() {
+    // ใช้ history.back() แทนการ navigate ไปหน้าเฉพาะ
     this.location.back();
   }
 

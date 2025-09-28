@@ -125,44 +125,73 @@ export class ReportsComponent {
     this.isUploading = true;
 
     try {
-      let imageUrls: string[] = [];
-
-      // อัปโหลดรูปภาพไปยัง Firebase Storage (ถ้ามี)
-      if (this.selectedImages.length > 0) {
-        this.notificationService.showNotification('info', 'กำลังอัปโหลดรูปภาพ...', 'กรุณารอสักครู่');
-        imageUrls = await this.uploadImagesToFirebase();
-      }
-
-      // ส่งข้อมูลไปยัง backend
-      const reportData = {
-        subject: this.subject,
-        message: this.message,
-        timestamp: new Date().toISOString(),
-        images: imageUrls,
-        userId: this.currentUser?.uid || null,
-        userEmail: this.currentUser?.email || null
-      };
-
       // ดึง Firebase ID token
       const token = await this.currentUser.getIdToken();
       
       if (!token) {
         throw new Error('ไม่สามารถรับ Firebase token ได้');
       }
+
+      // 1. สร้าง report ก่อน
+      const reportData = {
+        subject: this.subject,
+        message: this.message,
+        timestamp: new Date().toISOString(),
+        userId: this.currentUser?.uid || null,
+        userEmail: this.currentUser?.email || null
+      };
+
+      console.log('📊 Creating report:', reportData);
       
-      // Debug logging
-      console.log('🔑 Firebase Token:', token.substring(0, 20) + '...');
-      console.log('📊 Report Data:', reportData);
-      console.log('🌐 API URL:', `${this.apiUrl}/api/reports`);
-      
-      await this.http
-        .post(`${this.apiUrl}/api/reports`, reportData, {
+      const reportResponse = await this.http
+        .post<any>(`${this.apiUrl}/api/reports`, reportData, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         })
         .toPromise();
+
+      console.log('✅ Report created:', reportResponse);
+      const reportId = reportResponse.report?.reportid || reportResponse.reportid;
+
+      if (!reportId) {
+        throw new Error('ไม่สามารถรับ Report ID ได้');
+      }
+
+      // 2. อัปโหลดรูปภาพไปยัง Firebase Storage (ถ้ามี)
+      if (this.selectedImages.length > 0) {
+        this.notificationService.showNotification('info', 'กำลังอัปโหลดรูปภาพ...', 'กรุณารอสักครู่');
+        
+        const imageUrls = await this.uploadImagesToFirebase();
+        console.log('📸 Uploaded images:', imageUrls);
+
+        // 3. บันทึก URL ของภาพใน table image
+        for (const imageUrl of imageUrls) {
+          try {
+            const imageData = {
+              reportid: reportId,
+              imageUrl: imageUrl
+            };
+
+            console.log('💾 Saving image to database:', imageData);
+            
+            await this.http
+              .post(`${this.apiUrl}/api/images`, imageData, {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              })
+              .toPromise();
+
+            console.log('✅ Image saved to database:', imageUrl);
+          } catch (imageError) {
+            console.error('❌ Error saving image to database:', imageError);
+            // ไม่ throw error เพื่อไม่ให้กระทบการสร้าง report
+          }
+        }
+      }
 
       this.notificationService.showNotification('success', 'ส่งเรื่องสำเร็จ!', 'ทีมงานจะติดต่อกลับโดยเร็ว', true, 'กลับ', () => {
         this.location.back();
@@ -172,9 +201,17 @@ export class ReportsComponent {
       this.subject = '';
       this.message = '';
       this.selectedImages = [];
-    } catch (error) {
-      console.error('Error sending report:', error);
-      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการส่งรายงาน');
+    } catch (error: any) {
+      console.error('❌ Error sending report:', error);
+      
+      let errorMessage = 'เกิดข้อผิดพลาดในการส่งรายงาน';
+      if (error.error?.message) {
+        errorMessage = error.error.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', errorMessage);
     } finally {
       this.isUploading = false;
     }

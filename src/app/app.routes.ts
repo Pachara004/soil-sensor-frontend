@@ -90,4 +90,11 @@ export const routes: Routes = [
         (m) => m.AdregisterComponent
       ),
   },
+  {
+    path: 'change-password',
+    loadComponent: () =>
+      import('./components/users/change-password/change-password.component').then(
+        (m) => m.ChangePasswordComponent
+      ),
+  },
 ];

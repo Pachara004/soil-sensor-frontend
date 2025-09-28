@@ -62,6 +62,18 @@ export class AdmainComponent implements OnInit, OnDestroy {
   selectedDeviceId: string = '';
   selectedDevice: any = null;
   suggestOpen = false;
+  
+  // ✅ Dropdown search properties
+  showDropdown = false;
+  selectedIndex = -1;
+  
+  // ✅ User search properties
+  userSearchQuery = '';
+  
+  // ✅ Device search properties
+  deviceSearchQuery = '';
+  devicesDisplay: any[] = [];
+  loadingDevices = false;
 
   // Stub fields used in template
   pendingClaims: any[] = [];
@@ -192,31 +204,119 @@ export class AdmainComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Stub method used in template input handler
+  // ✅ Enhanced User input and selection methods
   onUserInput() {
-    // no-op stub to satisfy template binding
+    const query = this.newDeviceUser?.toLowerCase() || '';
+    this.selectedIndex = -1;
+    
+    if (query.length > 0) {
+      this.filteredUsers = this.allUsers.filter(user => {
+        const username = user.username?.toLowerCase() || '';
+        const email = user.email?.toLowerCase() || '';
+        return username.includes(query) || email.includes(query);
+      });
+      this.showDropdown = true;
+    } else {
+      this.filteredUsers = [];
+      this.showDropdown = false;
+    }
+  }
+
+  onInputBlur() {
+    // Delay hiding dropdown to allow click events
+    setTimeout(() => {
+      this.showDropdown = false;
+      this.selectedIndex = -1;
+    }, 200);
+  }
+
+  selectUser(username: string) {
+    this.newDeviceUser = username;
+    this.filteredUsers = [];
+    this.showDropdown = false;
+    this.selectedIndex = -1;
+  }
+
+  onKeyDown(event: KeyboardEvent) {
+    if (!this.showDropdown || this.filteredUsers.length === 0) return;
+
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.selectedIndex = Math.min(this.selectedIndex + 1, this.filteredUsers.length - 1);
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.selectedIndex = Math.max(this.selectedIndex - 1, -1);
+        break;
+      case 'Enter':
+        event.preventDefault();
+        if (this.selectedIndex >= 0 && this.selectedIndex < this.filteredUsers.length) {
+          this.selectUser(this.filteredUsers[this.selectedIndex].username);
+        }
+        break;
+      case 'Escape':
+        this.showDropdown = false;
+        this.selectedIndex = -1;
+        break;
+    }
   }
 
   async loadDevices() {
     try {
+      this.loadingDevices = true;
       const devicesResult = await this.adminService.getDevices();
       
       // ✅ ตรวจสอบว่า devicesResult เป็น array หรือไม่
       if (Array.isArray(devicesResult)) {
         this.devices = devicesResult;
-    } else {
+      } else {
         console.warn('⚠️ getDevices() returned non-array:', devicesResult);
         this.devices = [];
       }
       
-      this.cdr.detectChanges();
-      console.log('✅ Devices loaded successfully:', {
-        totalDevices: this.devices.length,
-        devices: this.devices
+      // ✅ เรียงข้อมูลตาม device id (จากน้อยไปมาก)
+      this.devices.sort((a, b) => {
+        const aId = a['id'] || a['deviceid'] || 0;
+        const bId = b['id'] || b['deviceid'] || 0;
+        return aId - bId;
       });
+      
+      this.devicesDisplay = [...this.devices];
+      this.loadingDevices = false;
+      this.cdr.detectChanges();
+      
+      console.log('✅ Devices loaded and sorted by device id:', {
+        totalDevices: this.devices.length,
+        devices: this.devices.map(d => ({
+          deviceid: d['id'] || d['deviceid'],
+          name: d['display_name'] || d['name'],
+          userid: d['user_id'] || d['userid'],
+          username: d['user_name'] || this.getDeviceUserName(d['user_id'] || d['userid']),
+          useremail: d['user_email'] || 'ไม่ระบุ',
+          status: d['status'],
+          created_at: d['created_at'],
+          updated_at: d['updated_at'],
+          description: d['description']
+        }))
+      });
+
+      // ✅ แสดงข้อมูลอุปกรณ์แบบตารางใน console
+      console.table(this.devices.map(d => ({
+        'Device ID': d['id'] || d['deviceid'],
+        'ชื่ออุปกรณ์': d['display_name'] || d['name'],
+        'User ID': d['user_id'] || d['userid'],
+        'ชื่อผู้ใช้': d['user_name'] || this.getDeviceUserName(d['user_id'] || d['userid']),
+        'อีเมลผู้ใช้': d['user_email'] || 'ไม่ระบุ',
+        'สถานะ': d['status'],
+        'สร้างเมื่อ': d['created_at'] ? this.formatDate(d['created_at']) : 'ไม่ระบุ',
+        'อัปเดตล่าสุด': d['updated_at'] ? this.formatDate(d['updated_at']) : 'ไม่ระบุ'
+      })));
     } catch (error) {
       console.error('❌ Error loading devices:', error);
       this.devices = [];
+      this.devicesDisplay = [];
+      this.loadingDevices = false;
       this.cdr.detectChanges();
       this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการโหลดอุปกรณ์');
     }
@@ -235,6 +335,13 @@ export class AdmainComponent implements OnInit, OnDestroy {
         this.allUsers = [];
       }
       
+      // ✅ เรียงข้อมูลตาม userid (จากน้อยไปมาก)
+      this.allUsers.sort((a, b) => {
+        const aId = a['userid'] || a['id'] || 0;
+        const bId = b['userid'] || b['id'] || 0;
+        return aId - bId;
+      });
+      
       this.allUsersDisplay = [...this.allUsers];
       this.filteredUsers = [...this.allUsers];
       this.totalUsers = this.allUsers.length;
@@ -242,9 +349,13 @@ export class AdmainComponent implements OnInit, OnDestroy {
       this.loadingUsers = false;
       this.cdr.detectChanges();
       
-      console.log('✅ Users loaded successfully:', {
+      console.log('✅ Users loaded and sorted by userid:', {
         totalUsers: this.totalUsers,
-        users: this.allUsers
+        users: this.allUsers.map(u => ({
+          userid: u['userid'] || u['id'],
+          username: u['user_name'] || u['username'],
+          role: u['role'] || u['type']
+        }))
       });
     } catch (error) {
       console.error('❌ Error loading users:', error);
@@ -266,6 +377,29 @@ export class AdmainComponent implements OnInit, OnDestroy {
         (user.email && user.email.toLowerCase().includes(query.toLowerCase()))
     );
     this.totalUsersFiltered = this.filteredUsers.length;
+    this.cdr.detectChanges();
+  }
+
+  // ✅ ฟังก์ชันค้นหาผู้ใช้ในรายการทั้งหมด
+  onUserSearch() {
+    const query = this.userSearchQuery?.toLowerCase() || '';
+    
+    if (query.length > 0) {
+      this.allUsersDisplay = this.allUsers.filter(user => {
+        const username = (user['user_name'] || user['username'] || '').toLowerCase();
+        const email = (user['user_email'] || user['email'] || '').toLowerCase();
+        const userid = String(user['userid'] || user['id'] || '');
+        const role = (user['role'] || user['type'] || '').toLowerCase();
+        
+        return username.includes(query) || 
+               email.includes(query) || 
+               userid.includes(query) ||
+               role.includes(query);
+      });
+    } else {
+      this.allUsersDisplay = [...this.allUsers];
+    }
+    
     this.cdr.detectChanges();
   }
 
@@ -493,10 +627,11 @@ export class AdmainComponent implements OnInit, OnDestroy {
   getDeviceUserName(userId: number): string {
     if (!userId) return 'ไม่ระบุ';
     
+    // ✅ ใช้ข้อมูลจาก allUsers array
     const user = this.allUsers.find(u => 
       u['id'] === userId || u['userid'] === userId
     );
-    return user ? user.username : `User ID: ${userId}`;
+    return user ? (user['user_name'] || user['username'] || `User ID: ${userId}`) : `User ID: ${userId}`;
   }
 
   viewDevice(device: any) {
@@ -529,5 +664,138 @@ export class AdmainComponent implements OnInit, OnDestroy {
 
   goToReports() {
     this.router.navigate(['/mail']);
+  }
+
+  // ✅ User management methods
+  editUser(user: UserData) {
+    this.editingUser = { ...user };
+    this.newPassword = '';
+    this.showEditModal = true;
+  }
+
+  closeEditModal() {
+    this.showEditModal = false;
+    this.editingUser = { username: '' };
+    this.newPassword = '';
+  }
+
+  async saveUserChanges() {
+    if (!this.editingUser.username) {
+      this.notificationService.showNotification('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณาเลือกผู้ใช้ที่ต้องการแก้ไข');
+      return;
+    }
+
+    try {
+      const updateData: any = {
+        user_name: this.editingUser.username,
+        user_email: this.editingUser.email,
+        role: this.editingUser.type || 'user'
+      };
+
+      if (this.newPassword && this.newPassword.trim()) {
+        updateData.user_password = this.newPassword;
+      }
+
+      const token = await this.currentUser.getIdToken();
+      const response = await lastValueFrom(
+        this.http.put(`${this.apiUrl}/api/users/${this.editingUser.username}`, updateData, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      );
+
+      this.notificationService.showNotification('success', 'บันทึกสำเร็จ', 'ข้อมูลผู้ใช้ถูกอัปเดตเรียบร้อยแล้ว');
+      this.closeEditModal();
+      await this.loadAllUsersOnce();
+    } catch (error: any) {
+      console.error('Error saving user changes:', error);
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้');
+    }
+  }
+
+  async deleteUser(username: string) {
+    this.notificationService.showNotification('warning', 'ยืนยันการลบ', `ต้องการลบผู้ใช้ ${username} จริงหรือไม่?`, true, 'ลบ', async () => {
+      try {
+        const token = await this.currentUser.getIdToken();
+        await lastValueFrom(
+          this.http.delete(`${this.apiUrl}/api/users/${username}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        );
+
+        this.notificationService.showNotification('success', 'ลบสำเร็จ', 'ผู้ใช้ถูกลบเรียบร้อยแล้ว');
+        await this.loadAllUsersOnce();
+      } catch (error: any) {
+        console.error('Error deleting user:', error);
+        this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'ไม่สามารถลบผู้ใช้ได้');
+      }
+    });
+  }
+
+  // ✅ ฟังก์ชันดูรายละเอียดผู้ใช้
+  viewUserDetails(user: UserData) {
+    const userDetails = {
+      'User ID': user['userid'] || user['id'] || 'ไม่ระบุ',
+      'ชื่อผู้ใช้': user['user_name'] || user['username'] || 'ไม่ระบุ',
+      'อีเมล': user['user_email'] || user['email'] || 'ไม่ระบุ',
+      'เบอร์โทร': user['user_phone'] || user['phone'] || 'ไม่ระบุ',
+      'ประเภท': user['role'] === 'admin' || user['type'] === 'admin' ? 'Admin' : 'User',
+      'สร้างเมื่อ': this.formatDate(user['created_at'] || user['createdAt']),
+      'อัปเดตล่าสุด': this.formatDate(user['updated_at'] || user['updatedAt']),
+      'Firebase UID': user['firebase_uid'] || user['firebaseUid'] || 'ไม่ระบุ'
+    };
+
+    const detailsText = Object.entries(userDetails)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('\n');
+
+    this.notificationService.showNotification('info', 'รายละเอียดผู้ใช้', detailsText, true, 'ปิด');
+  }
+
+  // ✅ ฟังก์ชันค้นหาอุปกรณ์ในรายการทั้งหมด
+  onDeviceSearch() {
+    const query = this.deviceSearchQuery?.toLowerCase() || '';
+    
+    if (query.length > 0) {
+      this.devicesDisplay = this.devices.filter(device => {
+        const name = (device['display_name'] || device['name'] || '').toLowerCase();
+        const deviceId = String(device['id'] || device['deviceid'] || '');
+        const status = (device['status'] || '').toLowerCase();
+        const userName = (device['user_name'] || this.getDeviceUserName(device['user_id'] || device['userid'])).toLowerCase();
+        const userEmail = (device['user_email'] || '').toLowerCase();
+        const description = (device['description'] || '').toLowerCase();
+        
+        return name.includes(query) || 
+               deviceId.includes(query) || 
+               status.includes(query) ||
+               userName.includes(query) ||
+               userEmail.includes(query) ||
+               description.includes(query);
+      });
+    } else {
+      this.devicesDisplay = [...this.devices];
+    }
+    
+    this.cdr.detectChanges();
+  }
+
+  // ✅ ฟังก์ชันแก้ไขข้อมูลอุปกรณ์
+  editDevice(device: any) {
+    const deviceDetails = {
+      'Device ID': device['id'] || device['deviceid'] || 'ไม่ระบุ',
+      'ชื่ออุปกรณ์': device['display_name'] || device['name'] || 'ไม่ระบุ',
+      'User ID': device['user_id'] || device['userid'] || 'ไม่ระบุ',
+      'ชื่อผู้ใช้': device['user_name'] || this.getDeviceUserName(device['user_id'] || device['userid']),
+      'อีเมลผู้ใช้': device['user_email'] || 'ไม่ระบุ',
+      'สถานะ': device['status'] || 'ไม่ระบุ',
+      'คำอธิบาย': device['description'] || 'ไม่ระบุ',
+      'สร้างเมื่อ': this.formatDate(device['created_at']),
+      'อัปเดตล่าสุด': this.formatDate(device['updated_at'])
+    };
+
+    const detailsText = Object.entries(deviceDetails)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('\n');
+
+    this.notificationService.showNotification('info', 'รายละเอียดอุปกรณ์', detailsText, true, 'ปิด');
   }
 }

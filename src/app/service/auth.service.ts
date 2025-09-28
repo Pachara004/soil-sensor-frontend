@@ -6,6 +6,9 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signOut,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
 } from '@angular/fire/auth';
 import { catchError, throwError } from 'rxjs'; // เพิ่มสำหรับจัดการ error
 import { Observable } from 'rxjs';
@@ -111,6 +114,27 @@ export class AuthService {
       .then((res) => res?.exists || false); // รับรองว่าได้ boolean แม้ res เป็น undefined
   }
 
+  // Firebase Auth change password method
+  async changePasswordWithFirebase(currentPassword: string, newPassword: string): Promise<void> {
+    const user = this.auth.currentUser;
+    if (!user) {
+      throw new Error('No user logged in');
+    }
+
+    try {
+      // Re-authenticate user with current password
+      const credential = EmailAuthProvider.credential(user.email!, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+
+      // Update password
+      await updatePassword(user, newPassword);
+    } catch (error: any) {
+      console.error('Error changing password:', error);
+      throw error;
+    }
+  }
+
+  // Legacy method for backend API (kept for compatibility)
   changeUserPassword(oldPassword: string, newPassword: string): Promise<void> {
     return this.http
       .put(`${this.apiUrl}/api/auth/change-password`, {

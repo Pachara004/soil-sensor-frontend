@@ -1,10 +1,10 @@
 <div class="container">
-  <div class="card">
-    <!-- ปุ่มย้อนกลับ -->
-    <div class="back" (click)="goBack()">
-      <i class="fas fa-arrow-left"></i>
-    </div>
+  <!-- Back arrow อยู่นอก card -->
+  <button class="back" (click)="goBack()">
+    <i class="fas fa-arrow-left"></i>
+  </button>
 
+  <div class="card">
     <!-- Logo -->
     <div class="logo">
       <div class="logo-icon">
@@ -32,6 +32,10 @@
       <div class="otp-group">
         <label>กรุณากรอก OTP ที่ส่งไปยังอีเมล</label>
         <p class="email-display">{{ email }}</p>
+        <div class="reference-info" *ngIf="referenceNumber">
+          <p class="reference-label">เลขอ้างอิง:</p>
+          <p class="reference-number">{{ referenceNumber }}</p>
+        </div>
         <div class="otp-boxes">
           <input *ngFor="let box of otpInputsArray; let i = index" maxlength="1" [(ngModel)]="otp[i]"
             (input)="moveToNext($event, i)" (keydown)="onKeyDown($event, i)" #otpInput />

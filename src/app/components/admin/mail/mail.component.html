@@ -4,18 +4,6 @@
     <div class="header-section">
       <h2 class="mail-title">กล่องข้อความผู้ใช้</h2>
       <div class="header-actions">
-        <button class="search-images-btn" (click)="searchRealImagesInFirebase()" [disabled]="loading">
-          <i class="fas fa-search"></i>
-          ค้นหาภาพจริง
-        </button>
-        <button class="upload-test-btn" (click)="uploadTestFileToFirebase()" [disabled]="loading">
-          <i class="fas fa-upload"></i>
-          อัปโหลดทดสอบ
-        </button>
-        <button class="test-firebase-btn" (click)="testFirebaseStorageConnection()" [disabled]="loading">
-          <i class="fas fa-cloud"></i>
-          ทดสอบ Firebase
-        </button>
         <button class="refresh-btn" (click)="refreshReports()" [disabled]="loading">
           <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i>
           <span *ngIf="!loading">รีเฟรช</span>
@@ -35,10 +23,12 @@
           <div class="subject-row">
             <div class="subject">{{ report.subject }}</div>
             <div class="status-badge" [ngClass]="'status-' + (report.status || 'new')">
-              {{ report.status === 'new' ? 'ใหม่' : report.status === 'read' ? 'อ่านแล้ว' : report.status === 'resolved' ? 'แก้ไขแล้ว' : 'ใหม่' }}
+              {{ report.status === 'new' ? 'ใหม่' : report.status === 'read' ? 'อ่านแล้ว' : report.status === 'resolved'
+              ? 'แก้ไขแล้ว' : 'ใหม่' }}
             </div>
             <div class="priority-badge" [ngClass]="'priority-' + (report.priority || 'medium')">
-              {{ report.priority === 'high' ? 'สูง' : report.priority === 'medium' ? 'ปานกลาง' : report.priority === 'low' ? 'ต่ำ' : 'ปานกลาง' }}
+              {{ report.priority === 'high' ? 'สูง' : report.priority === 'medium' ? 'ปานกลาง' : report.priority ===
+              'low' ? 'ต่ำ' : 'ปานกลาง' }}
             </div>
           </div>
           <div class="meta">
@@ -52,12 +42,9 @@
           <div class="message">{{ report.message | slice:0:150 }}{{ report.message.length > 150 ? '...' : '' }}</div>
           <div *ngIf="report.images && report.images.length > 0" class="image-preview">
             <div class="preview-thumbnails">
-              <img *ngFor="let image of report.images | slice:0:3; let i = index" 
-                   [src]="image" 
-                   [alt]="'Preview ' + (i + 1)"
-                   class="thumbnail"
-                   (click)="viewImage(image)"
-                   (error)="$event.target.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI0UwRTBFMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiM3NTc1NzUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JTUc8L3RleHQ+PC9zdmc+'">
+              <img *ngFor="let image of report.images | slice:0:3; let i = index" [src]="image"
+                [alt]="'Preview ' + (i + 1)" class="thumbnail" (click)="viewImage(image)"
+                (error)="$event.target.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI0UwRTBFMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiM3NTc1NzUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JTUc8L3RleHQ+PC9zdmc+'">
               <div *ngIf="report.images.length > 3" class="more-images">
                 +{{ report.images.length - 3 }}
               </div>
@@ -90,16 +77,18 @@
           <h3>{{ selectedReport.subject }}</h3>
           <div class="header-badges">
             <div class="status-badge" [ngClass]="'status-' + (selectedReport.status || 'new')">
-              {{ selectedReport.status === 'new' ? 'ใหม่' : selectedReport.status === 'read' ? 'อ่านแล้ว' : selectedReport.status === 'resolved' ? 'แก้ไขแล้ว' : 'ใหม่' }}
+              {{ selectedReport.status === 'new' ? 'ใหม่' : selectedReport.status === 'read' ? 'อ่านแล้ว' :
+              selectedReport.status === 'resolved' ? 'แก้ไขแล้ว' : 'ใหม่' }}
             </div>
             <div class="priority-badge" [ngClass]="'priority-' + (selectedReport.priority || 'medium')">
-              {{ selectedReport.priority === 'high' ? 'สูง' : selectedReport.priority === 'medium' ? 'ปานกลาง' : selectedReport.priority === 'low' ? 'ต่ำ' : 'ปานกลาง' }}
+              {{ selectedReport.priority === 'high' ? 'สูง' : selectedReport.priority === 'medium' ? 'ปานกลาง' :
+              selectedReport.priority === 'low' ? 'ต่ำ' : 'ปานกลาง' }}
             </div>
           </div>
         </div>
         <button class="close-btn" (click)="closeReportModal()">×</button>
       </div>
-      
+
       <div class="modal-body">
         <div class="report-info">
           <div class="info-row">
@@ -141,13 +130,15 @@
           </div>
         </div>
       </div>
-      
+
       <div class="modal-footer">
         <div class="status-actions">
-          <button *ngIf="selectedReport.status !== 'read'" class="mark-read-btn" (click)="updateReportStatus(selectedReport.key, 'read')">
+          <button *ngIf="selectedReport.status !== 'read'" class="mark-read-btn"
+            (click)="updateReportStatus(selectedReport.key, 'read')">
             <i class="fas fa-check"></i> ทำเครื่องหมายว่าอ่านแล้ว
           </button>
-          <button *ngIf="selectedReport.status !== 'resolved'" class="resolve-btn" (click)="updateReportStatus(selectedReport.key, 'resolved')">
+          <button *ngIf="selectedReport.status !== 'resolved'" class="resolve-btn"
+            (click)="updateReportStatus(selectedReport.key, 'resolved')">
             <i class="fas fa-check-circle"></i> แก้ไขแล้ว
           </button>
         </div>

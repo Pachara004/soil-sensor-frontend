@@ -104,6 +104,14 @@ export class ProfileComponent implements OnInit {
               tel: userData.tel,
               contact: userData.contact
             });
+            console.log('👥 Role fields available:', {
+              role: userData.role,
+              type: userData.type,
+              userType: userData.userType,
+              user_type: userData.user_type,
+              userRole: userData.userRole,
+              user_role: userData.user_role
+            });
             
             if (userData.user_name || userData.username || userData.name) {
               this.username = userData.user_name || userData.username || userData.name || this.username;
@@ -132,8 +140,13 @@ export class ProfileComponent implements OnInit {
               console.log('❌ No phone number found in backend data');
             }
             
-            if (userData.type || userData.userType) {
-              this.userType = userData.type || userData.userType || 'user';
+            // ตรวจสอบ role field จาก PostgreSQL
+            if (userData.role || userData.type || userData.userType) {
+              this.userType = userData.role || userData.type || userData.userType || 'user';
+              console.log('👥 User role/type found:', this.userType);
+            } else {
+              console.log('❌ No role/type found in backend data, using default: user');
+              this.userType = 'user';
             }
             
             console.log('👤 Updated profile data from backend');
@@ -164,11 +177,16 @@ export class ProfileComponent implements OnInit {
   }
 
   goBack() {
+    // ใช้ history.back() แทนการ navigate ไปหน้าเฉพาะ
     this.location.back();
   }
 
   goToEditProfile() {
     this.router.navigate(['/edit-profile']);
+  }
+
+  goToChangePassword() {
+    this.router.navigate(['/change-password']);
   }
 
   goToContactAdmin() {
