@@ -14,6 +14,8 @@ interface Device {
   updated_at: string;
   userid: number;
   status: 'online' | 'offline';
+  device_type?: boolean; // ✅ เพิ่ม device_type property
+  [key: string]: any; // ✅ เพิ่ม index signature เพื่อรองรับ properties อื่นๆ
 }
 
 type LivePayload = {
@@ -253,11 +255,17 @@ export class MainComponent implements OnInit, OnDestroy {
         console.log('✅ Devices loaded from PostgreSQL:', response);
         this.devices = Array.isArray(response) ? response : [];
         
-        // ✅ ตั้งค่าสถานะ offline สำหรับทุกอุปกรณ์ (ยังไม่มีการเชื่อม IoT)
-        this.devices = this.devices.map(device => ({
-          ...device,
-          status: 'offline' as 'online' | 'offline'
-        }));
+        // ✅ ใช้ device_type จาก database: false = test device (online), true = production device (offline)
+        this.devices = this.devices.map(device => {
+          const isTestDevice = device.device_type === false; // false = test device, true = production device
+          
+          console.log('🔍 Device:', device.device_name, 'DB Type:', device.device_type, 'Is Test:', isTestDevice);
+          
+          return {
+            ...device,
+            status: isTestDevice ? 'online' as 'online' | 'offline' : 'offline' as 'online' | 'offline'
+          };
+        });
         
       } catch (deviceError: any) {
         console.error('❌ Error loading devices from PostgreSQL:', deviceError);
@@ -387,13 +395,22 @@ export class MainComponent implements OnInit, OnDestroy {
       const token = await currentUser.getIdToken();
       console.log('🔑 Firebase ID token obtained for add device');
 
+      // ✅ ตรวจสอบว่าชื่ออุปกรณ์มีคำว่า "test" หรือไม่
+      const deviceName = this.claimDeviceId.trim();
+      const isTestDevice = deviceName.toLowerCase().includes('test');
+      
       const requestData = {
-        deviceId: this.claimDeviceId.trim(),
-        device_name: this.claimDeviceId.trim(),
+        deviceId: isTestDevice ? `esp32-soil-test-${Date.now()}` : deviceName,
+        device_name: isTestDevice ? `esp32-soil-test-${Date.now()}` : deviceName,
+        status: isTestDevice ? 'online' : 'offline', // ✅ test device = online, อุปกรณ์ทั่วไป = offline
+        device_type: isTestDevice ? false : true, // ✅ false = test device, true = production device
+        description: isTestDevice ? 'อุปกรณ์ทดสอบ ESP32 Soil Sensor สำหรับทดสอบ API measurement' : 'อุปกรณ์ทั่วไป'
       };
       
       console.log('📤 Sending request to:', `${this.apiUrl}/api/devices`);
       console.log('📤 Request data:', requestData);
+      console.log('🔍 Is Test Device:', isTestDevice);
+      console.log('🔍 Device Status:', requestData.status);
 
       const response = await lastValueFrom(
         this.http.post<ClaimResponse>(`${this.apiUrl}/api/devices`, requestData, {
@@ -407,6 +424,8 @@ export class MainComponent implements OnInit, OnDestroy {
       console.log('✅ Add device response:', response);
       console.log('✅ Response success:', response.success);
       console.log('✅ Response message:', response.message);
+      console.log('✅ Response device:', response.device);
+      console.log('✅ Response device status:', response.device?.status);
 
       // ตรวจสอบ response หลายแบบ
       const isSuccess = response.success === true || 
@@ -419,11 +438,13 @@ export class MainComponent implements OnInit, OnDestroy {
              
              // แสดง notification popup เมื่อเพิ่มอุปกรณ์สำเร็จ
              const deviceName = this.claimDeviceId.trim();
+             const isTestDevice = deviceName.toLowerCase().includes('test');
+             const deviceType = isTestDevice ? 'ESP32-soil-test' : 'ทั่วไป';
              
              this.showNotificationPopup(
                'success',
                'เพิ่มอุปกรณ์สำเร็จ!',
-               `อุปกรณ์: ${deviceName}\n\nกดตกลงเพื่อรีเฟรซหน้า`,
+               `อุปกรณ์${deviceType}: ${isTestDevice ? `esp32-soil-test-${Date.now()}` : deviceName}\n\n${isTestDevice ? 'อุปกรณ์ทดสอบพร้อมใช้งานสำหรับทดสอบ API measurement' : 'อุปกรณ์พร้อมใช้งาน'}\n\nกดตกลงเพื่อรีเฟรซหน้า`,
                true,
                'ตกลง',
                () => {

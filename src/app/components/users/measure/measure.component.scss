@@ -275,6 +275,23 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
     color: #667eea;
     min-width: 140px;
 
+    &.test-btn {
+      border-color: #f59e0b;
+      color: #f59e0b;
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+
+      &:hover {
+        background: linear-gradient(135deg, #fde68a 0%, #f59e0b 100%);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+      }
+
+      i {
+        margin-right: 6px;
+      }
+    }
+
     &:hover {
       background: #f0f4ff;
       border-color: #667eea;

@@ -323,6 +323,38 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
     }
   }
 
+  .device-help {
+    background: linear-gradient(135deg, rgba(46, 125, 50, 0.05) 0%, rgba(76, 175, 80, 0.02) 100%);
+    border: 1px solid rgba(46, 125, 50, 0.2);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+
+    p {
+      margin: 0 0 12px 0;
+      color: $text-primary;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 20px;
+      color: $text-secondary;
+
+      li {
+        margin-bottom: 8px;
+        font-size: 13px;
+        line-height: 1.4;
+
+        strong {
+          color: $primary-color;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+
   .device-input-group {
     display: flex;
     gap: 15px;

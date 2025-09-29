@@ -37,6 +37,12 @@
       <button class="control-btn" (click)="toggleMainMap()" [ngClass]="{ active: showMainMap }">
         {{ showMainMap ? 'ซ่อนแผนที่' : 'แสดงแผนที่' }}
       </button>
+      <!-- ✅ ปุ่มสำหรับ test devices -->
+      <button class="control-btn test-btn" *ngIf="deviceName && deviceName.toLowerCase().includes('test')"
+        (click)="generateFakeSensorData()">
+        <i class="fas fa-flask"></i>
+        สร้างข้อมูลปลอมใหม่
+      </button>
     </div>
 
     <!-- ✅ ข้อมูล Device -->

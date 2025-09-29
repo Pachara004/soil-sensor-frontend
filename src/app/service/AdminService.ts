@@ -102,7 +102,10 @@ export class AdminService {
       .post(`${this.apiUrl}/api/devices`, { 
         deviceId: deviceName,
         device_name: deviceName,
-        user: user 
+        user: user,
+        status: 'offline', // ✅ ตั้งสถานะเป็น offline สำหรับอุปกรณ์ทั่วไป
+        device_type: true, // ✅ true = production device
+        description: 'อุปกรณ์ทั่วไป'
       }, { headers })
       .pipe(
         catchError((error) => {

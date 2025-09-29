@@ -99,9 +99,18 @@
       เพิ่มอุปกรณ์ใหม่
     </h3>
 
+    <div class="device-help">
+      <p><strong>💡 คำแนะนำ:</strong></p>
+      <ul>
+        <li>พิมพ์ <strong>"test"</strong> เพื่อสร้างอุปกรณ์ทดสอบ ESP32-soil-test</li>
+        <li>พิมพ์ชื่ออุปกรณ์ทั่วไป เช่น "esp32-soil-01"</li>
+        <li>อุปกรณ์ทดสอบจะตั้งเป็น online อัตโนมัติ</li>
+      </ul>
+    </div>
+
     <div class="device-input-group">
       <input class="claim-input" type="text" [(ngModel)]="claimDeviceId" (keyup.enter)="addNewDevice()"
-        placeholder="ใส่ Device ID เช่น esp32-soil-01" aria-label="Device ID">
+        placeholder="ใส่ชื่ออุปกรณ์ เช่น test device หรือ esp32-soil-01" aria-label="Device ID">
 
       <button class="claim-btn" [disabled]="requestingClaim || !claimDeviceId.trim()" (click)="addNewDevice()"
         aria-label="เพิ่มอุปกรณ์">

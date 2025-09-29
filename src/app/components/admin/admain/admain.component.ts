@@ -74,6 +74,12 @@ export class AdmainComponent implements OnInit, OnDestroy {
   deviceSearchQuery = '';
   devicesDisplay: any[] = [];
   loadingDevices = false;
+  
+  // ✅ Device simulation properties
+  simulationActive = false;
+  simulationInterval: any = null;
+  simulatedDevices: any[] = [];
+  measurementData: any[] = [];
 
   // Stub fields used in template
   pendingClaims: any[] = [];
@@ -211,10 +217,12 @@ export class AdmainComponent implements OnInit, OnDestroy {
     
     if (query.length > 0) {
       this.filteredUsers = this.allUsers.filter(user => {
-        const username = user.username?.toLowerCase() || '';
-        const email = user.email?.toLowerCase() || '';
-        return username.includes(query) || email.includes(query);
+        const username = (user['user_name'] || user['username'] || '').toLowerCase();
+        const email = (user['user_email'] || user['email'] || '').toLowerCase();
+        const userid = String(user['userid'] || user['id'] || '');
+        return username.includes(query) || email.includes(query) || userid.includes(query);
       });
+      
       this.showDropdown = true;
     } else {
       this.filteredUsers = [];
@@ -252,7 +260,9 @@ export class AdmainComponent implements OnInit, OnDestroy {
       case 'Enter':
         event.preventDefault();
         if (this.selectedIndex >= 0 && this.selectedIndex < this.filteredUsers.length) {
-          this.selectUser(this.filteredUsers[this.selectedIndex].username);
+          const selectedUser = this.filteredUsers[this.selectedIndex];
+          const username = selectedUser['user_name'] || selectedUser['username'] || '';
+          this.selectUser(username);
         }
         break;
       case 'Escape':
@@ -357,6 +367,7 @@ export class AdmainComponent implements OnInit, OnDestroy {
           role: u['role'] || u['type']
         }))
       });
+      
     } catch (error) {
       console.error('❌ Error loading users:', error);
       this.allUsers = [];
@@ -413,16 +424,258 @@ export class AdmainComponent implements OnInit, OnDestroy {
       this.notificationService.showNotification('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกชื่ออุปกรณ์และผู้ใช้');
       return;
     }
+    
     try {
-      await this.adminService.addDevice(this.newDeviceName, this.newDeviceUser);
-      this.notificationService.showNotification('success', 'เพิ่มอุปกรณ์สำเร็จ', 'อุปกรณ์ถูกเพิ่มเรียบร้อยแล้ว');
+      // ✅ ตรวจสอบว่าชื่ออุปกรณ์มีคำว่า "test" หรือไม่
+      const isTestDevice = this.newDeviceName.toLowerCase().includes('test');
+      
+      if (isTestDevice) {
+        // ✅ สร้างอุปกรณ์ทดสอบ ESP32-soil-test
+        const deviceData = {
+          device_name: `esp32-soil-test-${Date.now()}`,
+          user: this.newDeviceUser,
+          status: 'online',
+          device_type: false, // ✅ false = test device
+          description: 'อุปกรณ์ทดสอบ ESP32 Soil Sensor สำหรับทดสอบ API measurement'
+        };
+
+        // ✅ เพิ่ม Authorization token
+        const token = await this.currentUser.getIdToken();
+        const response = await this.http.post(`${this.apiUrl}/api/devices`, deviceData, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).toPromise();
+        
+        console.log('✅ ESP32 Test Device created successfully:', response);
+        console.log('🔍 Created device status:', (response as any)?.status);
+        console.log('🔍 Created device data:', response);
+        
+        this.notificationService.showNotification('success', 'เพิ่มอุปกรณ์ทดสอบสำเร็จ', 'อุปกรณ์ ESP32-soil-test ถูกเพิ่มและตั้งเป็น online แล้ว');
+        
+        // ✅ เริ่ม simulation อัตโนมัติสำหรับ test device
+        setTimeout(() => {
+          this.startDeviceSimulation();
+        }, 1000);
+      } else {
+        // ✅ สร้างอุปกรณ์ทั่วไป
+        await this.adminService.addDevice(this.newDeviceName, this.newDeviceUser);
+        this.notificationService.showNotification('success', 'เพิ่มอุปกรณ์สำเร็จ', 'อุปกรณ์ถูกเพิ่มเรียบร้อยแล้ว');
+      }
+      
+      // ✅ รีเซ็ตฟอร์ม
       this.newDeviceName = '';
       this.newDeviceUser = '';
+      
+      // ✅ โหลดข้อมูลอุปกรณ์ใหม่
       await this.loadDevices();
+      
     } catch (error) {
       console.error('Error adding device:', error);
       this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการเพิ่มอุปกรณ์');
     }
+  }
+
+  // ✅ ฟังก์ชันเพิ่มอุปกรณ์ทดสอบสำหรับ User (ใช้ในหน้า main)
+  async addUserTestDevice(deviceName: string, userId: string) {
+    try {
+      // ✅ ตรวจสอบว่าชื่ออุปกรณ์มีคำว่า "test" หรือไม่
+      const isTestDevice = deviceName.toLowerCase().includes('test');
+      
+      // ✅ สร้างอุปกรณ์ทดสอบใหม่
+      const deviceData = {
+        device_name: isTestDevice ? `esp32-soil-test-${Date.now()}` : deviceName,
+        user: userId,
+        status: isTestDevice ? 'online' : 'offline', // ✅ test device = online, อุปกรณ์ทั่วไป = offline
+        device_type: isTestDevice ? false : true, // ✅ false = test device, true = production device
+        description: isTestDevice ? 'อุปกรณ์ทดสอบ ESP32 Soil Sensor สำหรับทดสอบ API measurement' : 'อุปกรณ์ทั่วไป'
+      };
+
+      // ✅ เพิ่ม Authorization token
+      const token = await this.currentUser.getIdToken();
+      const response = await this.http.post(`${this.apiUrl}/api/devices`, deviceData, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).toPromise();
+      
+      console.log('✅ User Test Device created successfully:', response);
+      console.log('🔍 User Test Device status:', (response as any)?.status);
+      console.log('🔍 User Test Device data:', response);
+      
+      const deviceType = isTestDevice ? 'ESP32-soil-test' : 'ทั่วไป';
+      this.notificationService.showNotification('success', 'เพิ่มอุปกรณ์สำเร็จ', `อุปกรณ์${deviceType}ถูกเพิ่มและตั้งเป็น online แล้ว`);
+      
+      return response;
+      
+    } catch (error) {
+      console.error('❌ Error adding user test device:', error);
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการเพิ่มอุปกรณ์');
+      throw error;
+    }
+  }
+
+  // ✅ ฟังก์ชันเริ่มต้น Device Simulation
+  startDeviceSimulation() {
+    if (this.simulationActive) {
+      this.notificationService.showNotification('warning', 'Simulation กำลังทำงานอยู่', 'Simulation กำลังทำงานอยู่แล้ว');
+      return;
+    }
+
+    // ✅ เลือกอุปกรณ์ที่ต้องการ simulate (เฉพาะที่ status = 'online' และเป็น test device)
+    const availableDevices = this.devices.filter(device => 
+      device['status'] === 'online' && 
+      device['device_type'] === false // ✅ false = test device
+    );
+
+    if (availableDevices.length === 0) {
+      this.notificationService.showNotification('error', 'ไม่มีอุปกรณ์ทดสอบออนไลน์', 'ไม่มีอุปกรณ์ทดสอบที่สามารถ simulate ได้ กรุณาเพิ่มอุปกรณ์ที่มีคำว่า "test"');
+      return;
+    }
+
+    // ✅ เลือกอุปกรณ์ทดสอบ 3 เครื่องแรก
+    this.simulatedDevices = availableDevices.slice(0, 3);
+    this.simulationActive = true;
+    this.measurementData = [];
+
+    console.log('🚀 Starting Device Simulation for Test Devices:', {
+      simulatedDevices: this.simulatedDevices.map(d => ({
+        id: d['id'] || d['deviceid'],
+        name: d['device_name'] || d['display_name'] || d['name'],
+        type: d['device_type'] || 'unknown',
+        status: d['status']
+      }))
+    });
+
+    // ✅ เริ่มส่งข้อมูลทุก 5 วินาที
+    this.simulationInterval = setInterval(() => {
+      this.sendSimulatedMeasurements();
+    }, 5000);
+
+    this.notificationService.showNotification('success', 'Simulation เริ่มต้น', `เริ่มต้น simulation สำหรับ ${this.simulatedDevices.length} อุปกรณ์ทดสอบ ESP32-soil-test`);
+  }
+
+  // ✅ ฟังก์ชันหยุด Device Simulation
+  stopDeviceSimulation() {
+    if (!this.simulationActive) {
+      this.notificationService.showNotification('warning', 'Simulation ไม่ได้ทำงาน', 'Simulation ไม่ได้ทำงานอยู่');
+      return;
+    }
+
+    this.simulationActive = false;
+    if (this.simulationInterval) {
+      clearInterval(this.simulationInterval);
+      this.simulationInterval = null;
+    }
+
+    console.log('🛑 Stopping Device Simulation:', {
+      totalMeasurements: this.measurementData.length,
+      simulatedDevices: this.simulatedDevices.length
+    });
+
+    this.notificationService.showNotification('info', 'Simulation หยุด', `หยุด simulation หลังจากส่งข้อมูล ${this.measurementData.length} ครั้ง`);
+  }
+
+  // ✅ ฟังก์ชันส่งข้อมูล Simulation
+  async sendSimulatedMeasurements() {
+    if (!this.simulationActive || this.simulatedDevices.length === 0) return;
+
+    for (const device of this.simulatedDevices) {
+      try {
+        // ✅ สร้างข้อมูล measurement แบบ random สำหรับ ESP32 Soil Sensor
+        const measurementData = {
+          device_id: device['id'] || device['deviceid'],
+          temperature: this.generateRandomValue(20, 35, 1), // 20-35°C
+          humidity: this.generateRandomValue(40, 80, 1), // 40-80%
+          soil_moisture: this.generateRandomValue(20, 90, 1), // 20-90%
+          ph_level: this.generateRandomValue(5.5, 7.5, 2), // 5.5-7.5
+          light_intensity: this.generateRandomValue(100, 1000, 0), // 100-1000 lux
+          timestamp: new Date().toISOString()
+        };
+
+        // ✅ ส่งข้อมูลไปยัง API พร้อม Authorization token
+        const token = await this.currentUser.getIdToken();
+        const response = await this.http.post(`${this.apiUrl}/api/measurements`, measurementData, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).toPromise();
+        
+        // ✅ บันทึกข้อมูลสำหรับ tracking
+        this.measurementData.push({
+          ...measurementData,
+          device_name: device['device_name'] || device['display_name'] || device['name'],
+          sent_at: new Date().toISOString(),
+          response: response
+        });
+
+        console.log('📊 Measurement sent from ESP32 Test Device:', {
+          device: device['device_name'] || device['display_name'] || device['name'],
+          data: measurementData,
+          response: response
+        });
+
+      } catch (error) {
+        console.error('❌ Error sending measurement:', error);
+        this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', `ไม่สามารถส่งข้อมูลจาก ${device['device_name'] || device['display_name'] || device['name']} ได้`);
+      }
+    }
+
+    // ✅ แสดงสถิติ
+    console.log('📈 ESP32 Test Device Simulation Statistics:', {
+      totalMeasurements: this.measurementData.length,
+      activeDevices: this.simulatedDevices.length,
+      lastMeasurement: this.measurementData[this.measurementData.length - 1]
+    });
+  }
+
+  // ✅ ฟังก์ชันสร้างค่าสุ่ม
+  generateRandomValue(min: number, max: number, decimals: number = 0): number {
+    const value = Math.random() * (max - min) + min;
+    return parseFloat(value.toFixed(decimals));
+  }
+
+  // ✅ ฟังก์ชันดูสถิติ Simulation
+  viewSimulationStats() {
+    if (this.measurementData.length === 0) {
+      this.notificationService.showNotification('info', 'ไม่มีข้อมูล', 'ยังไม่มีข้อมูล measurement');
+      return;
+    }
+
+    const stats = this.calculateSimulationStats();
+    const statsText = Object.entries(stats)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('\n');
+
+    this.notificationService.showNotification('info', 'สถิติ Simulation ESP32', statsText, true, 'ปิด');
+  }
+
+  // ✅ ฟังก์ชันคำนวณสถิติ
+  calculateSimulationStats() {
+    if (this.measurementData.length === 0) return {};
+
+    const latestMeasurements = this.measurementData.slice(-this.simulatedDevices.length);
+    
+    const stats = {
+      'จำนวนการส่งข้อมูล': this.measurementData.length,
+      'อุปกรณ์ทดสอบ ESP32': this.simulatedDevices.length,
+      'การส่งข้อมูลล่าสุด': this.formatDate(this.measurementData[this.measurementData.length - 1]?.sent_at),
+      'อุณหภูมิเฉลี่ย': this.calculateAverage(latestMeasurements, 'temperature') + '°C',
+      'ความชื้นเฉลี่ย': this.calculateAverage(latestMeasurements, 'humidity') + '%',
+      'ความชื้นดินเฉลี่ย': this.calculateAverage(latestMeasurements, 'soil_moisture') + '%',
+      'ค่า pH เฉลี่ย': this.calculateAverage(latestMeasurements, 'ph_level'),
+      'ความเข้มแสงเฉลี่ย': this.calculateAverage(latestMeasurements, 'light_intensity') + ' lux'
+    };
+
+    return stats;
+  }
+
+  // ✅ ฟังก์ชันคำนวณค่าเฉลี่ย
+  calculateAverage(data: any[], field: string): number {
+    if (data.length === 0) return 0;
+    const sum = data.reduce((acc, item) => acc + (item[field] || 0), 0);
+    return parseFloat((sum / data.length).toFixed(2));
+  }
+
+  // ✅ ฟังก์ชันล้างข้อมูล Simulation
+  clearSimulationData() {
+    this.measurementData = [];
+    this.simulatedDevices = [];
+    this.notificationService.showNotification('info', 'ล้างข้อมูล', 'ล้างข้อมูล simulation เรียบร้อยแล้ว');
   }
 
   async bindHardwareDevice() {

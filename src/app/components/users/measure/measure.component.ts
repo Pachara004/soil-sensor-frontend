@@ -167,6 +167,15 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
           deviceName: this.deviceName,
           deviceStatus: this.deviceStatus
         });
+
+        // ✅ สำหรับ test devices เท่านั้น ให้สร้างข้อมูลปลอมทันที
+        const isTestDevice = this.deviceName && this.deviceName.toLowerCase().includes('test');
+        if (isTestDevice) {
+          console.log('🧪 Test device detected in ngOnInit - will generate fake data');
+          console.log('🔍 Test device name:', this.deviceName);
+        } else {
+          console.log('📱 Production device detected in ngOnInit - will use real sensor data');
+        }
       }
     });
     
@@ -291,22 +300,36 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
         );
         
         if (devicesResponse && devicesResponse.length > 0) {
-          const device = devicesResponse[0]; // ใช้ device แรก
+          // ✅ หา device ที่ตรงกับ deviceId ที่ส่งมาจาก main page
+          let device = devicesResponse.find(d => d.deviceid?.toString() === this.deviceId) || devicesResponse[0];
           
           // ✅ ใช้ข้อมูลจาก backend เฉพาะถ้าไม่มีข้อมูลจาก main page
           if (!this.deviceId) {
             this.deviceName = device.device_name || device.displayName || device.id || 'ไม่ระบุ';
-            this.deviceId = device.id;
+            this.deviceId = device.deviceid?.toString() || device.id;
           }
           
-          // ✅ ตรวจสอบสถานะ device (ออนไลน์/ออฟไลน์)
-          this.checkDeviceStatus(this.deviceId || device.id);
+          // ✅ ตรวจสอบสถานะ device จาก database
+          this.checkDeviceStatusFromDatabase(device);
           
           console.log('📱 Device data loaded:', {
             deviceId: this.deviceId,
             deviceName: this.deviceName,
-            deviceStatus: this.deviceStatus
+            deviceStatus: this.deviceStatus,
+            deviceType: device.device_type
           });
+
+          // ✅ สำหรับ test devices เท่านั้น ให้สร้างข้อมูลปลอมทันที
+          const isTestDevice = device.device_type === false || (this.deviceName && this.deviceName.toLowerCase().includes('test'));
+          if (isTestDevice) {
+            console.log('🧪 Test device detected - generating initial fake data');
+            console.log('🔍 Device type from DB:', device.device_type, 'Device name:', this.deviceName);
+            setTimeout(() => {
+              this.generateFakeSensorData();
+            }, 1000); // รอ 1 วินาทีให้ component โหลดเสร็จ
+          } else {
+            console.log('📱 Production device detected - using real sensor data');
+          }
         } else {
           console.log('⚠️ No devices found for user');
           if (!this.deviceId) {
@@ -325,9 +348,23 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
   
-  // ✅ ตรวจสอบสถานะ device (ออนไลน์/ออฟไลน์)
-  checkDeviceStatus(deviceId: string) {
-    // ✅ ตรวจสอบจาก Firebase live data
+  // ✅ ตรวจสอบสถานะ device จาก database
+  checkDeviceStatusFromDatabase(device: any) {
+    // ✅ ใช้ device_type จาก database: false = test device (online), true = production device (offline)
+    const isTestDevice = device.device_type === false;
+    
+    if (isTestDevice) {
+      this.deviceStatus = 'online'; // test devices เป็น online เสมอ
+      console.log(`📡 Test Device ${device.deviceid} status: ${this.deviceStatus} (device_type: false)`);
+    } else {
+      // ✅ สำหรับ production devices ให้ตรวจสอบจาก Firebase live data
+      this.checkDeviceStatusFromFirebase(device.deviceid?.toString() || device.id);
+    }
+  }
+
+  // ✅ ตรวจสอบสถานะ device จาก Firebase live data (สำหรับ production devices)
+  checkDeviceStatusFromFirebase(deviceId: string) {
+    // ✅ ตรวจสอบจาก Firebase live data สำหรับ production devices
     if (this.liveData && this.liveData.deviceId === deviceId) {
       this.deviceStatus = this.liveData.status || 'offline';
     } else {
@@ -343,7 +380,94 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     }
     
-    console.log(`📡 Device ${deviceId} status: ${this.deviceStatus}`);
+    console.log(`📡 Production Device ${deviceId} status: ${this.deviceStatus} (from Firebase)`);
+  }
+
+  // ✅ ตรวจสอบสถานะ device (ออนไลน์/ออฟไลน์) - legacy function
+  checkDeviceStatus(deviceId: string) {
+    // ✅ สำหรับ test devices ให้ตรวจสอบจาก device name
+    if (this.deviceName && this.deviceName.toLowerCase().includes('test')) {
+      this.deviceStatus = 'online'; // test devices เป็น online เสมอ
+      console.log(`📡 Test Device ${deviceId} status: ${this.deviceStatus} (test device)`);
+      return;
+    }
+    
+    // ✅ ตรวจสอบจาก Firebase live data สำหรับ production devices
+    this.checkDeviceStatusFromFirebase(deviceId);
+  }
+
+  // ✅ สร้างข้อมูลเซ็นเซอร์ปลอมสำหรับ test devices เท่านั้น
+  generateFakeSensorData() {
+    // ✅ ตรวจสอบว่าเป็น test device จริงๆ
+    const isTestDevice = (this.deviceName && this.deviceName.toLowerCase().includes('test')) || 
+                        (this.liveData && this.liveData.deviceId && this.liveData.deviceId.includes('test'));
+    
+    if (!isTestDevice) {
+      console.log('❌ Not a test device - cannot generate fake data');
+      this.notificationService.showNotification('error', 'ไม่สามารถสร้างข้อมูลปลอมได้', 'ฟีเจอร์นี้ใช้ได้เฉพาะกับ test devices เท่านั้น');
+      return;
+    }
+    
+    console.log('🧪 Generating fake sensor data for test device...');
+    
+    // ✅ สร้างข้อมูลเซ็นเซอร์ปลอมที่สมจริง (จำกัด precision เพื่อป้องกัน numeric field overflow)
+    const fakeData = {
+      temperature: this.limitPrecision(this.generateRandomValue(20, 35, 1), 2), // 20-35°C, 2 ทศนิยม
+      moisture: this.limitPrecision(this.generateRandomValue(30, 80, 1), 2), // 30-80%, 2 ทศนิยม
+      nitrogen: this.limitPrecision(this.generateRandomValue(10, 50, 1), 2), // 10-50 ppm, 2 ทศนิยม
+      phosphorus: this.limitPrecision(this.generateRandomValue(5, 30, 1), 2), // 5-30 ppm, 2 ทศนิยม
+      potassium: this.limitPrecision(this.generateRandomValue(8, 40, 1), 2), // 8-40 ppm, 2 ทศนิยม
+      ph: this.limitPrecision(this.generateRandomValue(5.5, 7.5, 2), 2), // 5.5-7.5, 2 ทศนิยม
+      lat: this.roundLatLng(this.generateRandomValue(16.0, 16.5, 6), 6), // ✅ จำกัด precision lat สำหรับ database constraint
+      lng: this.roundLatLng(this.generateRandomValue(103.0, 103.5, 6), 6), // ✅ จำกัด precision lng สำหรับ database constraint
+      timestamp: Date.now()
+    };
+    
+    // ✅ อัปเดต liveData ด้วยข้อมูลปลอม
+    this.liveData = {
+      ...this.liveData,
+      ...fakeData,
+      deviceId: this.deviceId || 'test-device',
+      status: 'online' as 'online' | 'offline'
+    };
+    
+    // ✅ อัปเดต measurement values
+    this.temperature = fakeData.temperature;
+    this.moisture = fakeData.moisture;
+    this.nitrogen = fakeData.nitrogen;
+    this.phosphorus = fakeData.phosphorus;
+    this.potassium = fakeData.potassium;
+    this.ph = fakeData.ph;
+    
+    console.log('🧪 Fake sensor data generated:', fakeData);
+    console.log('📊 Measurement values updated:', {
+      temperature: this.temperature,
+      moisture: this.moisture,
+      nitrogen: this.nitrogen,
+      phosphorus: this.phosphorus,
+      potassium: this.potassium,
+      ph: this.ph
+    });
+  }
+
+  // ✅ สร้างตัวเลขสุ่ม
+  generateRandomValue(min: number, max: number, decimals: number = 0): number {
+    const value = Math.random() * (max - min) + min;
+    return Number(value.toFixed(decimals));
+  }
+
+  // ✅ จำกัด precision ของ lat/lng เพื่อป้องกัน numeric field overflow
+  limitPrecision(value: number, decimals: number = 6): number {
+    return Number(value.toFixed(decimals));
+  }
+
+  // ✅ Special function for lat/lng with precision 10, scale 8 (max 2 integer digits)
+  roundLatLng(value: number, decimals: number = 6): number {
+    if (value === null || value === undefined) return 0;
+    // For precision 10, scale 8: max value is 99.99999999
+    const maxValue = 99.99999999;
+    const rounded = Math.round(value * Math.pow(10, decimals)) / Math.pow(10, decimals);
+    return Math.min(Math.max(rounded, -maxValue), maxValue);
   }
 
   // ✅ เริ่มต้นการเชื่อมต่อ Firebase
@@ -453,15 +577,22 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    // ตรวจสอบข้อมูลเซ็นเซอร์
-    if (this.liveData.temperature === undefined || 
-        this.liveData.moisture === undefined || 
-        this.liveData.nitrogen === undefined || 
-        this.liveData.phosphorus === undefined || 
-        this.liveData.potassium === undefined || 
-        this.liveData.ph === undefined) {
-      this.notificationService.showNotification('error', 'ข้อมูลเซ็นเซอร์ไม่ครบถ้วน', 'ข้อมูลจากเซ็นเซอร์ไม่ครบถ้วน กรุณารอให้เซ็นเซอร์ส่งข้อมูลครบก่อน');
-      return;
+    // ✅ สำหรับ test devices เท่านั้น ให้สร้างข้อมูลปลอม
+    const isTestDevice = this.deviceName && this.deviceName.toLowerCase().includes('test');
+    if (isTestDevice) {
+      console.log('🧪 Test device detected - generating fake sensor data');
+      this.generateFakeSensorData();
+    } else {
+      // ตรวจสอบข้อมูลเซ็นเซอร์สำหรับ production devices
+      if (this.liveData.temperature === undefined || 
+          this.liveData.moisture === undefined || 
+          this.liveData.nitrogen === undefined || 
+          this.liveData.phosphorus === undefined || 
+          this.liveData.potassium === undefined || 
+          this.liveData.ph === undefined) {
+        this.notificationService.showNotification('error', 'ข้อมูลเซ็นเซอร์ไม่ครบถ้วน', 'ข้อมูลจากเซ็นเซอร์ไม่ครบถ้วน กรุณารอให้เซ็นเซอร์ส่งข้อมูลครบก่อน');
+        return;
+      }
     }
     
     if (!this.currentUser) {
@@ -474,18 +605,18 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     console.log('📱 Selected device:', this.deviceName, 'Status:', this.deviceStatus);
     console.log('📊 Live data:', this.liveData);
     
-    // ✅ ใช้ข้อมูลจาก Firebase live data
+    // ✅ ใช้ข้อมูลจาก Firebase live data (จำกัด precision เพื่อป้องกัน numeric field overflow)
     const newMeasurement: Measurement = {
       deviceId: this.deviceId || 'unknown', // ใช้ device ID จาก component
-      temperature: this.liveData.temperature,
-      moisture: this.liveData.moisture,
-      nitrogen: this.liveData.nitrogen,
-      phosphorus: this.liveData.phosphorus,
-      potassium: this.liveData.potassium,
-      ph: this.liveData.ph,
+      temperature: this.limitPrecision(this.liveData.temperature, 2), // ✅ จำกัด precision
+      moisture: this.limitPrecision(this.liveData.moisture, 2), // ✅ จำกัด precision
+      nitrogen: this.limitPrecision(this.liveData.nitrogen, 2), // ✅ จำกัด precision
+      phosphorus: this.limitPrecision(this.liveData.phosphorus, 2), // ✅ จำกัด precision
+      potassium: this.limitPrecision(this.liveData.potassium, 2), // ✅ จำกัด precision
+      ph: this.limitPrecision(this.liveData.ph, 2), // ✅ จำกัด precision
       location: this.locationDetail || 'Auto Location',
-      lat: this.selectedPoints.length > 0 ? this.selectedPoints[0][1] : 16.2464504, // ใช้พิกัดจากจุดแรก หรือ default
-      lng: this.selectedPoints.length > 0 ? this.selectedPoints[0][0] : 103.2501379,
+      lat: this.roundLatLng(this.selectedPoints.length > 0 ? this.selectedPoints[0][1] : 16.2464504, 6), // ✅ จำกัด precision สำหรับ database constraint
+      lng: this.roundLatLng(this.selectedPoints.length > 0 ? this.selectedPoints[0][0] : 103.2501379, 6), // ✅ จำกัด precision สำหรับ database constraint
       date: new Date().toISOString(),
       timestamp: Date.now(),
       locationNameType: this.locationDetail ? 'custom' : 'auto',
@@ -496,7 +627,6 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     };
 
     try {
-      // ✅ บันทึกเข้า PostgreSQL ผ่าน backend API
       const token = await this.currentUser.getIdToken();
       
       if (!token) {
@@ -505,29 +635,15 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
         return;
       }
       
-      // Debug: แสดงข้อมูลที่จะส่งไปยัง backend
-      console.log('📊 Measurement request body:', newMeasurement);
-      console.log('🔑 Token length:', token.length);
-      console.log('🔑 Token preview:', token.substring(0, 20) + '...');
-      console.log('🌐 API URL:', `${this.apiUrl}/api/measurements`);
+      // ✅ ตรวจสอบว่ามีการวัดหลายจุดหรือไม่
+      if (this.selectedPoints.length > 1) {
+        // สร้าง area พร้อม measurements
+        await this.saveAreaMeasurement(token);
+      } else {
+        // บันทึก measurement เดียว
+        await this.saveSingleMeasurement(token, newMeasurement);
+      }
       
-      const response = await lastValueFrom(
-        this.http.post(`${this.apiUrl}/api/measurements`, newMeasurement, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-      );
-      
-      console.log('✅ Measurement saved to PostgreSQL:', response);
-      
-      // ✅ อัปเดต UI
-      this.measurements.push(newMeasurement);
-      this.measurementCount++;
-      await this.updateAreaStatistics();
-      this.initializeMap();
-      
-      this.notificationService.showNotification('success', 'บันทึกสำเร็จ', 'บันทึกข้อมูลการวัดเรียบร้อยแล้ว');
     } catch (error: any) {
       console.error('❌ Error saving measurement:', error);
       
@@ -546,6 +662,70 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
         this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่อีกครั้ง');
       }
     }
+  }
+
+  // ✅ บันทึก measurement เดียว
+  async saveSingleMeasurement(token: string, newMeasurement: Measurement) {
+    console.log('📊 Saving single measurement:', newMeasurement);
+    
+    const response = await lastValueFrom(
+      this.http.post(`${this.apiUrl}/api/measurements`, newMeasurement, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+    );
+    
+    console.log('✅ Single measurement saved:', response);
+    
+    // อัปเดต UI
+    this.measurements.push(newMeasurement);
+    this.measurementCount++;
+    await this.updateAreaStatistics();
+    this.initializeMap();
+    
+    this.notificationService.showNotification('success', 'บันทึกสำเร็จ', 'บันทึกข้อมูลการวัดเรียบร้อยแล้ว');
+  }
+
+  // ✅ สร้าง area พร้อม measurements
+  async saveAreaMeasurement(token: string) {
+    console.log('🏞️ Creating area with measurements...');
+    
+    const areaData = {
+      area_name: this.locationDetail || `พื้นที่วัด ${new Date().toLocaleDateString('th-TH')}`,
+      measurements: this.selectedPoints.map((point, index) => ({
+        lat: this.roundLatLng(point[1], 6),
+        lng: this.roundLatLng(point[0], 6),
+        temperature: this.limitPrecision(this.liveData?.temperature || 0, 2),
+        moisture: this.limitPrecision(this.liveData?.moisture || 0, 2),
+        nitrogen: this.limitPrecision(this.liveData?.nitrogen || 0, 2),
+        phosphorus: this.limitPrecision(this.liveData?.phosphorus || 0, 2),
+        potassium: this.limitPrecision(this.liveData?.potassium || 0, 2),
+        ph: this.limitPrecision(this.liveData?.ph || 7.0, 2)
+      }))
+    };
+
+    console.log('📊 Area data to send:', areaData);
+
+    const response = await lastValueFrom(
+      this.http.post(`${this.apiUrl}/api/measurements/create-area`, areaData, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+    );
+
+    console.log('✅ Area created successfully:', response);
+    
+    // อัปเดต UI
+    this.measurementCount += this.selectedPoints.length;
+    this.initializeMap();
+    
+    this.notificationService.showNotification(
+      'success', 
+      'สร้างพื้นที่สำเร็จ', 
+      `สร้างพื้นที่ "${areaData.area_name}" พร้อม ${this.selectedPoints.length} จุดวัดเรียบร้อยแล้ว`
+    );
   }
 
   async createArea() {
