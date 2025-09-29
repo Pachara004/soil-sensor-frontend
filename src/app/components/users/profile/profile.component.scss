@@ -835,3 +835,64 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
         margin-top: 20px;
     }
 }
+
+// Danger Zone Styling
+.danger-zone {
+    margin-top: 30px;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(244, 67, 54, 0.05) 0%, rgba(211, 47, 47, 0.02) 100%);
+    border: 2px solid rgba(244, 67, 54, 0.2);
+    border-radius: $border-radius-md;
+
+    .danger-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #F44336;
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 12px;
+
+        i {
+            font-size: 18px;
+            color: #F44336;
+        }
+    }
+
+    .danger-description {
+        color: $text-secondary;
+        font-size: 14px;
+        line-height: 1.5;
+        margin-bottom: 20px;
+    }
+
+    .delete-account-button {
+        background: linear-gradient(135deg, #F44336, #D32F2F);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: $border-radius-sm;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        transition: $transition;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+
+        i {
+            font-size: 16px;
+        }
+
+        &:hover {
+            background: linear-gradient(135deg, #D32F2F, #C62828);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+        }
+
+        &:active {
+            transform: translateY(0);
+        }
+    }
+}

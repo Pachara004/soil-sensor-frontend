@@ -966,20 +966,56 @@ export class AdmainComponent implements OnInit, OnDestroy {
   }
 
   async deleteUser(username: string) {
-    this.notificationService.showNotification('warning', 'ยืนยันการลบ', `ต้องการลบผู้ใช้ ${username} จริงหรือไม่?`, true, 'ลบ', async () => {
+    // หา userid จาก username
+    const user = this.allUsers.find(u => (u['user_name'] || u['username']) === username);
+    if (!user) {
+      this.notificationService.showNotification('error', 'ไม่พบข้อมูล', 'ไม่พบผู้ใช้ที่ต้องการลบ');
+      return;
+    }
+
+    const userid = user['userid'] || user['id'];
+    if (!userid) {
+      this.notificationService.showNotification('error', 'ข้อมูลไม่ครบถ้วน', 'ไม่พบ User ID ของผู้ใช้');
+      return;
+    }
+
+    this.notificationService.showNotification('warning', 'ยืนยันการลบ', `ต้องการลบผู้ใช้ "${username}" (ID: ${userid}) จริงหรือไม่?`, true, 'ลบ', async () => {
       try {
         const token = await this.currentUser.getIdToken();
-        await lastValueFrom(
-          this.http.delete(`${this.apiUrl}/api/users/${username}`, {
+        const response = await lastValueFrom(
+          this.http.delete(`${this.apiUrl}/api/auth/admin/delete-user/${userid}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           })
         );
 
+        console.log('✅ User deleted successfully:', response);
         this.notificationService.showNotification('success', 'ลบสำเร็จ', 'ผู้ใช้ถูกลบเรียบร้อยแล้ว');
         await this.loadAllUsersOnce();
       } catch (error: any) {
         console.error('Error deleting user:', error);
-        this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'ไม่สามารถลบผู้ใช้ได้');
+        
+        // แสดง error message ที่ชัดเจนขึ้น
+        let errorMessage = 'ไม่สามารถลบผู้ใช้ได้';
+        let errorTitle = 'เกิดข้อผิดพลาด';
+        
+        if (error.status === 404) {
+          errorMessage = 'ไม่พบผู้ใช้ที่ต้องการลบ';
+          errorTitle = 'ไม่พบข้อมูล';
+        } else if (error.status === 403) {
+          errorMessage = 'ไม่มีสิทธิ์ในการลบผู้ใช้ (ต้องเป็น Admin)';
+          errorTitle = 'ไม่มีสิทธิ์';
+        } else if (error.status === 400) {
+          errorMessage = error.error?.message || 'ข้อมูลไม่ถูกต้อง';
+          errorTitle = 'ข้อมูลไม่ถูกต้อง';
+        } else if (error.status === 500) {
+          errorMessage = 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง';
+          errorTitle = 'Server Error';
+        } else if (error.status === 401) {
+          errorMessage = 'หมดอายุการเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่';
+          errorTitle = 'หมดอายุ';
+        }
+        
+        this.notificationService.showNotification('error', errorTitle, errorMessage);
       }
     });
   }

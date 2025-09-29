@@ -6,16 +6,18 @@ import {
   ViewChild,
   ElementRef,
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { Constants } from '../../../config/constants'; // ปรับ path ตามโครงสร้าง
+import { Constants } from '../../../config/constants';
 import { Map, Marker, LngLatBounds, config } from '@maptiler/sdk';
 import '@maptiler/sdk/dist/maptiler-sdk.css';
-import { environment } from '../../../service/environment'; // ใช้ path มาตรฐานของ Angular
+import { environment } from '../../../service/environment';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatSpinner } from '@angular/material/progress-spinner';
 import { NotificationService } from '../../../service/notification.service';
+import { Auth, onAuthStateChanged } from '@angular/fire/auth';
+import { lastValueFrom } from 'rxjs';
 
 interface Measurement {
   id: number;
@@ -45,28 +47,83 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
   measurements: Measurement[] = [];
   isLoading = false;
   map: Map | undefined;
+  currentUser: any = null;
   @ViewChild('mapContainer') private mapContainer!: ElementRef<HTMLElement>;
   private apiUrl: string;
 
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     private http: HttpClient,
-    private constants: Constants, // Inject Constants
-    private notificationService: NotificationService
+    private constants: Constants,
+    private notificationService: NotificationService,
+    private auth: Auth
   ) {
     config.apiKey = environment.mapTilerApiKey;
-    this.apiUrl = this.constants.API_ENDPOINT; // ใช้ instance ของ Constants
+    this.apiUrl = this.constants.API_ENDPOINT;
   }
 
   ngOnInit(): void {
-    const savedDevice = localStorage.getItem('selectedDevice');
-    if (savedDevice) {
-      this.device = JSON.parse(savedDevice);
-      this.loadMeasurements();
+    // ใช้ Firebase Auth
+    onAuthStateChanged(this.auth, (user) => {
+      if (user) {
+        this.currentUser = user;
+        this.loadDeviceData();
+      } else {
+        console.log('❌ No user found, redirecting to login');
+        this.router.navigate(['/login']);
+      }
+    });
+  }
+
+  async loadDeviceData() {
+    // ลองดึง deviceId จาก route parameters ก่อน
+    const deviceId = this.route.snapshot.paramMap.get('deviceId');
+    
+    if (deviceId) {
+      // ดึงข้อมูล device จาก API
+      await this.loadDeviceFromAPI(deviceId);
     } else {
-      this.notificationService.showNotification('error', 'ไม่พบข้อมูล', 'ไม่พบข้อมูลอุปกรณ์', true, 'กลับ', () => {
-        this.router.navigate(['/adminmain']);
-      });
+      // Fallback: ใช้ localStorage
+      const savedDevice = localStorage.getItem('selectedDevice');
+      if (savedDevice) {
+        this.device = JSON.parse(savedDevice);
+        this.loadMeasurements();
+      } else {
+        this.notificationService.showNotification('error', 'ไม่พบข้อมูล', 'ไม่พบข้อมูลอุปกรณ์', true, 'กลับ', () => {
+          this.router.navigate(['/adminmain']);
+        });
+      }
+    }
+  }
+
+  async loadDeviceFromAPI(deviceId: string) {
+    try {
+      const token = await this.currentUser.getIdToken();
+      
+      // ดึงข้อมูล device จาก API
+      const response = await lastValueFrom(
+        this.http.get<any[]>(`${this.apiUrl}/api/devices`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      );
+
+      if (response && Array.isArray(response)) {
+        // หา device ที่ตรงกับ deviceId
+        this.device = response.find(d => d.deviceid?.toString() === deviceId);
+        
+        if (this.device) {
+          console.log('✅ Device loaded from API:', this.device);
+          this.loadMeasurements();
+        } else {
+          this.notificationService.showNotification('error', 'ไม่พบข้อมูล', 'ไม่พบข้อมูลอุปกรณ์', true, 'กลับ', () => {
+            this.router.navigate(['/adminmain']);
+          });
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error loading device from API:', error);
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลอุปกรณ์ได้');
     }
   }
 
@@ -81,12 +138,18 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async loadMeasurements() {
-    if (!this.device?.id) return;
+    if (!this.device?.deviceid && !this.device?.id) return;
     this.isLoading = true;
     try {
-      const response = await this.http
-        .get<Measurement[]>(`${this.apiUrl}/api/measurements/${this.device.id}`)
-        .toPromise();
+      const deviceId = this.device.deviceid || this.device.id;
+      const token = await this.currentUser.getIdToken();
+      
+      const response = await lastValueFrom(
+        this.http.get<Measurement[]>(`${this.apiUrl}/api/measurements/${deviceId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      );
+      
       this.measurements = response || [];
       this.isLoading = false;
       this.initializeMap();
@@ -95,6 +158,22 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
       console.error('Error loading measurements:', error);
       this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการโหลดข้อมูลวัด');
       this.isLoading = false;
+    }
+  }
+
+  formatDate(dateString: string): string {
+    if (!dateString) return 'ไม่ระบุ';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'ไม่ระบุ';
     }
   }
 

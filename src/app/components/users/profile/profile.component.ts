@@ -7,6 +7,7 @@ import { HttpClient } from '@angular/common/http';
 import { Constants } from '../../../config/constants';
 import { Auth, onAuthStateChanged } from '@angular/fire/auth';
 import { lastValueFrom } from 'rxjs';
+import { NotificationService } from '../../../service/notification.service';
 
 @Component({
   selector: 'app-profile',
@@ -32,7 +33,8 @@ export class ProfileComponent implements OnInit {
     private location: Location,
     private http: HttpClient,
     private constants: Constants,
-    private auth: Auth
+    private auth: Auth,
+    private notificationService: NotificationService
   ) {
     this.apiUrl = this.constants.API_ENDPOINT;
   }
@@ -211,5 +213,72 @@ export class ProfileComponent implements OnInit {
     if (!(event.target as Element).closest('.card-menu')) {
       this.closeCardMenu();
     }
+  }
+
+  async deleteAccount() {
+    // แสดง confirmation dialog
+    this.notificationService.showNotification(
+      'warning', 
+      'ยืนยันการลบบัญชี', 
+      `คุณแน่ใจหรือไม่ว่าต้องการลบบัญชี "${this.username}"? การกระทำนี้ไม่สามารถย้อนกลับได้ และจะลบข้อมูลทั้งหมดของคุณ`, 
+      true, 
+      'ลบบัญชี', 
+      async () => {
+        try {
+          const currentUser = this.auth.currentUser;
+          if (!currentUser) {
+            this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'ไม่พบข้อมูลผู้ใช้');
+            return;
+          }
+
+          const token = await currentUser.getIdToken();
+          const response = await lastValueFrom(
+            this.http.delete(`${this.apiUrl}/api/auth/delete-account`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            })
+          );
+
+          console.log('✅ Account deleted successfully:', response);
+          
+          // แสดงข้อความสำเร็จ
+          this.notificationService.showNotification(
+            'success', 
+            'ลบบัญชีสำเร็จ', 
+            'บัญชีของคุณถูกลบเรียบร้อยแล้ว'
+          );
+
+          // รอ 2 วินาทีแล้ว redirect ไปหน้า login
+          setTimeout(() => {
+            this.router.navigate(['/login']);
+          }, 2000);
+
+        } catch (error: any) {
+          console.error('Error deleting account:', error);
+          
+          // แสดง error message ที่ชัดเจนขึ้น
+          let errorMessage = 'ไม่สามารถลบบัญชีได้';
+          let errorTitle = 'เกิดข้อผิดพลาด';
+          
+          if (error.status === 404) {
+            errorMessage = 'ไม่พบบัญชีที่ต้องการลบ';
+            errorTitle = 'ไม่พบข้อมูล';
+          } else if (error.status === 403) {
+            errorMessage = 'ไม่มีสิทธิ์ในการลบบัญชีนี้';
+            errorTitle = 'ไม่มีสิทธิ์';
+          } else if (error.status === 400) {
+            errorMessage = error.error?.message || 'ข้อมูลไม่ถูกต้อง';
+            errorTitle = 'ข้อมูลไม่ถูกต้อง';
+          } else if (error.status === 500) {
+            errorMessage = 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง';
+            errorTitle = 'Server Error';
+          } else if (error.status === 401) {
+            errorMessage = 'หมดอายุการเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่';
+            errorTitle = 'หมดอายุ';
+          }
+          
+          this.notificationService.showNotification('error', errorTitle, errorMessage);
+        }
+      }
+    );
   }
 }

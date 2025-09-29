@@ -58,5 +58,20 @@
       <button class="edit-button" (click)="goToEditProfile()">แก้ไขข้อมูล</button>
       <button class="change-password-button" (click)="goToChangePassword()">เปลี่ยนรหัสผ่าน</button>
     </div>
+
+    <!-- Danger Zone -->
+    <div class="danger-zone" *ngIf="!isLoading">
+      <h3 class="danger-title">
+        <i class="fas fa-exclamation-triangle"></i>
+        โซนอันตราย
+      </h3>
+      <p class="danger-description">
+        การกระทำในส่วนนี้จะไม่สามารถย้อนกลับได้ กรุณาคิดให้ดีก่อนดำเนินการ
+      </p>
+      <button class="delete-account-button" (click)="deleteAccount()">
+        <i class="fas fa-trash"></i>
+        ลบบัญชี
+      </button>
+    </div>
   </div>
 </div>

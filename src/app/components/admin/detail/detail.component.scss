@@ -1,67 +1,240 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+// IoT Soil Monitor Design System - Admin Detail Page
+$primary-gradient: linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%);
+$secondary-gradient: linear-gradient(135deg, #0277BD 0%, #29B6F6 100%);
+$success-gradient: linear-gradient(135deg, #4CAF50, #2E7D32);
+$warning-gradient: linear-gradient(135deg, #FB8C00, #FF9800);
+$error-gradient: linear-gradient(135deg, #E53935, #D32F2F);
+
+$primary-color: #2E7D32;
+$secondary-color: #4CAF50;
+$accent-color: #0277BD;
+$warning-color: #FB8C00;
+$error-color: #E53935;
+
+$main-bg: #F8F9FA;
+$card-bg: #FFFFFF;
+$glass-bg: rgba(255, 255, 255, 0.9);
+$field-bg: #F5F5F5;
+$indoor-bg: #FAFAFA;
+
+$text-primary: #212121;
+$text-secondary: #424242;
+$text-muted: #757575;
+
+$font-family: 'Inter', sans-serif;
+$border-radius-sm: 8px;
+$border-radius-md: 12px;
+$border-radius-lg: 16px;
+$border-radius-xl: 20px;
+
+$transition: all 0.3s ease;
+$shadow-light: 0 2px 8px rgba(0, 0, 0, 0.08);
+$shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.12);
+$shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.15);
+$shadow-green: 0 4px 12px rgba(46, 125, 50, 0.2);
+$shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
 
 .device-detail-container {
-  background: linear-gradient(135deg, #013828 0%, #024731 100%);
+  background: $main-bg;
   min-height: 100vh;
-  color: #fff;
+  color: $text-primary;
   padding: clamp(20px, 3vw, 40px);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: $font-family;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   overflow: auto;
 }
 
 .device-detail-card {
-  background: rgba(255, 255, 255, 0.95);
-  color: #333;
-  padding: clamp(15px, 2vw, 20px);
-  border-radius: 15px;
-  width: min(800px, 90vw);
+  background: $card-bg;
+  color: $text-primary;
+  padding: clamp(20px, 3vw, 30px);
+  border-radius: $border-radius-lg;
+  width: min(900px, 95vw);
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: $shadow-medium;
   animation: fadeIn 0.5s ease-in-out;
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .back-btn {
-  background: linear-gradient(45deg, #6c757d, #868e96);
+  background: $secondary-gradient;
   border: none;
-  padding: clamp(8px, 1.5vw, 10px) clamp(15px, 2vw, 20px);
-  border-radius: 8px;
+  padding: clamp(10px, 1.5vw, 12px) clamp(20px, 2vw, 24px);
+  border-radius: $border-radius-sm;
   cursor: pointer;
   color: white;
-  font-size: clamp(12px, 1.8vw, 14px);
+  font-size: clamp(14px, 1.8vw, 16px);
   font-weight: 600;
-  transition: all 0.3s ease;
-  margin-bottom: 20px;
-}
+  transition: $transition;
+  margin-bottom: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: $shadow-light;
 
-.back-btn:hover {
-  background: linear-gradient(45deg, #5a6268, #747b81);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  i {
+    font-size: 16px;
+  }
+
+  &:hover {
+    background: linear-gradient(135deg, #388E3C 0%, #2E7D32 100%);
+    transform: translateY(-2px);
+    box-shadow: $shadow-green;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
 }
 
 .device-info {
-  margin-bottom: clamp(20px, 3vw, 30px);
+  margin-bottom: clamp(24px, 3vw, 32px);
+
+  h2 {
+    font-size: clamp(20px, 2.5vw, 24px);
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: $text-primary;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    i {
+      color: $primary-color;
+      font-size: 24px;
+    }
+  }
 }
 
-.device-info h2 {
-  font-size: clamp(18px, 2.5vw, 22px);
-  font-weight: 700;
-  margin-bottom: 15px;
-}
+.device-details {
+  background: $indoor-bg;
+  border-radius: $border-radius-md;
+  padding: 20px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
 
-.device-info p {
-  font-size: clamp(14px, 2vw, 16px);
-  margin: 5px 0;
-  color: #333;
+  .detail-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .detail-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 160px;
+      font-weight: 600;
+      color: $text-secondary;
+      font-size: 14px;
+
+      i {
+        width: 18px;
+        text-align: center;
+        color: $primary-color;
+        font-size: 16px;
+      }
+    }
+
+    .detail-value {
+      flex: 1;
+      color: $text-primary;
+      font-size: 14px;
+      word-break: break-all;
+
+      &.device-name-value {
+        font-weight: 600;
+        color: $primary-color;
+        background: rgba(46, 125, 50, 0.1);
+        padding: 6px 12px;
+        border-radius: $border-radius-sm;
+        display: inline-block;
+      }
+
+      &.device-id-value {
+        font-family: 'Courier New', monospace;
+        font-weight: 600;
+        color: #1976D2;
+        background: rgba(25, 118, 210, 0.1);
+        padding: 6px 12px;
+        border-radius: $border-radius-sm;
+        display: inline-block;
+      }
+
+      &.user-name-value {
+        font-weight: 600;
+        color: $accent-color;
+        background: rgba(2, 119, 189, 0.1);
+        padding: 6px 12px;
+        border-radius: $border-radius-sm;
+        display: inline-block;
+      }
+
+      &.user-id-value {
+        font-family: 'Courier New', monospace;
+        font-weight: 600;
+        color: #388E3C;
+        background: rgba(56, 142, 60, 0.1);
+        padding: 6px 12px;
+        border-radius: $border-radius-sm;
+        display: inline-block;
+      }
+
+      .status-online {
+        color: #4CAF50;
+        font-weight: 600;
+        background: rgba(76, 175, 80, 0.1);
+        padding: 4px 8px;
+        border-radius: $border-radius-sm;
+        display: inline-block;
+      }
+
+      .status-offline {
+        color: #F44336;
+        font-weight: 600;
+        background: rgba(244, 67, 54, 0.1);
+        padding: 4px 8px;
+        border-radius: $border-radius-sm;
+        display: inline-block;
+      }
+
+      .type-production {
+        color: #4CAF50;
+        font-weight: 600;
+        background: rgba(76, 175, 80, 0.1);
+        padding: 4px 8px;
+        border-radius: $border-radius-sm;
+        display: inline-block;
+      }
+
+      .type-test {
+        color: #FF9800;
+        font-weight: 600;
+        background: rgba(255, 152, 0, 0.1);
+        padding: 4px 8px;
+        border-radius: $border-radius-sm;
+        display: inline-block;
+      }
+    }
+  }
 }
 
 .measurements-section {
@@ -184,11 +357,14 @@
     color: #e0e0e0;
   }
 
-  .device-info h2, .measurements-section h3, .map-section h3 {
+  .device-info h2,
+  .measurements-section h3,
+  .map-section h3 {
     color: #e0e0e0;
   }
 
-  .device-info p, .measurement-info p {
+  .device-info p,
+  .measurement-info p {
     color: #e0e0e0;
   }
 
@@ -248,7 +424,8 @@
     font-size: clamp(16px, 2.2vw, 18px);
   }
 
-  .measurements-section h3, .map-section h3 {
+  .measurements-section h3,
+  .map-section h3 {
     font-size: clamp(14px, 2vw, 16px);
   }
 
