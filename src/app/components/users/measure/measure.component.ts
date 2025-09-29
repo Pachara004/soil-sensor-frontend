@@ -693,6 +693,7 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     
     const areaData = {
       area_name: this.locationDetail || `พื้นที่วัด ${new Date().toLocaleDateString('th-TH')}`,
+      deviceId: this.deviceId, // ✅ เพิ่ม deviceId
       measurements: this.selectedPoints.map((point, index) => ({
         lat: this.roundLatLng(point[1], 6),
         lng: this.roundLatLng(point[0], 6),

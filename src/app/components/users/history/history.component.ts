@@ -254,10 +254,21 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     try {
       const token = await this.currentUser.getIdToken();
       
-      // ✅ ใช้ Areas API ที่สร้างขึ้นแล้ว
+      // ✅ ใช้ Areas API พร้อม deviceid parameter
+      let apiUrl = `${this.apiUrl}/api/measurements/areas/with-measurements`;
+      
+      // ถ้ามี deviceId ให้เพิ่ม parameter
+      if (this.deviceId) {
+        const actualDeviceId = this.deviceMap[this.deviceId] || this.deviceId;
+        apiUrl += `?deviceid=${actualDeviceId}`;
+        console.log('📱 Loading areas for device:', this.deviceId, '->', actualDeviceId);
+      } else {
+        console.log('📱 Loading all areas (no device filter)');
+      }
+      
       const response = await lastValueFrom(
         this.http.get<any[]>(
-          `${this.apiUrl}/api/measurements/areas/with-measurements`,
+          apiUrl,
           {
             headers: { 'Authorization': `Bearer ${token}` }
           }
