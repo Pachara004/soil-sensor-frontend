@@ -139,7 +139,8 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
   async onDeviceChange() {
     if (this.deviceId) {
       console.log('📱 Device changed to:', this.deviceId);
-      await this.loadDeviceMeasurements();
+      // ✅ โหลดแค่ areas ที่เป็นจุดหลักๆ ตาม device ที่เลือก
+      await this.loadAreas();
     }
   }
 
@@ -234,10 +235,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       // ดึงข้อมูล areas หลังจากได้ token แล้ว
       await this.loadAreas();
       
-      // ถ้ามี deviceId ให้ดึง measurements ของ device นั้นด้วย
-      if (this.deviceId) {
-        await this.loadDeviceMeasurements();
-      }
+      // ✅ ไม่ต้องดึง measurements ทีละจุดแล้ว เพราะ areas API มีข้อมูลครบถ้วนแล้ว
       
     } catch (error) {
       console.error('❌ Error loading user and device data:', error);
@@ -417,105 +415,6 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  async loadDeviceMeasurements() {
-    if (!this.currentUser || !this.deviceId) return;
-    
-    try {
-      // แปลง device_name กลับเป็น device_id สำหรับ API call
-      const actualDeviceId = this.deviceMap[this.deviceId] || this.deviceId;
-      console.log('📱 Loading measurements for device:', this.deviceId, '->', actualDeviceId);
-      const token = await this.currentUser.getIdToken();
-      
-      const response = await lastValueFrom(
-        this.http.get<Measurement[]>(
-          `${this.apiUrl}/api/measurements/${actualDeviceId}`,
-          {
-            headers: { 'Authorization': `Bearer ${token}` }
-          }
-        )
-      );
-      
-      if (response && Array.isArray(response)) {
-        console.log('✅ Device measurements loaded:', response.length);
-        
-        // จัดกลุ่ม measurements ตาม location
-        const areaMap: { [key: string]: AreaGroup } = {};
-        
-        response.forEach((measurement) => {
-          const location = measurement.location || 'ไม่ระบุสถานที่';
-          
-          if (!areaMap[location]) {
-            areaMap[location] = {
-              areaId: measurement.areaId || '',
-              areaName: location,
-              measurements: [],
-              totalMeasurements: 0,
-              averages: {
-                temperature: 0,
-                moisture: 0,
-                nitrogen: 0,
-                phosphorus: 0,
-                potassium: 0,
-                ph: 0
-              },
-              lastMeasurementDate: ''
-            };
-          }
-          
-          const area = areaMap[location];
-          area.measurements.push(measurement);
-          area.totalMeasurements = area.measurements.length;
-          
-          // หาการวัดล่าสุด
-          if (!area.lastMeasurementDate || new Date(measurement.date) > new Date(area.lastMeasurementDate)) {
-            area.lastMeasurementDate = measurement.date;
-          }
-        });
-        
-        // คำนวณค่าเฉลี่ยสำหรับแต่ละ area
-        Object.values(areaMap).forEach(area => {
-          if (area.measurements.length > 0) {
-            const measurements = area.measurements;
-            area.averages = {
-              temperature: measurements.reduce((sum, m) => sum + (m.temperature || 0), 0) / measurements.length,
-              moisture: measurements.reduce((sum, m) => sum + (m.moisture || 0), 0) / measurements.length,
-              nitrogen: measurements.reduce((sum, m) => sum + (m.nitrogen || 0), 0) / measurements.length,
-              phosphorus: measurements.reduce((sum, m) => sum + (m.phosphorus || 0), 0) / measurements.length,
-              potassium: measurements.reduce((sum, m) => sum + (m.potassium || 0), 0) / measurements.length,
-              ph: measurements.reduce((sum, m) => sum + (m.ph || 0), 0) / measurements.length
-            };
-          }
-        });
-        
-        const deviceAreas: AreaGroup[] = Object.values(areaMap);
-        
-        // รวมกับ areas ที่มีอยู่แล้ว
-        this.areas = [...this.areas, ...deviceAreas];
-        this.areaGroups = this.areas;
-        
-        console.log('✅ Total areas after adding device measurements:', this.areas.length);
-        console.log('📊 Areas with averages:', deviceAreas.map(area => ({
-          name: area.areaName,
-          measurements: area.totalMeasurements,
-          averages: area.averages
-        })));
-      }
-      
-    } catch (error: any) {
-      console.error('❌ Error loading device measurements:', error);
-      
-      if (error.status === 401) {
-        console.log('⚠️ Unauthorized in device measurements, token may be expired');
-        this.notificationService.showNotification(
-          'error',
-          'หมดอายุการเข้าสู่ระบบ',
-          'กรุณาเข้าสู่ระบบใหม่'
-        );
-        // Redirect to login
-        this.router.navigate(['/login']);
-      }
-    }
-  }
 
   initializeMap() {
     if (!this.mapContainer || !this.selectedArea) return;
@@ -539,6 +438,14 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
 
   getDisplayAreaName(area: AreaGroup): string {
     return area.areaName || 'ไม่ระบุพื้นที่';
+  }
+
+  // ✅ ฟังก์ชันสำหรับ format ตัวเลข
+  formatNumber(value: number, decimals: number = 2): string {
+    if (value === null || value === undefined || isNaN(value)) {
+      return '0.00';
+    }
+    return value.toFixed(decimals);
   }
 
   viewAreaDetails(area: AreaGroup) {
@@ -588,12 +495,12 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       จำนวนจุดวัด: ${area.totalMeasurements} จุด
       วันที่วัดล่าสุด: ${area.lastMeasurementDate}
       ค่าเฉลี่ย:
-      • อุณหภูมิ: ${stats.temperature}°C
-      • ความชื้น: ${stats.moisture}%
-      • ไนโตรเจน: ${stats.nitrogen} mg/kg
-      • ฟอสฟอรัส: ${stats.phosphorus} mg/kg
-      • โพแทสเซียม: ${stats.potassium} mg/kg
-      • ค่า pH: ${stats.ph}`;
+      • อุณหภูมิ: ${this.formatNumber(stats.temperature)}°C
+      • ความชื้น: ${this.formatNumber(stats.moisture)}%
+      • ไนโตรเจน: ${this.formatNumber(stats.nitrogen)} mg/kg
+      • ฟอสฟอรัส: ${this.formatNumber(stats.phosphorus)} mg/kg
+      • โพแทสเซียม: ${this.formatNumber(stats.potassium)} mg/kg
+      • ค่า pH: ${this.formatNumber(stats.ph, 1)}`;
     this.notificationService.showNotification('info', 'ข้อมูล', message);
   }
 

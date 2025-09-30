@@ -76,8 +76,76 @@ export class LoginComponent {
       }
     } catch (err: any) {
       console.error('❌ Login error:', err);
-      const msg = err?.message || 'เข้าสู่ระบบล้มเหลว';
-      this.notificationService.showNotification('error', 'เข้าสู่ระบบไม่สำเร็จ', msg);
+      
+      // ตรวจสอบ error code และแสดงข้อความที่เฉพาะเจาะจง
+      let errorTitle = 'เข้าสู่ระบบไม่สำเร็จ';
+      let errorMessage = 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ';
+      
+      if (err?.code) {
+        switch (err.code) {
+          case 'auth/user-not-found':
+            errorTitle = 'ไม่พบผู้ใช้';
+            errorMessage = 'ไม่พบผู้ใช้ที่ใช้อีเมลนี้ กรุณาตรวจสอบอีเมลอีกครั้ง';
+            break;
+          case 'auth/wrong-password':
+            errorTitle = 'รหัสผ่านผิด';
+            errorMessage = 'รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบรหัสผ่านอีกครั้ง';
+            break;
+          case 'auth/invalid-email':
+            errorTitle = 'อีเมลไม่ถูกต้อง';
+            errorMessage = 'รูปแบบอีเมลไม่ถูกต้อง กรุณากรอกอีเมลที่ถูกต้อง';
+            break;
+          case 'auth/user-disabled':
+            errorTitle = 'บัญชีถูกปิดใช้งาน';
+            errorMessage = 'บัญชีนี้ถูกปิดใช้งาน กรุณาติดต่อผู้ดูแลระบบ';
+            break;
+          case 'auth/too-many-requests':
+            errorTitle = 'พยายามเข้าสู่ระบบมากเกินไป';
+            errorMessage = 'คุณพยายามเข้าสู่ระบบมากเกินไป กรุณารอสักครู่แล้วลองใหม่';
+            break;
+          case 'auth/network-request-failed':
+            errorTitle = 'เชื่อมต่ออินเทอร์เน็ตไม่ได้';
+            errorMessage = 'ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้ กรุณาตรวจสอบการเชื่อมต่อ';
+            break;
+          case 'auth/invalid-credential':
+            errorTitle = 'ข้อมูลเข้าสู่ระบบไม่ถูกต้อง';
+            errorMessage = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบข้อมูลอีกครั้ง';
+            break;
+          default:
+            // ตรวจสอบ error message เพื่อหาข้อมูลเพิ่มเติม
+            if (err?.message) {
+              if (err.message.includes('password') || err.message.includes('รหัสผ่าน')) {
+                errorTitle = 'รหัสผ่านผิด';
+                errorMessage = 'รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบรหัสผ่านอีกครั้ง';
+              } else if (err.message.includes('email') || err.message.includes('อีเมล')) {
+                errorTitle = 'อีเมลไม่ถูกต้อง';
+                errorMessage = 'อีเมลไม่ถูกต้อง กรุณาตรวจสอบอีเมลอีกครั้ง';
+              } else if (err.message.includes('user') || err.message.includes('ผู้ใช้')) {
+                errorTitle = 'ไม่พบผู้ใช้';
+                errorMessage = 'ไม่พบผู้ใช้ที่ใช้อีเมลนี้ กรุณาตรวจสอบอีเมลอีกครั้ง';
+              } else {
+                errorMessage = err.message;
+              }
+            }
+            break;
+        }
+      } else if (err?.message) {
+        // ตรวจสอบ error message เพื่อหาข้อมูลเพิ่มเติม
+        if (err.message.includes('password') || err.message.includes('รหัสผ่าน')) {
+          errorTitle = 'รหัสผ่านผิด';
+          errorMessage = 'รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบรหัสผ่านอีกครั้ง';
+        } else if (err.message.includes('email') || err.message.includes('อีเมล')) {
+          errorTitle = 'อีเมลไม่ถูกต้อง';
+          errorMessage = 'อีเมลไม่ถูกต้อง กรุณาตรวจสอบอีเมลอีกครั้ง';
+        } else if (err.message.includes('user') || err.message.includes('ผู้ใช้')) {
+          errorTitle = 'ไม่พบผู้ใช้';
+          errorMessage = 'ไม่พบผู้ใช้ที่ใช้อีเมลนี้ กรุณาตรวจสอบอีเมลอีกครั้ง';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      this.notificationService.showNotification('error', errorTitle, errorMessage);
     } finally {
       this.isLoading = false;
       if (this.isLoading === false) {
@@ -125,7 +193,59 @@ export class LoginComponent {
       }
     } catch (error: any) {
       console.error('❌ Google login error:', error);
-      this.notificationService.showNotification('error', 'Google Sign-in ล้มเหลว', 'เข้าสู่ระบบด้วย Google ล้มเหลว');
+      
+      // ตรวจสอบ error code และแสดงข้อความที่เฉพาะเจาะจง
+      let errorTitle = 'Google Sign-in ล้มเหลว';
+      let errorMessage = 'เข้าสู่ระบบด้วย Google ล้มเหลว';
+      
+      // ตรวจสอบ error code ที่เกี่ยวข้องกับการยกเลิกก่อน
+      if (error?.code === 'auth/popup-closed-by-user' || 
+          error?.code === 'auth/cancelled-popup-request') {
+        errorTitle = 'ยกเลิกการเข้าสู่ระบบ';
+        errorMessage = 'คุณได้ยกเลิกการเข้าสู่ระบบด้วย Google';
+      } else if (error?.message && (
+          error.message.includes('popup') ||
+          error.message.includes('cancelled') ||
+          error.message.includes('ยกเลิก') ||
+          error.message.includes('closed') ||
+          error.message.includes('ปิด')
+        )) {
+        errorTitle = 'ยกเลิกการเข้าสู่ระบบ';
+        errorMessage = 'คุณได้ยกเลิกการเข้าสู่ระบบด้วย Google';
+      } else if (error?.code) {
+        switch (error.code) {
+          case 'auth/popup-blocked':
+            errorTitle = 'ป๊อปอัพถูกบล็อก';
+            errorMessage = 'ป๊อปอัพถูกบล็อกโดยเบราว์เซอร์ กรุณาอนุญาตป๊อปอัพแล้วลองใหม่';
+            break;
+          case 'auth/account-exists-with-different-credential':
+            errorTitle = 'บัญชีมีอยู่แล้ว';
+            errorMessage = 'มีบัญชีอื่นที่ใช้อีเมลนี้อยู่แล้ว กรุณาใช้วิธีเข้าสู่ระบบอื่น';
+            break;
+          case 'auth/operation-not-allowed':
+            errorTitle = 'ไม่สามารถเข้าสู่ระบบได้';
+            errorMessage = 'การเข้าสู่ระบบด้วย Google ถูกปิดใช้งาน กรุณาติดต่อผู้ดูแลระบบ';
+            break;
+          case 'auth/network-request-failed':
+            errorTitle = 'เชื่อมต่ออินเทอร์เน็ตไม่ได้';
+            errorMessage = 'ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้ กรุณาตรวจสอบการเชื่อมต่อ';
+            break;
+          default:
+            if (error?.message) {
+              errorMessage = error.message;
+            }
+            break;
+        }
+      } else if (error?.message) {
+        if (error.message.includes('popup') || error.message.includes('ป๊อปอัพ')) {
+          errorTitle = 'ป๊อปอัพถูกบล็อก';
+          errorMessage = 'ป๊อปอัพถูกบล็อกโดยเบราว์เซอร์ กรุณาอนุญาตป๊อปอัพแล้วลองใหม่';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      this.notificationService.showNotification('error', errorTitle, errorMessage);
     } finally {
       this.isLoading = false;
     }

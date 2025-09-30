@@ -81,6 +81,14 @@ export class AdmainComponent implements OnInit, OnDestroy {
   simulatedDevices: any[] = [];
   measurementData: any[] = [];
 
+  // ✅ Delete user loading state
+  deletingUser = false;
+  deletingUserId: string | null = null;
+
+  // ✅ Delete device loading state
+  deletingDevice = false;
+  deletingDeviceId: string | null = null;
+
   // Stub fields used in template
   pendingClaims: any[] = [];
 
@@ -744,7 +752,11 @@ export class AdmainComponent implements OnInit, OnDestroy {
   }
 
   async deleteDevice(deviceId: string) {
-    if (confirm(`ลบอุปกรณ์ ${deviceId} ?`)) {
+    this.notificationService.showNotification('warning', 'ยืนยันการลบ', `ต้องการลบอุปกรณ์ ${deviceId} จริงหรือไม่?`, true, 'ลบ', async () => {
+      // เริ่ม loading state
+      this.deletingDevice = true;
+      this.deletingDeviceId = deviceId;
+      
       try {
         await this.adminService.deleteDevice(deviceId);
         this.notificationService.showNotification('success', 'ลบอุปกรณ์สำเร็จ', 'อุปกรณ์ถูกลบเรียบร้อยแล้ว');
@@ -752,8 +764,12 @@ export class AdmainComponent implements OnInit, OnDestroy {
       } catch (error) {
         console.error('เกิดข้อผิดพลาดในการลบอุปกรณ์:', error);
         this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการลบอุปกรณ์');
+      } finally {
+        // หยุด loading state
+        this.deletingDevice = false;
+        this.deletingDeviceId = null;
       }
-    }
+    });
   }
 
   toggleUsersList() {
@@ -980,6 +996,10 @@ export class AdmainComponent implements OnInit, OnDestroy {
     }
 
     this.notificationService.showNotification('warning', 'ยืนยันการลบ', `ต้องการลบผู้ใช้ "${username}" (ID: ${userid}) จริงหรือไม่?`, true, 'ลบ', async () => {
+      // เริ่ม loading state
+      this.deletingUser = true;
+      this.deletingUserId = userid.toString();
+      
       try {
         const token = await this.currentUser.getIdToken();
         const response = await lastValueFrom(
@@ -1016,6 +1036,10 @@ export class AdmainComponent implements OnInit, OnDestroy {
         }
         
         this.notificationService.showNotification('error', errorTitle, errorMessage);
+      } finally {
+        // หยุด loading state
+        this.deletingUser = false;
+        this.deletingUserId = null;
       }
     });
   }

@@ -34,6 +34,11 @@ export class MailComponent implements OnInit {
   loading = false; // ✅ เพิ่ม loading state
   selectedImage: string | null = null; // ✅ เพิ่ม selectedImage สำหรับ image viewer
   showImageModal = false; // ✅ เพิ่ม showImageModal
+  
+  // ✅ Delete report loading state
+  deletingReport = false;
+  deletingReportKey: string | null = null;
+  
   private apiUrl: string;
 
   constructor(
@@ -229,6 +234,10 @@ export class MailComponent implements OnInit {
   async deleteReport(key: string) {
     // ✅ ใช้ notification popup แทน confirm()
     this.notificationService.showNotification('warning', 'ยืนยันการลบ', 'ต้องการลบเรื่องนี้จริงหรือไม่?', true, 'ลบ', async () => {
+      // เริ่ม loading state
+      this.deletingReport = true;
+      this.deletingReportKey = key;
+      
       try {
         console.log('🗑️ Deleting report:', key);
         const headers = await this.getAuthHeaders();
@@ -280,6 +289,10 @@ export class MailComponent implements OnInit {
       } catch (error) {
         console.error('❌ Error deleting report:', error);
         this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการลบรายงาน');
+      } finally {
+        // หยุด loading state
+        this.deletingReport = false;
+        this.deletingReportKey = null;
       }
     });
   }

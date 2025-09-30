@@ -577,6 +577,12 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
+    // ตรวจสอบว่ามีจุดวัดหรือไม่
+    if (this.measurementPoints.length === 0) {
+      this.notificationService.showNotification('error', 'ไม่มีจุดวัด', 'กรุณาเลือกพื้นที่วัดก่อน');
+      return;
+    }
+
     // ✅ สำหรับ test devices เท่านั้น ให้สร้างข้อมูลปลอม
     const isTestDevice = this.deviceName && this.deviceName.toLowerCase().includes('test');
     if (isTestDevice) {
@@ -604,28 +610,8 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     console.log('👤 Current user:', this.currentUser.uid, this.currentUser.email);
     console.log('📱 Selected device:', this.deviceName, 'Status:', this.deviceStatus);
     console.log('📊 Live data:', this.liveData);
+    console.log('🎯 Measurement points to measure:', this.measurementPoints.length);
     
-    // ✅ ใช้ข้อมูลจาก Firebase live data (จำกัด precision เพื่อป้องกัน numeric field overflow)
-    const newMeasurement: Measurement = {
-      deviceId: this.deviceId || 'unknown', // ใช้ device ID จาก component
-      temperature: this.limitPrecision(this.liveData.temperature, 2), // ✅ จำกัด precision
-      moisture: this.limitPrecision(this.liveData.moisture, 2), // ✅ จำกัด precision
-      nitrogen: this.limitPrecision(this.liveData.nitrogen, 2), // ✅ จำกัด precision
-      phosphorus: this.limitPrecision(this.liveData.phosphorus, 2), // ✅ จำกัด precision
-      potassium: this.limitPrecision(this.liveData.potassium, 2), // ✅ จำกัด precision
-      ph: this.limitPrecision(this.liveData.ph, 2), // ✅ จำกัด precision
-      location: this.locationDetail || 'Auto Location',
-      lat: this.roundLatLng(this.selectedPoints.length > 0 ? this.selectedPoints[0][1] : 16.2464504, 6), // ✅ จำกัด precision สำหรับ database constraint
-      lng: this.roundLatLng(this.selectedPoints.length > 0 ? this.selectedPoints[0][0] : 103.2501379, 6), // ✅ จำกัด precision สำหรับ database constraint
-      date: new Date().toISOString(),
-      timestamp: Date.now(),
-      locationNameType: this.locationDetail ? 'custom' : 'auto',
-      customLocationName: this.locationDetail || null,
-      autoLocationName: this.locationDetail ? null : 'Auto Location',
-      areaId: this.currentAreaId ?? undefined,
-      measurementPoint: this.measurementCount + 1,
-    };
-
     try {
       const token = await this.currentUser.getIdToken();
       
@@ -635,14 +621,8 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
         return;
       }
       
-      // ✅ ตรวจสอบว่ามีการวัดหลายจุดหรือไม่
-      if (this.selectedPoints.length > 1) {
-        // สร้าง area พร้อม measurements
-        await this.saveAreaMeasurement(token);
-      } else {
-        // บันทึก measurement เดียว
-        await this.saveSingleMeasurement(token, newMeasurement);
-      }
+      // ✅ วัดทีละจุดและบันทึกเข้าสู่ PostgreSQL
+      await this.measureAllPoints(token);
       
     } catch (error: any) {
       console.error('❌ Error saving measurement:', error);
@@ -661,6 +641,93 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
         console.error('❌ Unknown Error:', error);
         this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่อีกครั้ง');
       }
+    }
+  }
+
+  // ✅ วัดทีละจุดและบันทึกเข้าสู่ PostgreSQL
+  async measureAllPoints(token: string) {
+    console.log('🎯 Starting measurement of all points...');
+    
+    let successCount = 0;
+    let errorCount = 0;
+    
+    // แสดง loading state
+    this.isLoading = true;
+    
+    try {
+      // วัดทีละจุด
+      for (let i = 0; i < this.measurementPoints.length; i++) {
+        const [lng, lat] = this.measurementPoints[i];
+        
+        console.log(`📊 Measuring point ${i + 1}/${this.measurementPoints.length}: [${lng}, ${lat}]`);
+        
+        // สร้างข้อมูล measurement สำหรับจุดนี้
+        const measurementData = {
+          deviceId: this.deviceId,
+          temperature: this.limitPrecision(this.liveData?.temperature || 0, 2),
+          moisture: this.limitPrecision(this.liveData?.moisture || 0, 2),
+          nitrogen: this.limitPrecision(this.liveData?.nitrogen || 0, 2),
+          phosphorus: this.limitPrecision(this.liveData?.phosphorus || 0, 2),
+          potassium: this.limitPrecision(this.liveData?.potassium || 0, 2),
+          ph: this.limitPrecision(this.liveData?.ph || 7.0, 2),
+          location: this.locationDetail || 'Auto Location',
+          lat: this.roundLatLng(lat, 6),
+          lng: this.roundLatLng(lng, 6),
+          date: new Date().toISOString(),
+          customLocationName: this.locationDetail || null,
+          areaId: this.currentAreaId
+        };
+
+        try {
+          // บันทึก measurement ไปยัง PostgreSQL
+          const response = await lastValueFrom(
+            this.http.post(`${this.apiUrl}/api/measurements`, measurementData, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            })
+          );
+          
+          console.log(`✅ Point ${i + 1} measured successfully:`, response);
+          successCount++;
+          
+          // อัปเดต UI
+          this.measurementCount++;
+          
+        } catch (pointError: any) {
+          console.error(`❌ Error measuring point ${i + 1}:`, pointError);
+          errorCount++;
+        }
+        
+        // รอสักครู่ระหว่างการวัดแต่ละจุด (เพื่อให้เห็นการทำงาน)
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      console.log(`🎯 Measurement completed: ${successCount} success, ${errorCount} errors`);
+      
+      // แสดงผลลัพธ์
+      if (successCount > 0) {
+        this.notificationService.showNotification(
+          'success', 
+          'ทำการวัดพื้นที่เสร็จแล้ว', 
+          `ทำการวัดพื้นที่เสร็จแล้ว ${successCount} จุดจาก ${this.measurementPoints.length} จุด${errorCount > 0 ? ` (มีข้อผิดพลาด ${errorCount} จุด)` : ''}`
+        );
+        
+        // เด้งไปหน้า history หลังจาก 2 วินาที
+        setTimeout(() => {
+          console.log('🔄 Redirecting to history page...');
+          this.router.navigate(['/history']);
+        }, 2000);
+        
+      } else {
+        this.notificationService.showNotification('error', 'วัดไม่สำเร็จ', 'ไม่สามารถวัดจุดใดได้ กรุณาลองใหม่');
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Error in measureAllPoints:', error);
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการวัด กรุณาลองใหม่');
+    } finally {
+      this.isLoading = false;
     }
   }
 
@@ -963,7 +1030,7 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   
   // ✅ ยืนยันพื้นที่
-  confirmArea() {
+  async confirmArea() {
     if (this.selectedPoints.length < 3) {
       this.notificationService.showNotification('error', 'ข้อมูลไม่เพียงพอ', 'กรุณาเลือกอย่างน้อย 3 จุดเพื่อสร้างพื้นที่');
       return;
@@ -971,6 +1038,9 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     
     // ✅ สร้างจุดที่ต้องวัดภายในพื้นที่
     this.generateMeasurementPoints();
+    
+    // ✅ สร้างข้อมูลใน table areas ทันที
+    await this.createAreaImmediately();
     
     this.showPopup = false;
     this.isSelectingArea = false;
@@ -986,6 +1056,13 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     const area = this.calculatePolygonArea(this.selectedPoints);
     this.locationDetail = `พื้นที่ที่เลือก: ${area.toFixed(2)} ตารางเมตร (${this.selectedPoints.length} จุด) - จุดวัด: ${this.measurementPoints.length} จุด`;
     
+    // แสดงขนาดพื้นที่ที่แม่นยำ
+    console.log('📐 Calculated area:', {
+      area: area.toFixed(2) + ' ตารางเมตร',
+      points: this.selectedPoints.length,
+      measurementPoints: this.measurementPoints.length
+    });
+    
     console.log('✅ Area confirmed:', {
       points: this.selectedPoints.length,
       area: area,
@@ -995,6 +1072,62 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     console.log('🗺️ Main map will show measurement points');
   }
   
+  // ✅ สร้างข้อมูลใน table areas ทันทีเมื่อยืนยันพื้นที่
+  async createAreaImmediately() {
+    if (!this.currentUser || !this.deviceId) {
+      console.error('❌ No current user or device ID for area creation');
+      return;
+    }
+
+    try {
+      const token = await this.currentUser.getIdToken();
+      
+      // คำนวณพื้นที่
+      const area = this.calculatePolygonArea(this.selectedPoints);
+      
+      const areaData = {
+        area_name: `พื้นที่วัด ${new Date().toLocaleDateString('th-TH')} - ${area.toFixed(2)} ตารางเมตร`,
+        deviceId: this.deviceId,
+        measurements: [] // ยังไม่มี measurements ตอนนี้
+      };
+
+      // แสดงขนาดพื้นที่ที่แม่นยำ
+      console.log('📐 Area size calculation:', {
+        area: area.toFixed(2) + ' ตารางเมตร',
+        coordinates: this.selectedPoints.length + ' จุด',
+        areaName: areaData.area_name
+      });
+
+      console.log('🏞️ Creating area immediately:', areaData);
+
+      const response = await lastValueFrom(
+        this.http.post(`${this.apiUrl}/api/measurements/create-area`, areaData, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+      );
+
+      console.log('✅ Area created immediately:', response);
+      
+      // เก็บ area ID สำหรับใช้ในการบันทึก measurements
+      if (response && (response as any).areaId) {
+        this.currentAreaId = (response as any).areaId;
+        console.log('📝 Area ID saved for measurements:', this.currentAreaId);
+      }
+
+      this.notificationService.showNotification(
+        'success', 
+        'สร้างพื้นที่สำเร็จ', 
+        `สร้างพื้นที่ "${areaData.area_name}" เรียบร้อยแล้ว พร้อมสำหรับการวัด ${this.measurementPoints.length} จุด`
+      );
+      
+    } catch (error: any) {
+      console.error('❌ Error creating area immediately:', error);
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'ไม่สามารถสร้างพื้นที่ได้ กรุณาลองใหม่');
+    }
+  }
+
   // ✅ สร้างจุดที่ต้องวัดภายในพื้นที่
   generateMeasurementPoints() {
     if (this.selectedPoints.length < 3) return;
@@ -1006,7 +1139,12 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     
     // ✅ คำนวณขนาดพื้นที่ (เมตร)
     const areaSize = this.calculateAreaSize(bounds);
-    console.log('📏 Area size:', areaSize, 'meters');
+    const realArea = this.calculatePolygonArea(this.selectedPoints);
+    console.log('📏 Area size calculation:', {
+      boundsArea: areaSize.toFixed(2) + ' meters',
+      realArea: realArea.toFixed(2) + ' ตารางเมตร',
+      coordinates: this.selectedPoints.length + ' จุด'
+    });
     
     // ✅ กำหนดระยะห่างระหว่างจุดวัดตามขนาดพื้นที่
     let pointDistance: number;
@@ -1104,10 +1242,11 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     return inside;
   }
   
-  // ✅ คำนวณพื้นที่ polygon
+  // ✅ คำนวณพื้นที่ polygon แบบแม่นยำ (ตารางเมตร)
   calculatePolygonArea(coordinates: [number, number][]): number {
     if (coordinates.length < 3) return 0;
     
+    // ใช้ Shoelace formula สำหรับคำนวณพื้นที่ในระบบพิกัด
     let area = 0;
     const n = coordinates.length;
     
@@ -1119,20 +1258,39 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     
     area = Math.abs(area) / 2;
     
-    // แปลงจาก degrees เป็น meters (ประมาณ)
-    const earthRadius = 6371000; // meters
-    const lat1 = coordinates[0][1] * Math.PI / 180;
-    const lat2 = coordinates[1][1] * Math.PI / 180;
-    const dLat = lat2 - lat1;
-    const dLng = (coordinates[1][0] - coordinates[0][0]) * Math.PI / 180;
+    // แปลงจาก degrees เป็น meters โดยใช้ Haversine formula
+    const earthRadius = 6371000; // รัศมีโลกในหน่วยเมตร
     
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1) * Math.cos(lat2) *
-              Math.sin(dLng/2) * Math.sin(dLng/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    const distance = earthRadius * c;
+    // คำนวณระยะทางเฉลี่ยระหว่างจุด
+    let totalDistance = 0;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      const lat1 = coordinates[i][1] * Math.PI / 180;
+      const lat2 = coordinates[j][1] * Math.PI / 180;
+      const dLat = lat2 - lat1;
+      const dLng = (coordinates[j][0] - coordinates[i][0]) * Math.PI / 180;
+      
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1) * Math.cos(lat2) *
+                Math.sin(dLng/2) * Math.sin(dLng/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      const distance = earthRadius * c;
+      totalDistance += distance;
+    }
     
-    return area * (distance * distance);
+    const avgDistance = totalDistance / n;
+    
+    // คำนวณพื้นที่จริงในตารางเมตร
+    const realArea = area * (avgDistance * avgDistance);
+    
+    console.log('📐 Area calculation details:', {
+      coordinates: coordinates.length,
+      shoelaceArea: area.toFixed(6),
+      avgDistance: avgDistance.toFixed(2) + 'm',
+      realArea: realArea.toFixed(2) + 'm²'
+    });
+    
+    return realArea;
   }
   
   // ✅ เริ่มต้นแผนที่ใน popup

@@ -150,15 +150,21 @@
         </div>
 
         <div class="user-actions">
-          <button class="btn btn-edit" (click)="editUser(user)" title="แก้ไขข้อมูลผู้ใช้">
+          <button class="btn btn-edit" (click)="editUser(user)" title="แก้ไขข้อมูลผู้ใช้" [disabled]="deletingUser">
             <i class="fas fa-edit"></i>
             <span>แก้ไข</span>
           </button>
-          <button class="btn btn-delete" (click)="deleteUser(user.user_name || user.username)" title="ลบผู้ใช้">
-            <i class="fas fa-trash"></i>
-            <span>ลบ</span>
+          <button class="btn btn-delete" (click)="deleteUser(user.user_name || user.username)" title="ลบผู้ใช้"
+            [disabled]="deletingUser"
+            [class.loading]="deletingUser && deletingUserId === (user.userid || user.id)?.toString()">
+            <i class="fas fa-trash"
+              *ngIf="!deletingUser || deletingUserId !== (user.userid || user.id)?.toString()"></i>
+            <i class="fas fa-spinner fa-spin"
+              *ngIf="deletingUser && deletingUserId === (user.userid || user.id)?.toString()"></i>
+            <span *ngIf="!deletingUser || deletingUserId !== (user.userid || user.id)?.toString()">ลบ</span>
+            <span *ngIf="deletingUser && deletingUserId === (user.userid || user.id)?.toString()">กำลังลบ...</span>
           </button>
-          <button class="btn btn-view" (click)="viewUserDetails(user)" title="ดูรายละเอียด">
+          <button class="btn btn-view" (click)="viewUserDetails(user)" title="ดูรายละเอียด" [disabled]="deletingUser">
             <i class="fas fa-eye"></i>
             <span>ดูรายละเอียด</span>
           </button>
@@ -386,15 +392,21 @@
         </div>
 
         <div class="device-actions">
-          <button class="btn btn-view" (click)="viewDevice(device)" title="ดูข้อมูลอุปกรณ์">
+          <button class="btn btn-view" (click)="viewDevice(device)" title="ดูข้อมูลอุปกรณ์" [disabled]="deletingDevice">
             <i class="fas fa-eye"></i>
             <span>ดูข้อมูล</span>
           </button>
-          <button class="btn btn-delete" (click)="deleteDevice(device.id || device.deviceid)" title="ลบอุปกรณ์">
-            <i class="fas fa-trash"></i>
-            <span>ลบ</span>
+          <button class="btn btn-delete" (click)="deleteDevice(device.id || device.deviceid)" title="ลบอุปกรณ์"
+            [disabled]="deletingDevice"
+            [class.loading]="deletingDevice && deletingDeviceId === (device.id || device.deviceid)">
+            <i class="fas fa-trash" *ngIf="!deletingDevice || deletingDeviceId !== (device.id || device.deviceid)"></i>
+            <i class="fas fa-spinner fa-spin"
+              *ngIf="deletingDevice && deletingDeviceId === (device.id || device.deviceid)"></i>
+            <span *ngIf="!deletingDevice || deletingDeviceId !== (device.id || device.deviceid)">ลบ</span>
+            <span *ngIf="deletingDevice && deletingDeviceId === (device.id || device.deviceid)">กำลังลบ...</span>
           </button>
-          <button class="btn btn-edit" (click)="editDevice(device)" title="แก้ไขข้อมูลอุปกรณ์">
+          <button class="btn btn-edit" (click)="editDevice(device)" title="แก้ไขข้อมูลอุปกรณ์"
+            [disabled]="deletingDevice">
             <i class="fas fa-edit"></i>
             <span>แก้ไข</span>
           </button>

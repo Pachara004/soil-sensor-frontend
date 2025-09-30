@@ -145,7 +145,7 @@ export class RegisterComponent {
           errors.push(`Backend: ${backendResult.reason.message}`);
         }
 
-        // หากมี error ที่สำคัญ ให้แสดงข้อผิดพลาด
+        // หากมี error ที่สำคัญ ให้แสดงข้อผิดพลาด (ไม่แสดง popup)
         if (errors.length > 0 && (firebaseResult.status === 'rejected' && backendResult.status === 'rejected')) {
           this.emailStatus = {
             class: 'error',
@@ -177,6 +177,7 @@ export class RegisterComponent {
       } catch (error: any) {
         console.error('Unexpected error checking email:', error);
         
+        // ไม่แสดง popup notification ตอนตรวจสอบอีเมล
         this.emailStatus = {
           class: 'error',
           message: 'เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่',

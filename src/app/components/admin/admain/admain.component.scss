@@ -2372,3 +2372,30 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
     }
   }
 }
+
+// Loading state animations
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+// Delete button loading state
+.btn-delete.loading {
+  background: linear-gradient(135deg, #FF9800, #F57C00) !important;
+  cursor: not-allowed !important;
+  opacity: 0.8 !important;
+
+  i.fa-spinner {
+    animation: spin 1s linear infinite;
+  }
+
+  &:hover {
+    transform: none !important;
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3) !important;
+  }
+}

@@ -57,27 +57,27 @@
           <div class="avg-grid">
             <div class="avg-item">
               <span class="avg-label">อุณหภูมิ</span>
-              <span class="avg-value">{{ area.averages.temperature }}°C</span>
+              <span class="avg-value">{{ formatNumber(area.averages.temperature) }}°C</span>
             </div>
             <div class="avg-item">
               <span class="avg-label">ความชื้น</span>
-              <span class="avg-value">{{ area.averages.moisture }}%</span>
+              <span class="avg-value">{{ formatNumber(area.averages.moisture) }}%</span>
             </div>
             <div class="avg-item">
               <span class="avg-label">N</span>
-              <span class="avg-value">{{ area.averages.nitrogen }}</span>
+              <span class="avg-value">{{ formatNumber(area.averages.nitrogen) }}</span>
             </div>
             <div class="avg-item">
               <span class="avg-label">P</span>
-              <span class="avg-value">{{ area.averages.phosphorus }}</span>
+              <span class="avg-value">{{ formatNumber(area.averages.phosphorus) }}</span>
             </div>
             <div class="avg-item">
               <span class="avg-label">K</span>
-              <span class="avg-value">{{ area.averages.potassium }}</span>
+              <span class="avg-value">{{ formatNumber(area.averages.potassium) }}</span>
             </div>
             <div class="avg-item">
               <span class="avg-label">pH</span>
-              <span class="avg-value">{{ area.averages.ph }}</span>
+              <span class="avg-value">{{ formatNumber(area.averages.ph, 1) }}</span>
             </div>
           </div>
         </div>
