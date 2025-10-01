@@ -45,7 +45,7 @@ interface Measurement {
   locationNameType?: 'custom' | 'auto';
   customLocationName?: string | null;
   autoLocationName?: string | null;
-  areaId?: string; // ใช้ undefined แทน null (ถ้าจะใช้ null ให้เปลี่ยนเป็น: string | null)
+  areasid?: string; // ใช้ undefined แทน null (ถ้าจะใช้ null ให้เปลี่ยนเป็น: string | null)
   measurementPoint?: number;
 }
 
@@ -673,9 +673,8 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
           location: this.locationDetail || 'Auto Location',
           lat: this.roundLatLng(lat, 6),
           lng: this.roundLatLng(lng, 6),
-          date: new Date().toISOString(),
-          customLocationName: this.locationDetail || null,
-          areaId: this.currentAreaId
+          measurementPoint: i + 1, // เพิ่ม measurementPoint
+          areasid: this.currentAreaId
         };
 
         try {
@@ -1053,12 +1052,13 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     }, 100);
     
     // คำนวณพื้นที่
-    const area = this.calculatePolygonArea(this.selectedPoints);
-    this.locationDetail = `พื้นที่ที่เลือก: ${area.toFixed(2)} ตารางเมตร (${this.selectedPoints.length} จุด) - จุดวัด: ${this.measurementPoints.length} จุด`;
+    const area = this.calculateSimpleArea(this.selectedPoints);
+    const areaFormatted = this.formatAreaToThaiUnits(area);
+    this.locationDetail = `พื้นที่ที่เลือก: ${areaFormatted} (${this.selectedPoints.length} จุด) - จุดวัด: ${this.measurementPoints.length} จุด`;
     
     // แสดงขนาดพื้นที่ที่แม่นยำ
     console.log('📐 Calculated area:', {
-      area: area.toFixed(2) + ' ตารางเมตร',
+      area: areaFormatted,
       points: this.selectedPoints.length,
       measurementPoints: this.measurementPoints.length
     });
@@ -1083,17 +1083,18 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       const token = await this.currentUser.getIdToken();
       
       // คำนวณพื้นที่
-      const area = this.calculatePolygonArea(this.selectedPoints);
+      const area = this.calculateSimpleArea(this.selectedPoints);
+      const areaFormatted = this.formatAreaToThaiUnits(area);
       
       const areaData = {
-        area_name: `พื้นที่วัด ${new Date().toLocaleDateString('th-TH')} - ${area.toFixed(2)} ตารางเมตร`,
+        area_name: `พื้นที่วัด ${new Date().toLocaleDateString('th-TH')} - ${areaFormatted}`,
         deviceId: this.deviceId,
         measurements: [] // ยังไม่มี measurements ตอนนี้
       };
 
       // แสดงขนาดพื้นที่ที่แม่นยำ
       console.log('📐 Area size calculation:', {
-        area: area.toFixed(2) + ' ตารางเมตร',
+        area: areaFormatted,
         coordinates: this.selectedPoints.length + ' จุด',
         areaName: areaData.area_name
       });
@@ -1114,6 +1115,9 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       if (response && (response as any).areaId) {
         this.currentAreaId = (response as any).areaId;
         console.log('📝 Area ID saved for measurements:', this.currentAreaId);
+      } else if (response && (response as any).areasid) {
+        this.currentAreaId = (response as any).areasid;
+        console.log('📝 Areas ID saved for measurements:', this.currentAreaId);
       }
 
       this.notificationService.showNotification(
@@ -1291,6 +1295,102 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     });
     
     return realArea;
+  }
+
+  // ✅ คำนวณพื้นที่แบบง่ายและแม่นยำ (ไร่)
+  calculateSimpleArea(coordinates: [number, number][]): number {
+    if (coordinates.length < 3) return 0;
+    
+    // ใช้ Shoelace formula
+    let area = 0;
+    const n = coordinates.length;
+    
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      area += coordinates[i][0] * coordinates[j][1];
+      area -= coordinates[j][0] * coordinates[i][1];
+    }
+    
+    area = Math.abs(area) / 2;
+    
+    // แปลงจาก degrees เป็น meters โดยใช้ค่าคงที่
+    // 1 องศา ≈ 111,000 เมตร
+    const latToMeters = 111000;
+    const lngToMeters = 111000 * Math.cos(coordinates[0][1] * Math.PI / 180);
+    
+    // คำนวณพื้นที่ในตารางเมตร
+    const areaInSquareMeters = area * latToMeters * lngToMeters;
+    
+    // แปลงเป็นไร่ (1 ไร่ = 1,600 ตารางเมตร)
+    const areaInRai = areaInSquareMeters / 1600;
+    
+    console.log('📐 Simple area calculation:', {
+      coordinates: coordinates.length,
+      shoelaceArea: area.toFixed(6),
+      latToMeters: latToMeters.toFixed(0),
+      lngToMeters: lngToMeters.toFixed(0),
+      areaInSquareMeters: areaInSquareMeters.toFixed(2) + 'm²',
+      areaInRai: areaInRai.toFixed(4) + ' ไร่'
+    });
+    
+    return areaInRai;
+  }
+
+  // ✅ แปลงพื้นที่เป็นรูปแบบ "กี่ ไร่ กี่ งาน กี่ ตารางวา กี่ ตารางเมตร"
+  formatAreaToThaiUnits(areaInRai: number): string {
+    if (areaInRai < 0.0001) return '0 ไร่ 0 งาน 0 ตารางวา 0 ตารางเมตร';
+    
+    // 1 ไร่ = 4 งาน = 1,600 ตารางเมตร
+    // 1 งาน = 400 ตารางเมตร
+    // 1 งาน = 100 ตารางวา
+    // 1 ตารางวา = 4 ตารางเมตร
+    
+    const rai = Math.floor(areaInRai);
+    const remainingArea = (areaInRai - rai) * 1600; // แปลงเป็นตารางเมตร
+    
+    const ngan = Math.floor(remainingArea / 400);
+    const remainingAfterNgan = remainingArea % 400;
+    
+    const squareWa = Math.floor(remainingAfterNgan / 4);
+    const squareMeters = Math.round(remainingAfterNgan % 4);
+    
+    // เรียงลำดับ: ไร่ → งาน → ตารางวา → ตารางเมตร
+    let result = '';
+    
+    if (rai > 0) {
+      result += `${rai} ไร่`;
+    }
+    
+    if (ngan > 0) {
+      if (result) result += ' ';
+      result += `${ngan} งาน`;
+    }
+    
+    if (squareWa > 0) {
+      if (result) result += ' ';
+      result += `${squareWa} ตารางวา`;
+    }
+    
+    if (squareMeters > 0) {
+      if (result) result += ' ';
+      result += `${squareMeters} ตารางเมตร`;
+    }
+    
+    // ถ้าไม่มีอะไรเลย ให้แสดง 0 ไร่ 0 งาน 0 ตารางวา 0 ตารางเมตร
+    if (!result) {
+      result = '0 ไร่ 0 งาน 0 ตารางวา 0 ตารางเมตร';
+    }
+    
+    console.log('📐 Thai units conversion:', {
+      areaInRai: areaInRai.toFixed(4),
+      rai: rai,
+      ngan: ngan,
+      squareWa: squareWa,
+      squareMeters: squareMeters,
+      result: result
+    });
+    
+    return result;
   }
   
   // ✅ เริ่มต้นแผนที่ใน popup

@@ -166,7 +166,7 @@ export class AdregisterComponent { // cSpell:ignore Adregister
             source = 'ระบบ Firebase และฐานข้อมูล';
           } else if (firebaseExists) {
             source = 'ระบบ Firebase Auth';
-          } else {
+      } else {
             source = 'ฐานข้อมูล';
           }
 
@@ -187,7 +187,7 @@ export class AdregisterComponent { // cSpell:ignore Adregister
           class: 'error',
           message: 'เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่',
         };
-      } finally {
+    } finally {
         this.isCheckingEmail = false;
       }
     }, 800);
@@ -227,8 +227,8 @@ export class AdregisterComponent { // cSpell:ignore Adregister
         console.error('Firebase check failed during OTP send:', firebaseResult.reason);
         // หาก Firebase check ล้มเหลว ให้แสดงข้อผิดพลาด
         this.showNotificationPopup('error', 'ระบบไม่พร้อม', 'ไม่สามารถตรวจสอบอีเมลกับระบบ Firebase ได้ กรุณาลองใหม่');
-        return;
-      }
+          return;
+        }
 
       // ประมวลผล Backend result (อนุญาตให้ล้มเหลวได้)
       if (backendResult.status === 'fulfilled') {
@@ -251,8 +251,8 @@ export class AdregisterComponent { // cSpell:ignore Adregister
         this.showNotificationPopup('warning', 'อีเมลถูกใช้แล้ว', 'อีเมลนี้ถูกใช้ไปแล้ว กรุณาใช้อีเมลอื่นหรือเข้าสู่ระบบ', true, 'ไปหน้า Login', () => {
           this.router.navigate(['/login']);
         });
-        return;
-      }
+      return;
+    }
 
       const response = await firstValueFrom(
         this.http.post(`${this.constants.API_ENDPOINT}/api/auth/send-otp`, {
@@ -571,7 +571,7 @@ export class AdregisterComponent { // cSpell:ignore Adregister
       }
 
        this.showNotificationPopup('success', '🔐 สมัคร Admin สำเร็จ!', 'ยินดีต้อนรับ Admin เข้าสู่ระบบ', true, 'ไปหน้า Admin', () => {
-        this.router.navigate(['/adminmain']);
+      this.router.navigate(['/adminmain']);
       });
     } catch (error: any) {
       console.error('ADMIN Registration error:', error);

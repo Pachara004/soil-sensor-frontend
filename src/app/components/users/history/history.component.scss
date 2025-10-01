@@ -468,7 +468,8 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
 }
 
 .detail-btn,
-.stats-btn {
+.stats-btn,
+.points-btn {
   padding: 12px 20px;
   border: none;
   border-radius: 25px;
@@ -478,6 +479,10 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
   transition: $transition;
   min-width: 120px;
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 
   &:hover {
     transform: translateY(-2px);
@@ -495,6 +500,21 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
   background: $secondary-gradient;
   color: white;
   box-shadow: $shadow-blue;
+}
+
+.points-btn {
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  color: white;
+  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+
+  &:hover {
+    background: linear-gradient(135deg, #3d8bfe, #00d4fe);
+  }
+
+  &::before {
+    content: "📍";
+    font-size: 16px;
+  }
 }
 
 // Area Details View - ปรับแต่งใหม่

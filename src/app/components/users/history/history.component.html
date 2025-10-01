@@ -84,6 +84,7 @@
         <div class="area-actions">
           <button class="detail-btn" (click)="viewAreaDetails(area)">ดูรายละเอียด</button>
           <button class="stats-btn" (click)="showAreaStatistics(area)">สถิติ</button>
+          <button class="points-btn" (click)="viewAllMeasurementPoints(area)">ดูจุดวัดทั้งหมด</button>
         </div>
       </div>
       <div *ngIf="areaGroups.length === 0" class="empty">ไม่พบข้อมูลการวัดค่า</div>

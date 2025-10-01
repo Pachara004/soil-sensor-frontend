@@ -665,6 +665,26 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
           margin-top: 8px;
         }
 
+        &.area-size-info {
+          color: #667eea;
+          font-weight: 700;
+          padding: 10px;
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+          border-radius: 8px;
+          border-left: 4px solid #667eea;
+          font-size: 15px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          margin-top: 8px;
+
+          strong {
+            color: #667eea;
+            font-size: 16px;
+          }
+        }
+
         &.polygon-warning {
           color: #ff9800;
           font-weight: 600;

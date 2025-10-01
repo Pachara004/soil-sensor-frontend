@@ -157,6 +157,9 @@
               <p *ngIf="selectedPoints.length >= 3" class="polygon-info">
                 ✅ กรอบการวัดแสดงแล้ว ({{ selectedPoints.length }} จุด)
               </p>
+              <p *ngIf="selectedPoints.length >= 3" class="area-size-info">
+                📏 ขนาดพื้นที่: <strong>{{ formatAreaToThaiUnits(calculateSimpleArea(selectedPoints)) }}</strong>
+              </p>
               <p *ngIf="selectedPoints.length < 3" class="polygon-warning">
                 ⚠️ ต้องเลือกอย่างน้อย 3 จุดเพื่อแสดงกรอบการวัด
               </p>
@@ -222,7 +225,8 @@
             🗑️ เคลียร์จุดทั้งหมด
           </button>
           <button class="btn-primary" (click)="confirmArea()" [disabled]="selectedPoints.length < 3">
-            ✅ ยืนยันพื้นที่ ({{ selectedPoints.length }} จุด)
+            ✅ ยืนยันพื้นที่ ({{ selectedPoints.length }} จุด) - {{ selectedPoints.length >= 3 ?
+            formatAreaToThaiUnits(calculateSimpleArea(selectedPoints)) : '0 ไร่ 0 งาน 0 ตารางเมตร' }}
           </button>
           <button class="btn-cancel" (click)="closePopup()">
             ❌ ยกเลิก

@@ -539,6 +539,450 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
   }
 }
 
+// Measurement Points Section
+.measurement-points-section {
+  margin: 20px 0;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 20px;
+
+    i {
+      color: #667eea;
+      font-size: 20px;
+    }
+  }
+
+  .points-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+  }
+
+  .point-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid #e9ecef;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      border-color: #667eea;
+    }
+
+    .point-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+
+      .point-number {
+        font-weight: 600;
+        font-size: 16px;
+        color: #667eea;
+      }
+
+      .point-date {
+        font-size: 12px;
+        color: #666;
+        background: #f0f0f0;
+        padding: 4px 8px;
+        border-radius: 6px;
+      }
+    }
+
+    .point-id {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 12px;
+      padding: 6px 10px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #666;
+      border-left: 3px solid #667eea;
+
+      i {
+        color: #667eea;
+        font-size: 11px;
+      }
+    }
+
+    .point-location {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 15px;
+      font-size: 14px;
+      color: #666;
+
+      i {
+        color: #667eea;
+      }
+    }
+
+    .point-measurements {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 15px;
+
+      .measurement-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        font-size: 13px;
+
+        .measurement-label {
+          color: #666;
+        }
+
+        .measurement-value {
+          font-weight: 600;
+          color: #333;
+        }
+      }
+    }
+
+    .point-actions {
+      display: flex;
+      justify-content: center;
+
+      .view-detail-btn {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        &:hover {
+          background: linear-gradient(135deg, #5a6fd8, #6a4190);
+          transform: translateY(-1px);
+        }
+      }
+    }
+  }
+
+  .loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: #666;
+
+    i {
+      font-size: 24px;
+      margin-bottom: 10px;
+      color: #667eea;
+    }
+
+    span {
+      font-size: 14px;
+    }
+  }
+}
+
+// Point Detail Modal
+.point-detail-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  .modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease-out;
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 25px;
+      border-bottom: 1px solid #e9ecef;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border-radius: 12px 12px 0 0;
+
+      h3 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        i {
+          font-size: 20px;
+        }
+      }
+
+      .close-btn {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 20px;
+        cursor: pointer;
+        padding: 5px;
+        border-radius: 50%;
+        width: 35px;
+        height: 35px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+      }
+    }
+
+    .modal-body {
+      padding: 25px;
+
+      .detail-section {
+        margin-bottom: 25px;
+
+        .detail-title {
+          font-size: 16px;
+          font-weight: 600;
+          color: #333;
+          margin-bottom: 15px;
+          padding-bottom: 8px;
+          border-bottom: 2px solid #667eea;
+        }
+
+        .detail-content {
+          .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+
+            &:last-child {
+              border-bottom: none;
+            }
+
+            .detail-label {
+              font-weight: 500;
+              color: #666;
+            }
+
+            .detail-value {
+              font-weight: 600;
+              color: #333;
+            }
+          }
+        }
+
+        .measurements-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 15px;
+
+          .measurement-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+
+            &:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            }
+
+            .measurement-icon {
+              margin-bottom: 15px;
+
+              img {
+                width: 40px;
+                height: 40px;
+              }
+            }
+
+            .measurement-info {
+              .measurement-value {
+                font-size: 24px;
+                font-weight: 700;
+                color: #333;
+                margin-bottom: 5px;
+              }
+
+              .measurement-unit {
+                font-size: 14px;
+                color: #666;
+                margin-bottom: 8px;
+              }
+
+              .measurement-label {
+                font-size: 12px;
+                color: #666;
+                font-weight: 500;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .modal-footer {
+      padding: 20px 25px;
+      border-top: 1px solid #e9ecef;
+      display: flex;
+      justify-content: center;
+
+      .btn-secondary {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        &:hover {
+          background: #5a6268;
+          transform: translateY(-1px);
+        }
+      }
+    }
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+// Responsive Design for Measurement Points
+@media (max-width: 768px) {
+  .measurement-points-section {
+    margin: 15px 0;
+    padding: 15px;
+
+    .points-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .point-card {
+      padding: 15px;
+
+      .point-measurements {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+    }
+  }
+
+  .point-detail-modal {
+    .modal-content {
+      width: 95%;
+      max-height: 95vh;
+
+      .modal-body {
+        padding: 20px;
+
+        .measurements-grid {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+
+          .measurement-card {
+            padding: 15px;
+
+            .measurement-info .measurement-value {
+              font-size: 20px;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .measurement-points-section {
+    .point-card {
+      .point-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+
+      .point-measurements {
+        .measurement-item {
+          font-size: 12px;
+          padding: 6px 10px;
+        }
+      }
+    }
+  }
+
+  .point-detail-modal {
+    .modal-content {
+      .modal-body {
+        .measurements-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    }
+  }
+}
+
 @media (max-width: 480px) {
   .user-id {
     margin-left: 10px;

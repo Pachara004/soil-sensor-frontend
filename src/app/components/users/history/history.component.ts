@@ -31,7 +31,7 @@ interface Measurement {
   phosphorus?: number;
   potassium?: number;
   ph?: number;
-  areaId?: string;
+  areasid?: string;
   measurementPoint?: number;
   lat?: number;
   lng?: number;
@@ -39,7 +39,7 @@ interface Measurement {
 }
 
 interface AreaGroup {
-  areaId: string;
+  areasid: string;
   areaName: string;
   measurements: Measurement[];
   totalMeasurements: number;
@@ -276,7 +276,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       if (response && Array.isArray(response)) {
         // แปลงข้อมูลจาก Areas API เป็น format ที่ต้องการ
         const areaGroups: AreaGroup[] = response.map(area => ({
-          areaId: area.areasid?.toString() || area.id?.toString() || '',
+          areasid: area.areasid?.toString() || area.id?.toString() || '',
           areaName: area.area_name || 'ไม่ระบุพื้นที่',
           measurements: area.measurements || [],
           totalMeasurements: area.totalmeasurement || area.measurements?.length || 0,
@@ -355,7 +355,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       if (response && Array.isArray(response)) {
         // แปลงข้อมูล areas เป็น format ที่ต้องการ
         const areaGroups: AreaGroup[] = response.map(area => ({
-          areaId: area.id || area.areaId || '',
+          areasid: area.id || area.areasid || '',
           areaName: area.name || area.location || 'ไม่ระบุสถานที่',
           measurements: area.measurements || [],
           totalMeasurements: area.measurements?.length || 0,
@@ -509,7 +509,11 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     
     // ใช้ device_id จริงสำหรับการส่งข้อมูล
     const actualDeviceId = this.deviceMap[this.deviceId || ''] || this.deviceId;
-    const measurementData = { ...measurement, deviceId: actualDeviceId };
+    const measurementData = { 
+      ...measurement, 
+      deviceId: actualDeviceId,
+      areasid: measurement.areasid || this.selectedArea?.areasid
+    };
     
     // แสดงข้อมูลการวัดในรูปแบบ popup หรือ modal
     const detailMessage = `
@@ -533,6 +537,26 @@ pH: ${measurement.ph}
     
     // บันทึกข้อมูลสำหรับหน้า detail (ถ้าต้องการ)
     localStorage.setItem('selectedMeasurement', JSON.stringify(measurementData));
+  }
+
+  // ฟังก์ชันสำหรับดูจุดวัดทั้งหมดของพื้นที่
+  viewAllMeasurementPoints(area: AreaGroup) {
+    console.log('📊 Viewing all measurement points for area:', area);
+    
+    // สร้างข้อมูลสำหรับส่งไปยังหน้า history detail
+    const areaData = {
+      areasid: area.areasid,
+      areaName: area.areaName,
+      deviceId: this.deviceId,
+      totalMeasurements: area.totalMeasurements,
+      averages: area.averages
+    };
+    
+    // บันทึกข้อมูลพื้นที่ใน localStorage
+    localStorage.setItem('selectedMeasurement', JSON.stringify(areaData));
+    
+    // นำทางไปยังหน้า history detail
+    this.router.navigate(['/history-detail']);
   }
 
   backToAreaList() {
