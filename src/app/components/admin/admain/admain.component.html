@@ -30,10 +30,8 @@
 
     <div class="action-btn" (click)="goToReports()">
       <img src="https://cdn-icons-png.flaticon.com/512/565/565340.png" alt="Messages">
-      <div class="text">
-        ข้อความ
-        <span class="unread-count" *ngIf="unreadCount > 0">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
-      </div>
+      <div class="text">ข้อความ</div>
+      <span class="unread-count" *ngIf="unreadCount > 0">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
     </div>
   </div>
 

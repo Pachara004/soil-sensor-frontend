@@ -57,10 +57,8 @@ export class MailComponent implements OnInit {
     onAuthStateChanged(this.auth, async (user) => {
       if (user) {
         this.currentUser = user;
-        console.log('✅ Admin user authenticated for mail:', user.email);
         await this.loadReports();
       } else {
-        console.log('❌ No user found, redirecting to login');
         this.notificationService.showNotification('warning', 'กรุณาล็อกอิน', 'กรุณาล็อกอินก่อน', true, 'ไปหน้า Login', () => {
           window.location.href = '/';
         });
@@ -88,16 +86,13 @@ export class MailComponent implements OnInit {
       this.loading = true;
       const headers = await this.getAuthHeaders();
       
-      console.log('🔍 Loading reports from PostgreSQL...');
       
       // ✅ ใช้ endpoint หลักสำหรับดึงข้อมูล reports
       try {
-        console.log('🔍 Loading reports from /api/reports');
         const response = await lastValueFrom(
           this.http.get<any>(`${this.apiUrl}/api/reports`, { headers })
         );
         
-        console.log('📊 Response from /api/reports:', response);
         
         // ✅ ตรวจสอบ response format
         let reportsData: any[] = [];
@@ -113,9 +108,11 @@ export class MailComponent implements OnInit {
         }
         
         if (reportsData.length > 0) {
+          
           // ✅ แปลงข้อมูลให้ตรงกับ interface
-          this.reports = reportsData.map((report: any) => {
-            return this.transformReportData(report);
+          this.reports = reportsData.map((report: any, index: number) => {
+            const transformedReport = this.transformReportData(report);
+            return transformedReport;
           });
           
           // เรียงลำดับตาม timestamp
@@ -123,15 +120,11 @@ export class MailComponent implements OnInit {
             return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
           });
           
-          console.log(`✅ Reports loaded from /api/reports:`, this.reports.length, 'reports');
-          console.log('📋 Sample report data:', this.reports[0]);
         } else {
-          console.log('⚠️ No reports found in response');
           this.reports = [];
         }
         
       } catch (endpointError: any) {
-        console.log(`❌ Reports endpoint /api/reports failed:`, endpointError.status, endpointError.message);
         
         // ✅ ถ้าไม่สามารถดึงข้อมูลได้ ให้แสดงข้อความแจ้งเตือน
         this.reports = [];
@@ -149,14 +142,12 @@ export class MailComponent implements OnInit {
 
   // ✅ ฟังก์ชันแปลงข้อมูล report ให้ตรงกับ interface
   private transformReportData(data: any): Report {
-    console.log('🔍 Raw report data:', data);
-    console.log('🔍 Images data:', data.images);
     
     const parsedImages = this.parseImages(data.images || data.attachments || data.files || []);
-    console.log('🔍 Parsed images:', parsedImages);
+    const reportKey = data.key || data.id || data.report_id || data.reportid || data.report_key || data.uuid || data.guid || String(data.id) || 'unknown';
     
     const report: Report = {
-      key: data.key || data.id || data.report_id || String(data.id),
+      key: reportKey,
       subject: data.subject || data.title || data.report_title || 'ไม่มีหัวข้อ',
       message: data.message || data.description || data.content || data.report_message || '',
       timestamp: data.timestamp || data.created_at || data.date || new Date().toISOString(),
@@ -168,7 +159,6 @@ export class MailComponent implements OnInit {
       device_info: this.parseDeviceInfo(data.device_info || data.device || data.sensor_info)
     };
     
-    console.log('🔍 Final report object:', report);
     return report;
   }
 
@@ -232,6 +222,13 @@ export class MailComponent implements OnInit {
 
 
   async deleteReport(key: string) {
+    // ✅ ตรวจสอบ key ก่อนลบ
+    if (!key || key === 'undefined' || key === 'unknown') {
+      console.error('❌ Invalid report key:', key);
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'ไม่พบ ID ของรายงานที่ต้องการลบ');
+      return;
+    }
+    
     // ✅ ใช้ notification popup แทน confirm()
     this.notificationService.showNotification('warning', 'ยืนยันการลบ', 'ต้องการลบเรื่องนี้จริงหรือไม่?', true, 'ลบ', async () => {
       // เริ่ม loading state
@@ -239,7 +236,6 @@ export class MailComponent implements OnInit {
       this.deletingReportKey = key;
       
       try {
-        console.log('🗑️ Deleting report:', key);
         const headers = await this.getAuthHeaders();
         
         // ✅ ลองใช้หลาย endpoints สำหรับลบ
@@ -252,15 +248,12 @@ export class MailComponent implements OnInit {
         let deleteSuccess = false;
         for (const endpoint of deleteEndpoints) {
           try {
-            console.log(`🗑️ Trying to delete via: ${endpoint}`);
             await lastValueFrom(
               this.http.delete(`${this.apiUrl}${endpoint}`, { headers })
             );
-            console.log(`✅ Report deleted successfully via ${endpoint}`);
             deleteSuccess = true;
             break;
           } catch (endpointError: any) {
-            console.log(`❌ Delete endpoint ${endpoint} failed:`, endpointError.status);
             continue;
           }
         }
@@ -313,15 +306,12 @@ export class MailComponent implements OnInit {
       let updateSuccess = false;
       for (const endpoint of updateEndpoints) {
         try {
-          console.log(`🔧 Trying to update status via: ${endpoint}`);
           await lastValueFrom(
             this.http.put(`${this.apiUrl}${endpoint}`, { status }, { headers })
           );
-          console.log(`✅ Status updated successfully via ${endpoint}`);
           updateSuccess = true;
           break;
         } catch (endpointError: any) {
-          console.log(`❌ Update endpoint ${endpoint} failed:`, endpointError.status);
           continue;
         }
       }
@@ -351,7 +341,6 @@ export class MailComponent implements OnInit {
 
   // ✅ ฟังก์ชัน refresh ข้อมูล
   async refreshReports() {
-    console.log('🔄 Refreshing reports...');
     await this.loadReports();
   }
 

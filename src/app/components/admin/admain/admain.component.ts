@@ -1,11 +1,11 @@
 import { Component, OnInit, ChangeDetectorRef, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { AdminService } from '../../../service/AdminService';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, catchError, filter } from 'rxjs/operators';
 import { throwError } from 'rxjs'; // เปลี่ยนจาก rxjs/operators มาเป็น rxjs
 import { Constants } from '../../../config/constants'; // ปรับ path ตามโครงสร้าง
 import { NotificationService } from '../../../service/notification.service';
@@ -112,11 +112,19 @@ export class AdmainComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
+    // ✅ Subscribe ถึง router events เพื่อ refresh unread count
+    this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe(async (event) => {
+        if (event instanceof NavigationEnd && event.url === '/admain') {
+          await this.refreshUnreadCount();
+        }
+      });
+
     // ✅ ใช้ Firebase Auth แทน localStorage
     onAuthStateChanged(this.auth, async (user) => {
       if (user) {
         this.currentUser = user;
-        console.log('✅ Admin user authenticated:', user.email);
         
         // ✅ ดึงข้อมูล admin จาก PostgreSQL
         await this.loadAdminData();
@@ -126,14 +134,13 @@ export class AdmainComponent implements OnInit, OnDestroy {
           await this.loadDevices();
           await this.loadAllUsersOnce();
           await this.loadRegularUsers();
+          await this.loadUnreadCount();
     } else {
-          console.log('❌ User is not admin, redirecting to login');
           this.notificationService.showNotification('warning', 'ไม่มีสิทธิ์', 'คุณไม่มีสิทธิ์เข้าถึงหน้า Admin', true, 'ไปหน้า Login', () => {
       this.router.navigate(['/']);
           });
         }
         } else {
-        console.log('❌ No user found, redirecting to login');
         this.notificationService.showNotification('warning', 'กรุณาล็อกอิน', 'กรุณาล็อกอินก่อน', true, 'ไปหน้า Login', () => {
           this.router.navigate(['/']);
         });
@@ -150,7 +157,6 @@ export class AdmainComponent implements OnInit, OnDestroy {
     if (!this.currentUser) return;
     
     try {
-      console.log('👤 Loading admin data from PostgreSQL...');
       const token = await this.currentUser.getIdToken();
       
       // ลองใช้หลาย endpoints เพื่อดึงข้อมูล admin
@@ -164,7 +170,6 @@ export class AdmainComponent implements OnInit, OnDestroy {
       let adminDataFound = false;
       for (const endpoint of userEndpoints) {
         try {
-          console.log(`🔍 Trying admin endpoint: ${endpoint}`);
           const userResponse = await lastValueFrom(
             this.http.get<any>(`${this.apiUrl}${endpoint}`, {
               headers: { 'Authorization': `Bearer ${token}` }
@@ -180,22 +185,15 @@ export class AdmainComponent implements OnInit, OnDestroy {
           if (userData && (userData.role === 'admin' || userData.type === 'admin')) {
             this.adminName = userData.user_name || userData.username || userData.name || 'Admin';
             this.adminEmail = userData.user_email || userData.email || this.currentUser.email;
-            console.log(`✅ Admin data loaded from PostgreSQL ${endpoint}:`, {
-              adminName: this.adminName,
-              adminEmail: this.adminEmail,
-              role: userData.role || userData.type
-            });
             adminDataFound = true;
             break; // หยุดเมื่อเจอ endpoint ที่ทำงานได้
           }
         } catch (userError: any) {
-          console.log(`❌ Admin endpoint ${endpoint} failed:`, userError.status);
           continue; // ลอง endpoint ถัดไป
         }
       }
 
       if (!adminDataFound) {
-        console.log('⚠️ No PostgreSQL admin data found, checking localStorage fallback');
         // ✅ ลองใช้ข้อมูลจาก localStorage เป็น fallback
         const adminData = localStorage.getItem('admin');
         if (adminData) {
@@ -203,10 +201,6 @@ export class AdmainComponent implements OnInit, OnDestroy {
             const parsedData = JSON.parse(adminData);
             this.adminName = parsedData.name || parsedData.username || 'Admin';
             this.adminEmail = parsedData.email || this.currentUser.email;
-            console.log('👤 Using localStorage admin data as fallback:', {
-              adminName: this.adminName,
-              adminEmail: this.adminEmail
-            });
           } catch (e) {
             console.error('JSON parse error:', e);
           }
@@ -304,32 +298,7 @@ export class AdmainComponent implements OnInit, OnDestroy {
       this.loadingDevices = false;
       this.cdr.detectChanges();
       
-      console.log('✅ Devices loaded and sorted by device id:', {
-        totalDevices: this.devices.length,
-        devices: this.devices.map(d => ({
-          deviceid: d['id'] || d['deviceid'],
-          name: d['display_name'] || d['name'],
-          userid: d['user_id'] || d['userid'],
-          username: d['user_name'] || this.getDeviceUserName(d['user_id'] || d['userid']),
-          useremail: d['user_email'] || 'ไม่ระบุ',
-          status: d['status'],
-          created_at: d['created_at'],
-          updated_at: d['updated_at'],
-          description: d['description']
-        }))
-      });
 
-      // ✅ แสดงข้อมูลอุปกรณ์แบบตารางใน console
-      console.table(this.devices.map(d => ({
-        'Device ID': d['id'] || d['deviceid'],
-        'ชื่ออุปกรณ์': d['display_name'] || d['name'],
-        'User ID': d['user_id'] || d['userid'],
-        'ชื่อผู้ใช้': d['user_name'] || this.getDeviceUserName(d['user_id'] || d['userid']),
-        'อีเมลผู้ใช้': d['user_email'] || 'ไม่ระบุ',
-        'สถานะ': d['status'],
-        'สร้างเมื่อ': d['created_at'] ? this.formatDate(d['created_at']) : 'ไม่ระบุ',
-        'อัปเดตล่าสุด': d['updated_at'] ? this.formatDate(d['updated_at']) : 'ไม่ระบุ'
-      })));
     } catch (error) {
       console.error('❌ Error loading devices:', error);
       this.devices = [];
@@ -367,14 +336,6 @@ export class AdmainComponent implements OnInit, OnDestroy {
       this.loadingUsers = false;
       this.cdr.detectChanges();
       
-      console.log('✅ Users loaded and sorted by userid:', {
-        totalUsers: this.totalUsers,
-        users: this.allUsers.map(u => ({
-          userid: u['userid'] || u['id'],
-          username: u['user_name'] || u['username'],
-          role: u['role'] || u['type']
-        }))
-      });
       
     } catch (error) {
       console.error('❌ Error loading users:', error);
@@ -453,9 +414,6 @@ export class AdmainComponent implements OnInit, OnDestroy {
           headers: { 'Authorization': `Bearer ${token}` }
         }).toPromise();
         
-        console.log('✅ ESP32 Test Device created successfully:', response);
-        console.log('🔍 Created device status:', (response as any)?.status);
-        console.log('🔍 Created device data:', response);
         
         this.notificationService.showNotification('success', 'เพิ่มอุปกรณ์ทดสอบสำเร็จ', 'อุปกรณ์ ESP32-soil-test ถูกเพิ่มและตั้งเป็น online แล้ว');
         
@@ -503,9 +461,6 @@ export class AdmainComponent implements OnInit, OnDestroy {
         headers: { 'Authorization': `Bearer ${token}` }
       }).toPromise();
       
-      console.log('✅ User Test Device created successfully:', response);
-      console.log('🔍 User Test Device status:', (response as any)?.status);
-      console.log('🔍 User Test Device data:', response);
       
       const deviceType = isTestDevice ? 'ESP32-soil-test' : 'ทั่วไป';
       this.notificationService.showNotification('success', 'เพิ่มอุปกรณ์สำเร็จ', `อุปกรณ์${deviceType}ถูกเพิ่มและตั้งเป็น online แล้ว`);
@@ -542,14 +497,6 @@ export class AdmainComponent implements OnInit, OnDestroy {
     this.simulationActive = true;
     this.measurementData = [];
 
-    console.log('🚀 Starting Device Simulation for Test Devices:', {
-      simulatedDevices: this.simulatedDevices.map(d => ({
-        id: d['id'] || d['deviceid'],
-        name: d['device_name'] || d['display_name'] || d['name'],
-        type: d['device_type'] || 'unknown',
-        status: d['status']
-      }))
-    });
 
     // ✅ เริ่มส่งข้อมูลทุก 5 วินาที
     this.simulationInterval = setInterval(() => {
@@ -572,10 +519,6 @@ export class AdmainComponent implements OnInit, OnDestroy {
       this.simulationInterval = null;
     }
 
-    console.log('🛑 Stopping Device Simulation:', {
-      totalMeasurements: this.measurementData.length,
-      simulatedDevices: this.simulatedDevices.length
-    });
 
     this.notificationService.showNotification('info', 'Simulation หยุด', `หยุด simulation หลังจากส่งข้อมูล ${this.measurementData.length} ครั้ง`);
   }
@@ -611,11 +554,6 @@ export class AdmainComponent implements OnInit, OnDestroy {
           response: response
         });
 
-        console.log('📊 Measurement sent from ESP32 Test Device:', {
-          device: device['device_name'] || device['display_name'] || device['name'],
-          data: measurementData,
-          response: response
-        });
 
       } catch (error) {
         console.error('❌ Error sending measurement:', error);
@@ -935,6 +873,70 @@ export class AdmainComponent implements OnInit, OnDestroy {
     this.router.navigate(['/mail']);
   }
 
+  // ✅ ฟังก์ชันสำหรับ refresh เมื่อกลับมาจากหน้า mail
+  async onActivate() {
+    await this.refreshUnreadCount();
+  }
+
+  // ✅ ฟังก์ชันนับข้อความใหม่
+  async loadUnreadCount() {
+    try {
+      const headers = await this.getAuthHeaders();
+      
+      // ✅ ดึงข้อมูล reports จาก API
+      const response = await lastValueFrom(
+        this.http.get<any>(`${this.apiUrl}/api/reports`, { headers })
+      );
+      
+      // ✅ ตรวจสอบ response format
+      let reportsData: any[] = [];
+      
+      if (Array.isArray(response)) {
+        reportsData = response;
+      } else if (response && Array.isArray(response.reports)) {
+        reportsData = response.reports;
+      } else if (response && Array.isArray(response.data)) {
+        reportsData = response.data;
+      } else if (response && response.success && Array.isArray(response.result)) {
+        reportsData = response.result;
+      }
+      
+      // ✅ นับข้อความที่ยังไม่อ่าน (status = 'new')
+      this.unreadCount = reportsData.filter((report: any) => 
+        (report.status || 'new') === 'new'
+      ).length;
+      
+      console.log(`📧 Unread reports count: ${this.unreadCount}`);
+      
+    } catch (error: any) {
+      console.error('❌ Error loading unread count:', error);
+      this.unreadCount = 0;
+    }
+  }
+
+  // ✅ ฟังก์ชันสำหรับ refresh unread count
+  async refreshUnreadCount() {
+    await this.loadUnreadCount();
+  }
+
+  // ✅ ฟังก์ชันสำหรับสร้าง auth headers
+  async getAuthHeaders(): Promise<HttpHeaders> {
+    if (this.currentUser) {
+      try {
+        const token = await this.currentUser.getIdToken();
+        return new HttpHeaders({
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        });
+      } catch (error) {
+        console.error('Error getting auth token:', error);
+      }
+    }
+    return new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+  }
+
   // ✅ User management methods
   editUser(user: UserData) {
     this.editingUser = { ...user };
@@ -967,7 +969,7 @@ export class AdmainComponent implements OnInit, OnDestroy {
 
       const token = await this.currentUser.getIdToken();
       const response = await lastValueFrom(
-        this.http.put(`${this.apiUrl}/api/users/${this.editingUser.username}`, updateData, {
+        this.http.put<any>(`${this.apiUrl}/api/users/${this.editingUser.username}`, updateData, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       );
