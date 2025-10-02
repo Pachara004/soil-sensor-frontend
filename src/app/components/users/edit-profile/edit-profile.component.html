@@ -40,7 +40,12 @@
 
       <div class="info-row">
         <div class="label">Phone</div>
-        <input type="tel" class="value" [(ngModel)]="phoneNumber" placeholder="เบอร์โทรศัพท์" />
+        <input type="tel" class="value" [class.error]="phoneNumberError" [(ngModel)]="phoneNumber"
+          placeholder="เบอร์โทรศัพท์ (10 หลัก)" maxlength="10" pattern="[0-9]*" (input)="onPhoneNumberInput($event)"
+          (keypress)="onPhoneNumberKeyPress($event)" (blur)="validatePhoneNumber()" />
+        <div class="error-message" *ngIf="phoneNumberError">
+          {{ phoneNumberErrorMessage }}
+        </div>
       </div>
       <div class="button-group">
         <button class="edit-button" (click)="saveProfile()">บันทึก</button>

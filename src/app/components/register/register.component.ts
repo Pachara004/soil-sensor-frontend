@@ -8,7 +8,6 @@ import { firstValueFrom } from 'rxjs';
 import { Auth, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, fetchSignInMethodsForEmail, deleteUser } from '@angular/fire/auth';
 import { Constants } from '../../config/constants';
 import { AuthService } from '../../service/auth.service';
-
 @Component({
   selector: 'app-register',
   standalone: true,
@@ -18,7 +17,6 @@ import { AuthService } from '../../service/auth.service';
 })
 export class RegisterComponent {
   @ViewChildren('otpInput') otpInputs!: QueryList<ElementRef>;
-
   step = 1;
   email = '';
   otp = ['', '', '', '', '', ''];
@@ -28,7 +26,6 @@ export class RegisterComponent {
   username = '';
   phoneNumber = '';
   otpReferenceNumber = '';
-
   passwordMismatch = false;
   showPassword = false;
   showConfirmPassword = false;
@@ -36,16 +33,13 @@ export class RegisterComponent {
   isRegistering = false;
   countdown = 0;
   isCheckingEmail = false;
-
   usernameStatus: { class: string; message: string } | null = null;
   passwordStrength = { width: 0, class: '', text: '' };
   emailStatus: { class: string; message: string } | null = null;
-
   otpInputsArray = Array(6).fill('');
   userType: 'user' | 'admin' = 'user';
   private usernameCheckTimeout: any;
   private emailCheckTimeout: any;
-
   // Notification popup properties
   showNotification = false;
   notificationType: 'success' | 'error' | 'warning' | 'info' = 'info';
@@ -54,8 +48,6 @@ export class RegisterComponent {
   showNotificationActions = false;
   notificationConfirmText = '';
   notificationConfirmCallback: (() => void) | null = null;
-
-
   constructor(
     private http: HttpClient,
     private router: Router,
@@ -65,20 +57,16 @@ export class RegisterComponent {
     private constants: Constants,
     private authService: AuthService
   ) {}
-
   ngOnInit() {
     this.userType =
       (this.route.snapshot.data['type'] as 'user' | 'admin') ||
       (this.router.url.includes('adregister') ? 'admin' : 'user');
-    
     // ตรวจสอบให้แน่ใจว่า userType มีค่า
     if (!this.userType) {
       this.userType = 'user';
     }
-    
     console.log('User type set to:', this.userType); // Debug log
   }
-
   goBack() {
     if (this.step > 1) {
       this.step--;
@@ -87,48 +75,38 @@ export class RegisterComponent {
       this.location.back();
     }
   }
-
   // ปรับปรุงฟังก์ชันตรวจสอบอีเมลให้ครอบคลุมทั้ง Firebase และ Backend
   async checkEmailAvailability() {
     if (!this.email || !this.isValidEmail(this.email)) {
       this.emailStatus = null;
       return;
     }
-
     // Clear previous timeout
     if (this.emailCheckTimeout) {
       clearTimeout(this.emailCheckTimeout);
     }
-
     // Set loading state
     this.emailStatus = {
       class: 'loading',
       message: 'กำลังตรวจสอบอีเมล...',
     };
-
     this.isCheckingEmail = true;
-
     // Debounce the API call
     this.emailCheckTimeout = setTimeout(async () => {
       try {
         console.log(`Checking email availability for: ${this.email}`); // Debug log
-        
         // ตรวจสอบทั้ง Firebase Auth และ Backend PostgreSQL พร้อมกัน
         const emailChecks = await Promise.allSettled([
           this.checkEmailExistsInFirebase(this.email),
           this.checkEmailExistsInBackend(this.email)
         ]);
-
         const firebaseResult = emailChecks[0];
         const backendResult = emailChecks[1];
-
         console.log('Firebase result:', firebaseResult); // Debug log
         console.log('Backend result:', backendResult); // Debug log
-
         let firebaseExists = false;
         let backendExists = false;
         let errors = [];
-
         // ประมวลผล Firebase result
         if (firebaseResult.status === 'fulfilled') {
           firebaseExists = firebaseResult.value;
@@ -136,7 +114,6 @@ export class RegisterComponent {
           console.error('Firebase check failed:', firebaseResult.reason);
           errors.push(`Firebase: ${firebaseResult.reason.message}`);
         }
-
         // ประมวลผล Backend result
         if (backendResult.status === 'fulfilled') {
           backendExists = backendResult.value;
@@ -144,7 +121,6 @@ export class RegisterComponent {
           console.error('Backend check failed:', backendResult.reason);
           errors.push(`Backend: ${backendResult.reason.message}`);
         }
-
         // หากมี error ที่สำคัญ ให้แสดงข้อผิดพลาด (ไม่แสดง popup)
         if (errors.length > 0 && (firebaseResult.status === 'rejected' && backendResult.status === 'rejected')) {
           this.emailStatus = {
@@ -153,7 +129,6 @@ export class RegisterComponent {
           };
           return;
         }
-        
         if (firebaseExists || backendExists) {
           let source = '';
           if (firebaseExists && backendExists) {
@@ -163,7 +138,6 @@ export class RegisterComponent {
           } else {
             source = 'ฐานข้อมูล';
           }
-
           this.emailStatus = {
             class: 'error',
             message: `อีเมลนี้ถูกใช้ไปแล้ว กรุณาใช้อีเมลอื่น`,
@@ -176,7 +150,6 @@ export class RegisterComponent {
         }
       } catch (error: any) {
         console.error('Unexpected error checking email:', error);
-        
         // ไม่แสดง popup notification ตอนตรวจสอบอีเมล
         this.emailStatus = {
           class: 'error',
@@ -187,34 +160,26 @@ export class RegisterComponent {
       }
     }, 800);
   }
-
   async sendOtp() {
     // ตรวจสอบความถูกต้องของอีเมลก่อน
     if (!this.email || !this.isValidEmail(this.email)) {
       this.showNotificationPopup('error', 'อีเมลไม่ถูกต้อง', 'กรุณากรอก Email ที่ถูกต้อง');
       return;
     }
-
     this.isLoading = true;
-
     try {
       console.log(`Sending OTP - checking email: ${this.email}`); // Debug log
-      
       // ตรวจสอบอีเมลทั้ง Firebase Auth และ Backend พร้อมกัน
       const emailChecks = await Promise.allSettled([
         this.checkEmailExistsInFirebase(this.email),
         this.checkEmailExistsInBackend(this.email)
       ]);
-
       const firebaseResult = emailChecks[0];
       const backendResult = emailChecks[1];
-
       console.log('OTP Send - Firebase result:', firebaseResult); // Debug log
       console.log('OTP Send - Backend result:', backendResult); // Debug log
-
       let firebaseExists = false;
       let backendExists = false;
-
       // ประมวลผล Firebase result
       if (firebaseResult.status === 'fulfilled') {
         firebaseExists = firebaseResult.value;
@@ -224,15 +189,12 @@ export class RegisterComponent {
         this.showNotificationPopup('error', 'ระบบไม่พร้อม', 'ไม่สามารถตรวจสอบอีเมลกับระบบ Firebase ได้ กรุณาลองใหม่');
         return;
       }
-
       // ประมวลผล Backend result (อนุญาตให้ล้มเหลวได้)
       if (backendResult.status === 'fulfilled') {
         backendExists = backendResult.value;
       } else {
-        console.warn('Backend check failed during OTP send, continuing with Firebase only');
         backendExists = false;
       }
-
       if (firebaseExists || backendExists) {
         let source = '';
         if (firebaseExists && backendExists) {
@@ -242,21 +204,17 @@ export class RegisterComponent {
         } else {
           source = 'ฐานข้อมูล';
         }
-        
         this.showNotificationPopup('warning', 'อีเมลถูกใช้แล้ว', 'อีเมลนี้ถูกใช้ไปแล้ว กรุณาใช้อีเมลอื่นหรือเข้าสู่ระบบ', true, 'ไปหน้า Login', () => {
           this.router.navigate(['/login']);
         });
         return;
       }
-
       const response = await firstValueFrom(
         this.http.post(`${this.constants.API_ENDPOINT}/api/auth/send-otp`, {
           email: this.email,
         })
       ) as any;
-
       this.otpReferenceNumber = response?.referenceNumber || response?.ref || 'N/A';
-      
       this.showNotificationPopup('success', 'ส่ง OTP สำเร็จ', `OTP ถูกส่งไปยังอีเมลของคุณแล้ว\nเลขอ้างอิง: ${this.otpReferenceNumber}`);
       this.step = 2;
       this.startCountdown();
@@ -273,11 +231,9 @@ export class RegisterComponent {
       this.isLoading = false;
     }
   }
-
   async resendOtp() {
     await this.sendOtp();
   }
-
   private startCountdown() {
     this.countdown = 60;
     const timer = setInterval(() => {
@@ -287,7 +243,6 @@ export class RegisterComponent {
       }
     }, 1000);
   }
-
   moveToNext(event: any, index: number) {
     const value = event.target.value;
     if (value && index < 5) {
@@ -297,7 +252,6 @@ export class RegisterComponent {
       }
     }
   }
-
   onKeyDown(event: KeyboardEvent, index: number) {
     if (event.key === 'Backspace' && !this.otp[index] && index > 0) {
       const prevInput = this.otpInputs.toArray()[index - 1];
@@ -306,17 +260,13 @@ export class RegisterComponent {
       }
     }
   }
-
   async verifyOtp() {
     const enteredOtp = this.otp.join('');
-    
     if (enteredOtp.length !== 6) {
       this.showNotificationPopup('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอก OTP ให้ครบ 6 หลัก');
       return;
     }
-
     this.isLoading = true;
-
     try {
       const response = await firstValueFrom(
         this.http.post(`${this.constants.API_ENDPOINT}/api/auth/verify-otp`, {
@@ -324,7 +274,6 @@ export class RegisterComponent {
           otp: enteredOtp
         })
       );
-
       if (response) {
         this.showNotificationPopup('success', 'OTP ถูกต้อง', 'ยืนยัน OTP สำเร็จ');
         this.step = 3;
@@ -343,26 +292,21 @@ export class RegisterComponent {
       this.isLoading = false;
     }
   }
-
   togglePassword() {
     this.showPassword = !this.showPassword;
   }
-
   toggleConfirmPassword() {
     this.showConfirmPassword = !this.showConfirmPassword;
   }
-
   checkPasswordStrength() {
     const password = this.password;
     let strength = 0;
     let text = '';
     let className = '';
-
     if (password.length >= 6) strength += 25;
     if (password.match(/[a-z]/)) strength += 25;
     if (password.match(/[A-Z]/)) strength += 25;
     if (password.match(/[0-9]/)) strength += 25;
-
     if (strength < 50) {
       text = 'อ่อน';
       className = 'weak';
@@ -373,46 +317,37 @@ export class RegisterComponent {
       text = 'แข็งแรง';
       className = 'strong';
     }
-
     this.passwordStrength = { width: strength, class: className, text: text };
   }
-
   nextToPersonalInfo() {
     if (this.password !== this.confirmPassword) {
       this.passwordMismatch = true;
       return;
     }
-
     if (this.password.length < 6) {
       this.showNotificationPopup('error', 'รหัสผ่านสั้นเกินไป', 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
       return;
     }
-
     this.passwordMismatch = false;
     this.step = 4;
   }
-
   async checkUsernameAvailability() {
     if (!this.username) {
       this.usernameStatus = null;
       return;
     }
-
     if (this.usernameCheckTimeout) {
       clearTimeout(this.usernameCheckTimeout);
     }
-
     this.usernameStatus = {
       class: 'loading',
       message: 'กำลังตรวจสอบ...',
     };
-
     this.usernameCheckTimeout = setTimeout(async () => {
     try {
       const response = (await firstValueFrom(
           this.http.get(`${this.constants.API_ENDPOINT}/api/auth/check-username/${this.username}`)
       )) as { exists: boolean };
-
       if (response.exists) {
         this.usernameStatus = {
           class: 'error',
@@ -426,7 +361,6 @@ export class RegisterComponent {
       }
       } catch (error: any) {
       console.error('Error checking username:', error);
-        
         if (error?.status === 404) {
           this.usernameStatus = {
             class: 'error',
@@ -446,13 +380,11 @@ export class RegisterComponent {
       }
     }, 500);
   }
-
   formatPhoneNumber(event: any) {
     let value = event.target.value.replace(/\D/g, '');
     if (value.length > 10) {
       value = value.substring(0, 10);
     }
-
     if (value.length >= 3) {
       if (value.length >= 6) {
         value = value.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
@@ -460,35 +392,26 @@ export class RegisterComponent {
         value = value.replace(/(\d{3})(\d{3})/, '$1-$2');
       }
     }
-
     this.phoneNumber = value;
   }
-
   async register() {
     if (!this.validateForm()) {
       return;
     }
-
     this.isRegistering = true;
-
     try {
       console.log(`Register - final email check: ${this.email}`); // Debug log
-      
       // ตรวจสอบอีเมลอีกครั้งก่อนสมัคร เพื่อความแน่ใจ
       const emailChecks = await Promise.allSettled([
         this.checkEmailExistsInFirebase(this.email),
         this.checkEmailExistsInBackend(this.email)
       ]);
-
       const firebaseResult = emailChecks[0];
       const backendResult = emailChecks[1];
-
       console.log('Register - Firebase result:', firebaseResult); // Debug log
       console.log('Register - Backend result:', backendResult); // Debug log
-
       let firebaseExists = false;
       let backendExists = false;
-
       // ประมวลผล Firebase result
       if (firebaseResult.status === 'fulfilled') {
         firebaseExists = firebaseResult.value;
@@ -497,15 +420,12 @@ export class RegisterComponent {
         this.showNotificationPopup('error', 'ระบบไม่พร้อม', 'ไม่สามารถตรวจสอบอีเมลกับระบบ Firebase ได้ กรุณาลองใหม่');
         return;
       }
-
       // ประมวลผล Backend result (อนุญาตให้ล้มเหลวได้)
       if (backendResult.status === 'fulfilled') {
         backendExists = backendResult.value;
       } else {
-        console.warn('Backend check failed during registration, continuing with Firebase only');
         backendExists = false;
       }
-
       if (firebaseExists || backendExists) {
         let source = '';
         if (firebaseExists && backendExists) {
@@ -515,24 +435,20 @@ export class RegisterComponent {
         } else {
           source = 'ฐานข้อมูล';
         }
-        
         this.showNotificationPopup('warning', 'อีเมลถูกใช้แล้ว', `อีเมลนี้ถูกใช้ไปแล้วใน${source} กรุณาใช้อีเมลอื่นหรือเข้าสู่ระบบ`, true, 'ไปหน้า Login', () => {
           this.router.navigate(['/login']);
         });
         return;
       }
-
       // Create Firebase user
       await createUserWithEmailAndPassword(this.auth, this.email, this.password);
       console.log('Firebase user created successfully'); // Debug log
-
       // Save user data to backend
       try {
         await this.saveUserToBackend();
         console.log('User data saved to backend successfully'); // Debug log
       } catch (backendError: any) {
         console.error('Failed to save user to backend:', backendError);
-        
         // ลบ Firebase user ที่สร้างขึ้นมาแล้ว
         try {
           const currentUser = this.auth.currentUser;
@@ -543,17 +459,14 @@ export class RegisterComponent {
         } catch (deleteError) {
           console.error('Failed to delete Firebase user:', deleteError);
         }
-        
         this.showNotificationPopup('error', 'สมัครไม่สำเร็จ', `สมัครไม่สำเร็จ: ${backendError.message}`);
         return;
       }
-
       this.showNotificationPopup('success', 'สมัครสำเร็จ!', 'ยินดีต้อนรับเข้าสู่ระบบ', true, 'เข้าสู่หน้าหลัก', () => {
         this.router.navigate(['/']);
       });
     } catch (error: any) {
       console.error('Registration error:', error);
-      
       if (error.code === 'auth/email-already-in-use') {
         this.showNotificationPopup('warning', 'อีเมลถูกใช้แล้ว', 'อีเมลนี้ถูกใช้ไปแล้ว กรุณาใช้อีเมลอื่นหรือเข้าสู่ระบบ', true, 'ไปหน้า Login', () => {
           this.router.navigate(['/login']);
@@ -573,14 +486,11 @@ export class RegisterComponent {
       this.isRegistering = false;
     }
   }
-
   async registerWithGoogle() {
     try {
       // ใช้ AuthService เพื่อให้มีการสร้างข้อมูลใน PostgreSQL
       const result = await this.authService.loginWithGoogle();
-      
       if (result) {
-        console.log('✅ Google registration successful with PostgreSQL data:', result);
         this.showNotificationPopup('success', 'สมัครสมาชิกสำเร็จ', 'ยินดีต้อนรับ! ข้อมูลของคุณถูกสร้างในระบบแล้ว');
         this.router.navigate(['/main']);
       } else {
@@ -591,7 +501,6 @@ export class RegisterComponent {
       this.showNotificationPopup('error', 'Google Sign-in ล้มเหลว', 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้ กรุณาลองใหม่');
     }
   }
-
   // Notification methods
   showNotificationPopup(
     type: 'success' | 'error' | 'warning' | 'info',
@@ -609,19 +518,16 @@ export class RegisterComponent {
     this.notificationConfirmCallback = confirmCallback;
     this.showNotification = true;
   }
-
   closeNotification() {
     this.showNotification = false;
     this.notificationConfirmCallback = null;
   }
-
   onNotificationConfirm() {
     if (this.notificationConfirmCallback) {
       this.notificationConfirmCallback();
     }
     this.closeNotification();
   }
-
   getNotificationIcon(): string {
     switch (this.notificationType) {
       case 'success': return 'fas fa-check-circle';
@@ -631,7 +537,6 @@ export class RegisterComponent {
       default: return 'fas fa-info-circle';
     }
   }
-
   private validateForm(): boolean {
     console.log('Validating form data:', {
       email: this.email,
@@ -639,59 +544,47 @@ export class RegisterComponent {
       phoneNumber: this.phoneNumber,
       userType: this.userType
     }); // Debug log
-
     if (!this.email || !this.email.trim()) {
       this.showNotificationPopup('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกอีเมล');
       return false;
     }
-
     if (!this.username || !this.username.trim()) {
       this.showNotificationPopup('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกชื่อผู้ใช้');
       return false;
     }
-
-
     if (!this.phoneNumber || !this.phoneNumber.replace(/\D/g, '')) {
       this.showNotificationPopup('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกเบอร์โทรศัพท์');
       return false;
     }
-
     if (this.usernameStatus?.class === 'error') {
       this.showNotificationPopup('error', 'ชื่อผู้ใช้ไม่ถูกต้อง', 'กรุณาเลือกชื่อผู้ใช้อื่น');
       return false;
     }
-
     if (this.emailStatus?.class === 'error') {
       this.showNotificationPopup('error', 'อีเมลไม่ถูกต้อง', 'กรุณาใช้อีเมลอื่น');
       return false;
     }
-
     // ตรวจสอบความยาวของข้อมูล
     if (this.username.trim().length < 3) {
       this.showNotificationPopup('error', 'ชื่อผู้ใช้สั้นเกินไป', 'ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษร');
       return false;
     }
-
     if (this.phoneNumber.replace(/\D/g, '').length < 10) {
       this.showNotificationPopup('error', 'เบอร์โทรศัพท์ไม่ถูกต้อง', 'เบอร์โทรศัพท์ต้องมีอย่างน้อย 10 หลัก');
       return false;
     }
-
     // ตรวจสอบรูปแบบอีเมล
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(this.email.trim())) {
       this.showNotificationPopup('error', 'รูปแบบอีเมลไม่ถูกต้อง', 'กรุณากรอกอีเมลในรูปแบบที่ถูกต้อง');
       return false;
     }
-
     return true;
   }
-
   private isValidEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   }
-
   // ตรวจสอบอีเมลใน Backend PostgreSQL
   private async checkEmailExistsInBackend(email: string): Promise<boolean> {
     try {
@@ -702,122 +595,88 @@ export class RegisterComponent {
       return response.exists;
     } catch (error: any) {
       console.error('Error checking email in backend:', error);
-      
       // หากเป็น 404 หรือ 500 error ให้ถือว่า backend ไม่พร้อม
       if (error?.status === 404 || error?.status >= 500) {
-        console.warn('Backend not available, skipping backend email check');
         return false; // ข้าม backend check แต่ให้ Firebase check ทำงาน
       }
-      
       // สำหรับ error อื่นๆ ให้ throw
       throw new Error('เกิดข้อผิดพลาดในการตรวจสอบอีเมลกับฐานข้อมูล');
     }
   }
-
   // ตรวจสอบอีเมลใน Firebase Auth
   private async checkEmailExistsInFirebase(email: string): Promise<boolean> {
     try {
-      console.log(`Starting Firebase Auth check for: ${email}`);
-      
       // วิธีที่ 1: ใช้ fetchSignInMethodsForEmail
       const methods = await fetchSignInMethodsForEmail(this.auth, email);
       console.log(`Firebase Auth methods for ${email}:`, methods);
-      console.log(`Methods length: ${methods.length}`);
-      
       if (methods.length > 0) {
-        console.log(`Email ${email} exists in Firebase Auth`);
         return true;
       }
-      
       // วิธีที่ 2: ลองใช้ createUserWithEmailAndPassword เพื่อดูว่าเกิด error หรือไม่
-      console.log(`Trying to create user with email ${email} to check if it exists...`);
-      
       // สร้าง temporary password เพื่อทดสอบ
       const tempPassword = 'TempPassword123!@#';
-      
       try {
         // ลองสร้าง user ใหม่
         const userCredential = await createUserWithEmailAndPassword(this.auth, email, tempPassword);
-        console.log(`Email ${email} does NOT exist in Firebase Auth - user created successfully`);
-        
         // ลบ user ที่สร้างขึ้นมาทันที
         await deleteUser(userCredential.user);
-        console.log(`Temporary user deleted successfully`);
-        
         return false;
       } catch (createError: any) {
         console.log(`Create user error for ${email}:`, createError.code);
-        
         if (createError.code === 'auth/email-already-in-use') {
-          console.log(`Email ${email} EXISTS in Firebase Auth (email-already-in-use error)`);
           return true;
         } else if (createError.code === 'auth/weak-password') {
           // ถ้าเป็น weak password error แสดงว่า email ไม่มีอยู่
-          console.log(`Email ${email} does NOT exist in Firebase Auth (weak-password error)`);
           return false;
         } else {
           console.error(`Unexpected error when checking email ${email}:`, createError);
           throw createError;
         }
       }
-      
     } catch (error: any) {
       console.error('Error checking email in Firebase:', error);
-      
       // ตรวจสอบ error code เฉพาะจาก Firebase
       if (error.code === 'auth/invalid-email') {
-        console.log(`Invalid email format: ${email}`);
         return false; // อีเมลรูปแบบไม่ถูกต้อง
       }
-      
       if (error.code === 'auth/network-request-failed') {
-        console.warn('Firebase network error, email may exist but cannot verify');
         throw new Error('ไม่สามารถตรวจสอบอีเมลใน Firebase ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต');
       }
-      
       // สำหรับ error อื่นๆ ให้ throw เพื่อให้ UI แสดงข้อผิดพลาด
       throw new Error('เกิดข้อผิดพลาดในการตรวจสอบอีเมลกับ Firebase Auth');
     }
   }
-
   private async saveUserToBackend(): Promise<void> {
     try {
       // ตรวจสอบข้อมูลก่อนส่ง
       if (!this.email || !this.username || !this.phoneNumber) {
         throw new Error('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบข้อมูลที่กรอก');
       }
-
       // ดึง Firebase UID จาก current user
       const currentUser = this.auth.currentUser;
       if (!currentUser || !currentUser.uid) {
         throw new Error('Firebase UID is required');
       }
-
       // ทำความสะอาดและตรวจสอบข้อมูล
       const cleanEmail = this.email.trim();
       const cleanUsername = this.username.trim();
       const cleanPhoneNumber = this.phoneNumber.replace(/\D/g, '');
       const userType = this.userType || 'user'; // กำหนดค่า default
-
       // ตรวจสอบความถูกต้องของข้อมูล
       if (!cleanEmail || cleanEmail.length === 0) {
         throw new Error('อีเมลไม่ถูกต้อง');
       }
-
       if (!cleanUsername || cleanUsername.length < 3) {
         throw new Error('ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษร');
       }
-
       if (!cleanPhoneNumber || cleanPhoneNumber.length < 10) {
         throw new Error('เบอร์โทรศัพท์ต้องมีอย่างน้อย 10 หลัก');
       }
-
       // ตรวจสอบรูปแบบอีเมล
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(cleanEmail)) {
         throw new Error('รูปแบบอีเมลไม่ถูกต้อง');
       }
-
       const userData = {
         firebase_uid: currentUser.uid, // เพิ่ม Firebase UID
         email: cleanEmail,
@@ -826,7 +685,6 @@ export class RegisterComponent {
         type: userType,
         emailVerified: false
       };
-
       console.log('Saving user to backend:', userData); // Debug log
       console.log('Backend URL:', `${this.constants.API_ENDPOINT}/api/auth/register`); // Debug log
       console.log('Data types:', {
@@ -837,11 +695,9 @@ export class RegisterComponent {
         type: typeof userData.type,
         emailVerified: typeof userData.emailVerified
       }); // Debug log
-
       const response = await firstValueFrom(
         this.http.post(`${this.constants.API_ENDPOINT}/api/auth/register`, userData)
       );
-
       console.log('Backend registration response:', response); // Debug log
     } catch (error: any) {
       console.error('Error saving user to backend:', error);
@@ -852,10 +708,8 @@ export class RegisterComponent {
         url: error?.url,
         error: error?.error
       });
-      
       // แสดงรายละเอียด error จาก backend
       let errorMessage = 'ไม่สามารถบันทึกข้อมูลลงฐานข้อมูลได้';
-      
       if (error?.status === 400) {
         errorMessage = 'ข้อมูลไม่ถูกต้อง: ';
         if (error?.error?.message) {
@@ -874,7 +728,6 @@ export class RegisterComponent {
       } else {
         errorMessage += `: ${error?.message || 'ไม่ทราบสาเหตุ'}`;
       }
-      
       // Throw error เพื่อให้ register function จัดการ
       throw new Error(errorMessage);
     }

@@ -37,12 +37,18 @@
     <div class="device-selector">
       <!-- เลือกอุปกรณ์ (กรณี > 1 ชิ้น) -->
       <select class="device-select" *ngIf="devices.length > 1" [(ngModel)]="selectedDeviceId"
-        (ngModelChange)="onDeviceChange()" aria-label="เลือกอุปกรณ์">
+        (ngModelChange)="onDeviceChange()" [disabled]="isLoading" aria-label="เลือกอุปกรณ์">
         <option value="" disabled>-- เลือกอุปกรณ์ --</option>
         <option *ngFor="let device of devices" [value]="device.deviceid">
           {{ device.device_name || device.deviceid }}
         </option>
       </select>
+
+      <!-- Loading indicator เมื่อเปลี่ยนอุปกรณ์ -->
+      <div class="loading-indicator" *ngIf="isLoading">
+        <i class="fas fa-spinner fa-spin"></i>
+        <span>กำลังอัปเดตสถานะอุปกรณ์...</span>
+      </div>
 
       <!-- แสดงชื่ออุปกรณ์ -->
       <div class="device-name" *ngIf="devices.length === 1">
@@ -103,17 +109,24 @@
       <p><strong>💡 คำแนะนำ:</strong></p>
       <ul>
         <li>พิมพ์ <strong>"test"</strong> เพื่อสร้างอุปกรณ์ทดสอบ ESP32-soil-test</li>
-        <li>พิมพ์ชื่ออุปกรณ์ทั่วไป เช่น "esp32-soil-01"</li>
+        <li>อุปกรณ์จริง: <strong>esp32-soil-001</strong> ถึง <strong>esp32-soil-999</strong></li>
+        <li>ตัวอย่าง: esp32-soil-001, esp32-soil-123, esp32-soil-999</li>
         <li>อุปกรณ์ทดสอบจะตั้งเป็น online อัตโนมัติ</li>
       </ul>
     </div>
 
     <div class="device-input-group">
-      <input class="claim-input" type="text" [(ngModel)]="claimDeviceId" (keyup.enter)="addNewDevice()"
-        placeholder="ใส่ชื่ออุปกรณ์ เช่น test device หรือ esp32-soil-01" aria-label="Device ID">
+      <input class="claim-input" [class.error]="deviceValidationError" type="text" [(ngModel)]="claimDeviceId"
+        (input)="validateDeviceInput()" (keyup.enter)="addNewDevice()"
+        placeholder="ใส่ชื่ออุปกรณ์ เช่น test หรือ esp32-soil-001" aria-label="Device ID">
 
-      <button class="claim-btn" [disabled]="requestingClaim || !claimDeviceId.trim()" (click)="addNewDevice()"
-        aria-label="เพิ่มอุปกรณ์">
+      <div class="device-validation-message" *ngIf="deviceValidationMessage">
+        <i class="fas fa-exclamation-triangle"></i>
+        {{ deviceValidationMessage }}
+      </div>
+
+      <button class="claim-btn" [disabled]="requestingClaim || !claimDeviceId.trim() || deviceValidationError"
+        (click)="addNewDevice()" aria-label="เพิ่มอุปกรณ์">
         <i class="fas fa-plus" *ngIf="!requestingClaim"></i>
         <span class="spinner" *ngIf="requestingClaim" aria-hidden="true"></span>
         <span *ngIf="!requestingClaim">เพิ่มอุปกรณ์</span>

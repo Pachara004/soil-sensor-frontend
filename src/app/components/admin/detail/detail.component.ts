@@ -18,7 +18,6 @@ import { MatSpinner } from '@angular/material/progress-spinner';
 import { NotificationService } from '../../../service/notification.service';
 import { Auth, onAuthStateChanged } from '@angular/fire/auth';
 import { lastValueFrom } from 'rxjs';
-
 interface Measurement {
   id: number;
   location: string;
@@ -34,7 +33,6 @@ interface Measurement {
   measurementPoint?: number;
   [key: string]: any;
 }
-
 @Component({
   selector: 'app-detail',
   standalone: true,
@@ -50,7 +48,6 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
   currentUser: any = null;
   @ViewChild('mapContainer') private mapContainer!: ElementRef<HTMLElement>;
   private apiUrl: string;
-
   constructor(
     private router: Router,
     private route: ActivatedRoute,
@@ -62,7 +59,6 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
     config.apiKey = environment.mapTilerApiKey;
     this.apiUrl = this.constants.API_ENDPOINT;
   }
-
   ngOnInit(): void {
     // ใช้ Firebase Auth
     onAuthStateChanged(this.auth, (user) => {
@@ -70,16 +66,13 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
         this.currentUser = user;
         this.loadDeviceData();
       } else {
-        console.log('❌ No user found, redirecting to login');
         this.router.navigate(['/login']);
       }
     });
   }
-
   async loadDeviceData() {
     // ลองดึง deviceId จาก route parameters ก่อน
     const deviceId = this.route.snapshot.paramMap.get('deviceId');
-    
     if (deviceId) {
       // ดึงข้อมูล device จาก API
       await this.loadDeviceFromAPI(deviceId);
@@ -96,24 +89,19 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     }
   }
-
   async loadDeviceFromAPI(deviceId: string) {
     try {
       const token = await this.currentUser.getIdToken();
-      
       // ดึงข้อมูล device จาก API
       const response = await lastValueFrom(
         this.http.get<any[]>(`${this.apiUrl}/api/devices`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       );
-
       if (response && Array.isArray(response)) {
         // หา device ที่ตรงกับ deviceId
         this.device = response.find(d => d.deviceid?.toString() === deviceId);
-        
         if (this.device) {
-          console.log('✅ Device loaded from API:', this.device);
           this.loadMeasurements();
         } else {
           this.notificationService.showNotification('error', 'ไม่พบข้อมูล', 'ไม่พบข้อมูลอุปกรณ์', true, 'กลับ', () => {
@@ -126,30 +114,25 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
       this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลอุปกรณ์ได้');
     }
   }
-
   ngAfterViewInit() {
     this.initializeMap();
   }
-
   ngOnDestroy() {
     if (this.map) {
       this.map.remove();
     }
   }
-
   async loadMeasurements() {
     if (!this.device?.deviceid && !this.device?.id) return;
     this.isLoading = true;
     try {
       const deviceId = this.device.deviceid || this.device.id;
       const token = await this.currentUser.getIdToken();
-      
       const response = await lastValueFrom(
         this.http.get<Measurement[]>(`${this.apiUrl}/api/measurements/${deviceId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       );
-      
       this.measurements = response || [];
       this.isLoading = false;
       this.initializeMap();
@@ -160,7 +143,6 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
       this.isLoading = false;
     }
   }
-
   formatDate(dateString: string): string {
     if (!dateString) return 'ไม่ระบุ';
     try {
@@ -176,7 +158,6 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
       return 'ไม่ระบุ';
     }
   }
-
   initializeMap() {
     if (!this.mapContainer) return;
     this.map = new Map({
@@ -186,10 +167,8 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
       zoom: 10,
     });
   }
-
   fitMapToBounds() {
     if (!this.map || this.measurements.length === 0) return;
-
     const validMeasurements = this.measurements.filter(
       (m) =>
         m.lat !== undefined &&
@@ -197,7 +176,6 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
         !isNaN(m.lat) &&
         !isNaN(m.lng)
     );
-
     if (validMeasurements.length === 0) {
       this.mapContainer.nativeElement.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #f5f5f5; color: #666;">
@@ -206,18 +184,14 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
       `;
       return;
     }
-
     const lats = validMeasurements.map((m) => m.lat!);
     const lngs = validMeasurements.map((m) => m.lng!);
-
     const bounds = new LngLatBounds(
       [Math.min(...lngs), Math.min(...lats)],
       [Math.max(...lngs), Math.max(...lats)]
     );
-
     this.map.fitBounds(bounds, { padding: 50, maxZoom: 18 });
   }
-
   showMeasurementPopup(measurement: Measurement) {
     const details = `จุดที่: ${measurement.measurementPoint || 'ไม่ระบุ'}
 วันที่: ${measurement.date}
@@ -228,10 +202,8 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
 โพแทสเซียม: ${measurement.potassium} mg/kg
 pH: ${measurement.ph}
 ตำแหน่ง: ${measurement.location}`;
-
     this.notificationService.showNotification('info', 'รายละเอียดการวัด', details);
   }
-
   goBack() {
     this.router.navigate(['/adminmain']);
   }
