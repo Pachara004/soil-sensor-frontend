@@ -1,14 +1,15 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
-import { SafePipe } from '../../../shared/safe.pipe';
 import { environment } from '../../../service/environment'; // นำเข้า environment
 import { NotificationService } from '../../../service/notification.service';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { Auth } from '@angular/fire/auth';
 import { Constants } from '../../../config/constants';
+import { Map, Marker, config, LngLatBounds, Popup } from '@maptiler/sdk';
+import '@maptiler/sdk/dist/maptiler-sdk.css';
 
 interface MeasurementData {
   id?: string;
@@ -56,11 +57,11 @@ interface FertilizerRecommendation {
 @Component({
   selector: 'app-history-detail',
   standalone: true,
-  imports: [CommonModule, SafePipe],
+  imports: [CommonModule],
   templateUrl: './history-detail.component.html',
   styleUrl: './history-detail.component.scss',
 })
-export class HistoryDetailComponent implements OnInit {
+export class HistoryDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   username: string = '';
   deviceId: string = '';
   measureDate: string = '';
@@ -82,6 +83,11 @@ export class HistoryDetailComponent implements OnInit {
   showPointDetail = false;
   loading = false;
   areasid: string = '';
+  
+  // แผนที่
+  map: Map | undefined;
+  @ViewChild('mapContainer') mapContainer!: ElementRef<HTMLElement>;
+  measurementMarkers: any[] = [];
 
   private apiUrl: string;
 
@@ -94,11 +100,25 @@ export class HistoryDetailComponent implements OnInit {
     private constants: Constants
   ) {
     this.apiUrl = this.constants.API_ENDPOINT;
+    config.apiKey = environment.mapTilerApiKey;
   }
 
   ngOnInit() {
     this.loadMeasurementData();
     this.loadMeasurementPoints();
+  }
+  
+  ngAfterViewInit() {
+    // รอให้ข้อมูลโหลดเสร็จก่อนสร้างแผนที่
+    setTimeout(() => {
+      this.initializeMap();
+    }, 1000);
+  }
+  
+  ngOnDestroy() {
+    if (this.map) {
+      this.map.remove();
+    }
   }
 
   private loadMeasurementData() {
@@ -325,5 +345,94 @@ export class HistoryDetailComponent implements OnInit {
 
   goToContactAdmin() {
     this.router.navigate(['/reports']);
+  }
+  
+  // ✅ สร้างแผนที่และแสดงจุดวัด
+  initializeMap() {
+    if (!this.mapContainer || this.measurementPoints.length === 0) {
+      return;
+    }
+    
+    try {
+      // สร้างแผนที่
+      this.map = new Map({
+        container: this.mapContainer.nativeElement,
+        style: 'streets-v2',
+        center: [100.5018, 13.7563], // กลางประเทศไทย
+        zoom: 10,
+      });
+      
+      // เพิ่มจุดวัดทั้งหมด
+      this.addMeasurementPointsToMap();
+      
+      // ปรับ view ให้แสดงทุกจุด
+      this.fitMapToBounds();
+      
+    } catch (error) {
+      console.error('Error initializing map:', error);
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'ไม่สามารถสร้างแผนที่ได้');
+    }
+  }
+  
+  // ✅ เพิ่มจุดวัดลงแผนที่
+  addMeasurementPointsToMap() {
+    if (!this.map) return;
+    
+    // ลบ markers เดิม
+    this.measurementMarkers.forEach(marker => marker.remove());
+    this.measurementMarkers = [];
+    
+    // เพิ่ม markers ใหม่
+    this.measurementPoints.forEach((point, index) => {
+      if (point.lat && point.lng) {
+        const marker = new Marker({ color: 'green' }) // สีเขียวตามที่ต้องการ
+          .setLngLat([point.lng, point.lat])
+          .setPopup(new Popup().setHTML(`
+            <div class="measurement-point-popup">
+              <h3>จุดวัดที่ ${point.measurementPoint}</h3>
+              <div class="measurement-data">
+                <p><strong>วันที่:</strong> ${this.getPointDate(point)}</p>
+                <p><strong>เวลา:</strong> ${this.getPointTime(point)}</p>
+                <p><strong>อุณหภูมิ:</strong> ${point.temperature}°C</p>
+                <p><strong>ความชื้น:</strong> ${point.moisture}%</p>
+                <p><strong>ไนโตรเจน:</strong> ${point.nitrogen} ppm</p>
+                <p><strong>ฟอสฟอรัส:</strong> ${point.phosphorus} ppm</p>
+                <p><strong>โพแทสเซียม:</strong> ${point.potassium} ppm</p>
+                <p><strong>pH:</strong> ${point.ph}</p>
+                <p><strong>พิกัด:</strong> ${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}</p>
+              </div>
+              <button class="view-detail-btn" onclick="window.showPointDetail(${index})">
+                ดูรายละเอียด
+              </button>
+            </div>
+          `))
+          .addTo(this.map!);
+        
+        this.measurementMarkers.push(marker);
+      }
+    });
+    
+    // เพิ่มฟังก์ชัน global สำหรับปุ่ม
+    (window as any).showPointDetail = (index: number) => {
+      this.showMeasurementPointDetail(this.measurementPoints[index]);
+    };
+  }
+  
+  // ✅ ปรับ view ให้แสดงทุกจุด
+  fitMapToBounds() {
+    if (!this.map || this.measurementPoints.length === 0) return;
+    
+    const validPoints = this.measurementPoints.filter(p => p.lat && p.lng);
+    if (validPoints.length === 0) return;
+    
+    const lats = validPoints.map(p => p.lat!);
+    const lngs = validPoints.map(p => p.lng!);
+    
+    const bounds = new LngLatBounds(
+      [Math.min(...lngs), Math.min(...lats)],
+      [Math.max(...lngs), Math.max(...lats)]
+    );
+    
+    this.map.fitBounds(bounds, { padding: 50, maxZoom: 18 });
   }
 }

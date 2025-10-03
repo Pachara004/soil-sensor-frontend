@@ -51,7 +51,12 @@
       <div *ngFor="let area of areaGroups" class="area-item">
         <div class="area-header">
           <h3 class="area-name">{{ getDisplayAreaName(area) }}</h3>
-          <p class="area-details">{{ area.totalMeasurements }} จุดวัด | วันที่ล่าสุด: {{ area.lastMeasurementDate }}</p>
+          <p class="area-details">
+            {{ area.totalMeasurements }} จุดวัด |
+            <span *ngIf="area.areaSizeFormatted" class="area-size">ขนาด: {{ area.areaSizeFormatted }}</span>
+            <span *ngIf="!area.areaSizeFormatted">ขนาด: ไม่ระบุ</span>
+          </p>
+          <p class="area-date">วันที่ล่าสุด: {{ area.lastMeasurementDate }}</p>
         </div>
         <div class="area-averages">
           <div class="avg-grid">

@@ -50,12 +50,14 @@
       </div>
     </div>
 
-    <!-- แผนที่ -->
-    <div class="map-section" *ngIf="mapUrl">
-      <div class="section-title">ตำแหน่งที่วัด</div>
+    <!-- แผนที่แสดงจุดวัดทั้งหมด -->
+    <div class="map-section" *ngIf="measurementPoints.length > 0">
+      <div class="section-title">
+        <i class="fas fa-map"></i>
+        แผนที่แสดงจุดวัดทั้งหมด ({{ measurementPoints.length }} จุด)
+      </div>
       <div class="map-container">
-        <iframe [src]="mapUrl | safe" width="100%" height="250" frameborder="0" style="border-radius: 12px;">
-        </iframe>
+        <div #mapContainer class="interactive-map"></div>
       </div>
     </div>
 

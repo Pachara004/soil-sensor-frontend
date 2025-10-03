@@ -406,6 +406,18 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
   margin: 0;
   font-size: 13px;
   font-weight: 500;
+
+  .area-size {
+    color: $primary-color;
+    font-weight: 600;
+  }
+}
+
+.area-date {
+  color: $text-muted;
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  font-weight: 400;
 }
 
 // Average Values Grid - ใช้สไตล์เหมือน Sensor Grid

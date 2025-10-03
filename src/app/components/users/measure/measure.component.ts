@@ -76,6 +76,10 @@ interface FirebaseLiveData {
   timestamp: number;
   deviceId: string;
   status: 'online' | 'offline';
+  latitude?: number;        // GPS latitude
+  longitude?: number;       // GPS longitude
+  isMeasuring?: boolean;    // กำลังวัดหรือไม่
+  currentPointIndex?: number; // จุดที่กำลังวัด
 }
 @Component({
   selector: 'app-measure',
@@ -108,6 +112,10 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
   currentPolygon: any = null;
   measurementPoints: [number, number][] = []; // ✅ จุดที่ต้องวัด
   showMeasurementPoints = false; // ✅ แสดงจุดที่ต้องวัด
+  measuredPoints: number[] = []; // ✅ จุดที่วัดแล้ว
+  currentPointIndex = 0; // ✅ จุดที่กำลังวัด
+  deviceMarker: any = null; // ✅ Marker ของอุปกรณ์
+  measurementMarkers: any[] = []; // ✅ Markers ของจุดวัด
   // ✅ Firebase live data properties
   liveData: FirebaseLiveData | null = null;
   isLiveDataConnected = false;
@@ -429,11 +437,280 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     this.phosphorus = data.phosphorus || 0;
     this.potassium = data.potassium || 0;
     this.ph = data.ph || 0;
+    
+    // ✅ อัปเดตตำแหน่งอุปกรณ์บนแผนที่
+    if (data.latitude && data.longitude) {
+      this.updateDevicePosition(data);
+      this.checkMeasurementProximity(data);
+    }
+    
     // ✅ อัปเดตสถานะ device
     if (this.deviceId) {
       this.checkDeviceStatus(this.deviceId);
     }
   }
+  
+  // ✅ อัปเดตตำแหน่งอุปกรณ์บนแผนที่
+  updateDevicePosition(data: FirebaseLiveData) {
+    if (!this.map) return;
+    
+    // สร้าง/อัปเดต marker ของอุปกรณ์
+    if (this.deviceMarker) {
+      this.deviceMarker.setLngLat([data.longitude!, data.latitude!]);
+    } else {
+      this.deviceMarker = new Marker({ color: 'red' })
+        .setLngLat([data.longitude!, data.latitude!])
+        .setPopup(new Popup().setHTML(`
+          <div class="device-popup">
+            <h3>อุปกรณ์: ${data.deviceId}</h3>
+            <p>สถานะ: ${data.status}</p>
+            <p>กำลังวัด: ${data.isMeasuring ? 'ใช่' : 'ไม่'}</p>
+            <p>ตำแหน่ง: ${data.latitude?.toFixed(6)}, ${data.longitude?.toFixed(6)}</p>
+          </div>
+        `))
+        .addTo(this.map!);
+    }
+  }
+  
+  // ✅ ตรวจสอบระยะใกล้จุดวัด
+  checkMeasurementProximity(deviceData: FirebaseLiveData) {
+    if (!deviceData.latitude || !deviceData.longitude) return;
+    
+    const deviceLat = deviceData.latitude;
+    const deviceLng = deviceData.longitude;
+    
+    // ตรวจสอบแต่ละจุดที่ยังไม่ได้วัด
+    for (let i = 0; i < this.measurementPoints.length; i++) {
+      if (this.measuredPoints.includes(i)) continue; // ข้ามจุดที่วัดแล้ว
+      
+      const [pointLng, pointLat] = this.measurementPoints[i];
+      const distance = this.calculateDistance(deviceLat, deviceLng, pointLat, pointLng);
+      
+      // ถ้าอยู่ในระยะ 2-3 เมตร
+      if (distance <= 3) {
+        this.triggerMeasurementPoint(i, distance);
+        break;
+      }
+    }
+  }
+  
+  // ✅ คำนวณระยะห่างระหว่างจุด
+  calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const R = 6371000; // รัศมีโลก (เมตร)
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // ระยะห่างในเมตร
+  }
+  
+  // ✅ แจ้งเตือนเมื่อถึงจุดวัด
+  async triggerMeasurementPoint(pointIndex: number, distance: number) {
+    // ส่งสัญญาณไปยังอุปกรณ์ให้เปิด Buzzer
+    await this.sendBuzzerCommand(pointIndex, distance);
+    
+    // แสดงการแจ้งเตือนบนหน้าจอ
+    this.notificationService.showNotification(
+      'info', 
+      '🎯 ถึงจุดวัดแล้ว!', 
+      `คุณอยู่ห่างจากจุดวัด ${pointIndex + 1} ประมาณ ${distance.toFixed(1)} เมตร\nกรุณาเสียบ Sensor และกดวัดค่าในอุปกรณ์`
+    );
+    
+    // เปลี่ยนสีจุดวัดเป็นสีเหลือง (พร้อมวัด)
+    this.updateMeasurementPointColor(pointIndex, 'yellow');
+  }
+  
+  // ✅ ส่งคำสั่ง Buzzer ไปยังอุปกรณ์
+  async sendBuzzerCommand(pointIndex: number, distance: number) {
+    try {
+      const command = {
+        deviceId: this.deviceId,
+        action: 'buzzer',
+        pointIndex: pointIndex,
+        distance: distance,
+        timestamp: Date.now()
+      };
+      
+      // ส่งคำสั่งไปยังอุปกรณ์ผ่าน Firebase
+      const { set, ref } = await import('@angular/fire/database');
+      await set(ref(this.database, `commands/${this.deviceId}`), command);
+    } catch (error) {
+      console.error('Error sending buzzer command:', error);
+    }
+  }
+  
+  // ✅ อัปเดตสีจุดวัด
+  updateMeasurementPointColor(pointIndex: number, color: string) {
+    if (this.measurementMarkers[pointIndex]) {
+      this.measurementMarkers[pointIndex].setColor(color);
+    }
+  }
+  
+  // ✅ เริ่มการวัดเมื่ออุปกรณ์ส่งสัญญาณ
+  async onDeviceStartMeasurement() {
+    if (!this.currentUser) return;
+    
+    try {
+      const token = await this.currentUser.getIdToken();
+      const measurementStart = {
+        deviceId: this.deviceId,
+        action: 'start_measurement',
+        pointIndex: this.currentPointIndex,
+        timestamp: Date.now()
+      };
+      
+      // ส่งไป Firebase
+      const { set, ref } = await import('@angular/fire/database');
+      await set(ref(this.database, `measurements/${this.deviceId}/current`), measurementStart);
+      
+      // แสดง loading
+      this.isLoading = true;
+    } catch (error) {
+      console.error('Error starting measurement:', error);
+    }
+  }
+  
+  // ✅ บันทึกข้อมูลการวัดเมื่ออุปกรณ์ส่งมา
+  async saveMeasurementData(deviceData: FirebaseLiveData) {
+    if (!this.currentUser) return;
+    
+    try {
+      const token = await this.currentUser.getIdToken();
+      const measurementData: Measurement = {
+        deviceId: deviceData.deviceId,
+        temperature: deviceData.temperature,
+        moisture: deviceData.moisture,
+        nitrogen: deviceData.nitrogen,
+        phosphorus: deviceData.phosphorus,
+        potassium: deviceData.potassium,
+        ph: deviceData.ph,
+        lat: deviceData.latitude || 0,
+        lng: deviceData.longitude || 0,
+        location: this.locationDetail || 'Auto Location',
+        date: new Date(deviceData.timestamp).toISOString(),
+        areasid: this.currentAreaId || undefined,
+        measurementPoint: this.currentPointIndex + 1,
+        timestamp: deviceData.timestamp
+      };
+      
+      // บันทึกใน PostgreSQL
+      await this.saveSingleMeasurement(token, measurementData);
+      
+      // แสดงการแจ้งเตือนเมื่อวัดจุดนี้เสร็จ
+      const remainingCount = this.measurementPoints.length - (this.currentPointIndex + 1);
+      const progressPercentage = Math.round(((this.currentPointIndex + 1) / this.measurementPoints.length) * 100);
+      
+      this.notificationService.showNotification(
+        'success', 
+        '✅ วัดเสร็จแล้ว!', 
+        `จุดที่ ${this.currentPointIndex + 1} วัดเสร็จแล้ว\n\n📊 ความคืบหน้า: ${progressPercentage}%\n✅ วัดแล้ว: ${this.currentPointIndex + 1}/${this.measurementPoints.length} จุด\n⏳ เหลืออีก: ${remainingCount} จุด`
+      );
+      
+      // อัปเดต UI
+      this.markPointAsMeasured(this.currentPointIndex);
+      this.currentPointIndex++;
+      
+      // ตรวจสอบว่าวัดครบทุกจุดหรือไม่
+      if (this.currentPointIndex >= this.measurementPoints.length) {
+        this.showMeasurementComplete();
+      }
+    } catch (error) {
+      console.error('Error saving measurement data:', error);
+    }
+  }
+  
+  // ✅ ทำเครื่องหมายจุดที่วัดแล้ว
+  markPointAsMeasured(pointIndex: number) {
+    this.measuredPoints.push(pointIndex);
+    this.updateMeasurementPoints();
+    
+    // คำนวณความคืบหน้า
+    const totalPoints = this.measurementPoints.length;
+    const measuredCount = this.measuredPoints.length;
+    const remainingCount = totalPoints - measuredCount;
+    const progressPercentage = Math.round((measuredCount / totalPoints) * 100);
+    
+    // แสดงการแจ้งเตือนที่ปรับปรุงแล้ว
+    this.notificationService.showNotification(
+      'success', 
+      '✅ วัดเสร็จแล้ว!', 
+      `จุดวัดที่ ${pointIndex + 1} วัดเสร็จแล้ว\n\n📊 ความคืบหน้า: ${progressPercentage}%\n✅ วัดแล้ว: ${measuredCount}/${totalPoints} จุด\n⏳ เหลืออีก: ${remainingCount} จุด`
+    );
+  }
+  
+  // ✅ แสดงความคืบหน้าการวัด
+  updateMeasurementPoints() {
+    if (!this.map) return;
+    
+    // ลบ markers เดิม
+    this.measurementMarkers.forEach(marker => marker.remove());
+    this.measurementMarkers = [];
+    
+    // สร้าง markers ใหม่
+    this.measurementPoints.forEach((point, index) => {
+      const [lng, lat] = point;
+      const isMeasured = this.measuredPoints.includes(index);
+      const isCurrent = index === this.currentPointIndex;
+      
+      let color = 'blue'; // ยังไม่วัด
+      if (isMeasured) color = 'green'; // วัดแล้ว
+      if (isCurrent) color = 'yellow'; // จุดปัจจุบัน
+      
+      const marker = new Marker({ color })
+        .setLngLat([lng, lat])
+        .setPopup(new Popup().setHTML(`
+          <div class="measurement-point-popup">
+            <h3>จุดวัดที่ ${index + 1}</h3>
+            <p>สถานะ: ${isMeasured ? 'วัดแล้ว' : 'ยังไม่วัด'}</p>
+            ${isMeasured ? this.getMeasurementDataHTML(index) : ''}
+          </div>
+        `))
+        .addTo(this.map!);
+      
+      this.measurementMarkers.push(marker);
+    });
+  }
+  
+  // ✅ สร้าง HTML สำหรับข้อมูลการวัด
+  getMeasurementDataHTML(pointIndex: number): string {
+    // ใช้ข้อมูลจาก measurements array
+    const measurement = this.measurements.find(m => m.measurementPoint === pointIndex + 1);
+    if (!measurement) return '';
+    
+    return `
+      <div class="measurement-data">
+        <p>🌡️ อุณหภูมิ: ${measurement.temperature}°C</p>
+        <p>💧 ความชื้น: ${measurement.moisture}%</p>
+        <p>🌱 ไนโตรเจน: ${measurement.nitrogen} ppm</p>
+        <p>🌿 ฟอสฟอรัส: ${measurement.phosphorus} ppm</p>
+        <p>🍃 โพแทสเซียม: ${measurement.potassium} ppm</p>
+        <p>⚗️ pH: ${measurement.ph}</p>
+      </div>
+    `;
+  }
+  
+  // ✅ แสดงการวัดเสร็จสิ้น
+  showMeasurementComplete() {
+    this.isLoading = false;
+    
+    // คำนวณสถิติสุดท้าย
+    const totalPoints = this.measurementPoints.length;
+    const measuredCount = this.measuredPoints.length;
+    const successRate = Math.round((measuredCount / totalPoints) * 100);
+    
+    this.notificationService.showNotification(
+      'success', 
+      '🎉 วัดเสร็จสิ้น!', 
+      `การวัดทุกจุดเสร็จสิ้นแล้ว!\n\n📊 สถิติสุดท้าย:\n✅ วัดสำเร็จ: ${measuredCount}/${totalPoints} จุด\n📈 อัตราความสำเร็จ: ${successRate}%\n\nกำลังนำคุณไปหน้า History...`
+    );
+    
+    setTimeout(() => {
+      this.router.navigate(['/history']);
+    }, 3000);
+  }
+  
   async loadMeasurements(deviceId: string) {
     try {
       const response = await lastValueFrom(
@@ -523,10 +800,26 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     let errorCount = 0;
     // แสดง loading state
     this.isLoading = true;
+    
+    // แสดงการแจ้งเตือนเริ่มต้น
+    this.notificationService.showNotification(
+      'info', 
+      '🚀 เริ่มการวัด', 
+      `เริ่มวัด ${this.measurementPoints.length} จุด\nกรุณารอสักครู่...`
+    );
+    
     try {
       // วัดทีละจุด
       for (let i = 0; i < this.measurementPoints.length; i++) {
         const [lng, lat] = this.measurementPoints[i];
+        
+        // แสดงการแจ้งเตือนกำลังวัดจุดนี้
+        this.notificationService.showNotification(
+          'info', 
+          '⏳ กำลังวัด...', 
+          `กำลังวัดจุดที่ ${i + 1}/${this.measurementPoints.length}\nพิกัด: ${lat.toFixed(6)}, ${lng.toFixed(6)}`
+        );
+        
         // สร้างข้อมูล measurement สำหรับจุดนี้
         const measurementData = {
           deviceId: this.deviceId,
@@ -542,6 +835,7 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
           measurementPoint: i + 1, // เพิ่ม measurementPoint
           areasid: this.currentAreaId
         };
+        
         try {
           // บันทึก measurement ไปยัง PostgreSQL
           const response = await lastValueFrom(
@@ -552,26 +846,53 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
             })
           );
           successCount++;
+          
           // อัปเดต UI
           this.measurementCount++;
+          
+          // แสดงการแจ้งเตือนเมื่อวัดจุดนี้เสร็จ
+          const remainingCount = this.measurementPoints.length - (i + 1);
+          const progressPercentage = Math.round(((i + 1) / this.measurementPoints.length) * 100);
+          
+          this.notificationService.showNotification(
+            'success', 
+            '✅ วัดเสร็จแล้ว!', 
+            `จุดที่ ${i + 1} วัดเสร็จแล้ว\n\n📊 ความคืบหน้า: ${progressPercentage}%\n✅ วัดแล้ว: ${i + 1}/${this.measurementPoints.length} จุด\n⏳ เหลืออีก: ${remainingCount} จุด`
+          );
+          
+          // อัปเดตจุดที่วัดแล้ว
+          this.markPointAsMeasured(i);
+          
         } catch (pointError: any) {
           console.error(`❌ Error measuring point ${i + 1}:`, pointError);
           errorCount++;
+          
+          // แสดงการแจ้งเตือนข้อผิดพลาด
+          this.notificationService.showNotification(
+            'error', 
+            '❌ วัดไม่สำเร็จ', 
+            `จุดที่ ${i + 1} วัดไม่สำเร็จ\n${pointError.error?.message || 'เกิดข้อผิดพลาดในการบันทึก'}`
+          );
         }
-        // รอสักครู่ระหว่างการวัดแต่ละจุด (เพื่อให้เห็นการทำงาน)
-        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // รอสักครู่ระหว่างการวัดแต่ละจุด (ยกเว้นจุดสุดท้าย)
+        if (i < this.measurementPoints.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
-      // แสดงผลลัพธ์
+      
+      // แสดงผลลัพธ์สุดท้าย
       if (successCount > 0) {
         this.notificationService.showNotification(
           'success', 
-          'ทำการวัดพื้นที่เสร็จแล้ว', 
-          `ทำการวัดพื้นที่เสร็จแล้ว ${successCount} จุดจาก ${this.measurementPoints.length} จุด${errorCount > 0 ? ` (มีข้อผิดพลาด ${errorCount} จุด)` : ''}`
+          '🎉 วัดเสร็จสิ้น!', 
+          `การวัดเสร็จสิ้นแล้ว!\n\n✅ วัดสำเร็จ: ${successCount} จุด\n${errorCount > 0 ? `❌ ล้มเหลว: ${errorCount} จุด\n` : ''}📊 อัตราความสำเร็จ: ${Math.round((successCount / this.measurementPoints.length) * 100)}%\n\nกำลังนำคุณไปหน้า History...`
         );
-        // เด้งไปหน้า history หลังจาก 2 วินาที
+        
+        // เด้งไปหน้า history หลังจาก 3 วินาที
         setTimeout(() => {
           this.router.navigate(['/history']);
-        }, 2000);
+        }, 3000);
       } else {
         this.notificationService.showNotification('error', 'วัดไม่สำเร็จ', 'ไม่สามารถวัดจุดใดได้ กรุณาลองใหม่');
       }
