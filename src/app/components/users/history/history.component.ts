@@ -207,50 +207,66 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     this.isLoading = true;
     try {
       const token = await this.currentUser.getIdToken();
-      // ✅ ใช้ Areas API พร้อม deviceid parameter
-      let apiUrl = `${this.apiUrl}/api/measurements/areas/with-measurements`;
-      // ถ้ามี deviceId ให้เพิ่ม parameter
+      
+      // ✅ ดึงข้อมูล areas ก่อน
+      let areasApiUrl = `${this.apiUrl}/api/measurements/areas/with-measurements`;
       if (this.deviceId) {
         const actualDeviceId = this.deviceMap[this.deviceId] || this.deviceId;
-        apiUrl += `?deviceid=${actualDeviceId}`;
-      } else {
+        areasApiUrl += `?deviceid=${actualDeviceId}`;
       }
-      const response = await lastValueFrom(
-        this.http.get<any[]>(
-          apiUrl,
-          {
-            headers: { 'Authorization': `Bearer ${token}` }
-          }
-        )
+      
+      const areasResponse = await lastValueFrom(
+        this.http.get<any[]>(areasApiUrl, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
       );
-      if (response && Array.isArray(response)) {
+
+      if (areasResponse && Array.isArray(areasResponse)) {
+        // ✅ ดึงข้อมูล measurements ทั้งหมดจาก measurement table
+        const measurementsResponse = await lastValueFrom(
+          this.http.get<any[]>(`${this.apiUrl}/api/measurements`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        );
+
         // แปลงข้อมูลจาก Areas API เป็น format ที่ต้องการ
-        const areaGroups: AreaGroup[] = response.map(area => {
+        const areaGroups: AreaGroup[] = areasResponse.map(area => {
+          const areasid = area.areasid?.toString() || area.id?.toString() || '';
+          
+          // ✅ กรอง measurements ที่มี areasid เดียวกันจาก measurement table
+          const areaMeasurements = measurementsResponse.filter(measurement => 
+            measurement.areasid && measurement.areasid.toString() === areasid
+          );
+
+          console.log(`🔍 Area ${areasid} measurements from DB:`, areaMeasurements);
+
           // คำนวณขนาดพื้นที่จาก polygon bounds
           const areaSize = this.calculateAreaFromBounds(area.polygon_bounds || []);
           const areaSizeFormatted = this.formatAreaToThaiUnits(areaSize);
           
+          // คำนวณค่าเฉลี่ยจาก measurements จริง
+          const averages = this.calculateAveragesFromMeasurements(areaMeasurements);
+          
           return {
-            areasid: area.areasid?.toString() || area.id?.toString() || '',
+            areasid: areasid,
             areaName: area.area_name || 'ไม่ระบุพื้นที่',
-            measurements: area.measurements || [],
-            totalMeasurements: area.totalmeasurement || area.measurements?.length || 0,
-            averages: {
-              temperature: parseFloat(area.temperature_avg) || 0,
-              moisture: parseFloat(area.moisture_avg) || 0,
-              nitrogen: parseFloat(area.nitrogen_avg) || 0,
-              phosphorus: parseFloat(area.phosphorus_avg) || 0,
-              potassium: parseFloat(area.potassium_avg) || 0,
-              ph: parseFloat(area.ph_avg) || 0
-            },
-            lastMeasurementDate: area.created_at || '',
+            measurements: areaMeasurements,
+            totalMeasurements: areaMeasurements.length,
+            averages: averages,
+            lastMeasurementDate: areaMeasurements.length > 0 
+              ? areaMeasurements[0].createdAt || areaMeasurements[0].date || area.created_at || ''
+              : area.created_at || '',
             areaSize: areaSize,
             areaSizeFormatted: areaSizeFormatted
           };
         });
+        
         this.areas = areaGroups;
         this.areaGroups = areaGroups;
         this.isLoading = false;
+        
+        console.log(`📊 Loaded ${areaGroups.length} areas with measurements`);
+        
         if (areaGroups.length === 0) {
           this.notificationService.showNotification(
             'info',
@@ -468,7 +484,11 @@ pH: ${measurement.ph}
       areaName: area.areaName,
       deviceId: this.deviceId,
       totalMeasurements: area.totalMeasurements,
-      averages: area.averages
+      averages: area.averages,
+      areaSize: area.areaSize,
+      areaSizeFormatted: area.areaSizeFormatted,
+      lastMeasurementDate: area.lastMeasurementDate,
+      polygonBounds: area.polygonBounds
     };
     // บันทึกข้อมูลพื้นที่ใน localStorage
     localStorage.setItem('selectedMeasurement', JSON.stringify(areaData));
@@ -710,5 +730,77 @@ pH: ${measurement.ph}
     if (squareMeters > 0) result += (result ? ' ' : '') + `${squareMeters} ตารางเมตร`;
     
     return result || '0.00 ไร่';
+  }
+
+  // ✅ คำนวณค่าเฉลี่ยจาก measurements จริง
+  calculateAveragesFromMeasurements(measurements: any[]): {
+    temperature: number;
+    moisture: number;
+    nitrogen: number;
+    phosphorus: number;
+    potassium: number;
+    ph: number;
+  } {
+    if (measurements.length === 0) {
+      return {
+        temperature: 0,
+        moisture: 0,
+        nitrogen: 0,
+        phosphorus: 0,
+        potassium: 0,
+        ph: 0
+      };
+    }
+
+    const totals = measurements.reduce((acc, measurement) => ({
+      temperature: acc.temperature + (measurement.temperature || 0),
+      moisture: acc.moisture + (measurement.moisture || 0),
+      nitrogen: acc.nitrogen + (measurement.nitrogen || 0),
+      phosphorus: acc.phosphorus + (measurement.phosphorus || 0),
+      potassium: acc.potassium + (measurement.potassium || 0),
+      ph: acc.ph + (measurement.ph || 0)
+    }), { temperature: 0, moisture: 0, nitrogen: 0, phosphorus: 0, potassium: 0, ph: 0 });
+
+    const count = measurements.length;
+    return {
+      temperature: totals.temperature / count,
+      moisture: totals.moisture / count,
+      nitrogen: totals.nitrogen / count,
+      phosphorus: totals.phosphorus / count,
+      potassium: totals.potassium / count,
+      ph: totals.ph / count
+    };
+  }
+
+  // ✅ แสดงช่วง Measurement ID
+  getMeasurementIdRange(area: AreaGroup): string {
+    if (!area.measurements || area.measurements.length === 0) {
+      return 'ไม่มีข้อมูล';
+    }
+
+    const measurementIds = area.measurements
+      .map(m => m['measurementid'] || m['id'])
+      .filter(id => id != null && id !== 'null' && id !== 'undefined' && id !== '')
+      .sort((a, b) => Number(a) - Number(b));
+
+    console.log(`🔍 Area ${area.areasid} measurements:`, area.measurements);
+    console.log(`🔍 Filtered measurement IDs:`, measurementIds);
+
+    if (measurementIds.length === 0) {
+      return 'ไม่มี ID';
+    }
+
+    if (measurementIds.length === 1) {
+      return measurementIds[0].toString();
+    }
+
+    const minId = measurementIds[0];
+    const maxId = measurementIds[measurementIds.length - 1];
+    
+    if (minId === maxId) {
+      return minId.toString();
+    }
+
+    return `${minId}-${maxId}`;
   }
 }

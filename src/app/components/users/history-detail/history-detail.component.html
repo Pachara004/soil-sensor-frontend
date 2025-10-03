@@ -18,6 +18,41 @@
       </div>
     </div>
 
+    <!-- ข้อมูลสรุปพื้นที่ -->
+    <div class="area-summary-section" *ngIf="areaSummary">
+      <div class="section-title">
+        <i class="fas fa-chart-line"></i>
+        สรุปข้อมูลพื้นที่
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary-item">
+          <div class="summary-label">ชื่อพื้นที่:</div>
+          <div class="summary-value">{{ areaSummary.areaName }}</div>
+        </div>
+
+        <div class="summary-item">
+          <div class="summary-label">Areas ID:</div>
+          <div class="summary-value">{{ areaSummary.areasid }}</div>
+        </div>
+
+        <div class="summary-item">
+          <div class="summary-label">จำนวนจุดวัด:</div>
+          <div class="summary-value">{{ areaSummary.totalPoints }} จุด</div>
+        </div>
+
+        <div class="summary-item">
+          <div class="summary-label">ขนาดพื้นที่:</div>
+          <div class="summary-value">{{ areaSummary.areaSizeFormatted }}</div>
+        </div>
+
+        <div class="summary-item">
+          <div class="summary-label">วันที่วัดล่าสุด:</div>
+          <div class="summary-value">{{ areaSummary.lastMeasurementDate | date:'dd/MM/yyyy HH:mm' }}</div>
+        </div>
+      </div>
+    </div>
+
     <!-- ข้อมูลอุปกรณ์และวันที่ -->
     <div class="measurement-info-section">
       <div class="section-title">รายละเอียดการวัด</div>
@@ -61,9 +96,12 @@
       </div>
     </div>
 
-    <!-- ผลการวัด -->
-    <div class="results-section">
-      <div class="section-title">ผลการวัด</div>
+    <!-- ผลการวัดเฉลี่ย -->
+    <div class="results-section" *ngIf="areaSummary">
+      <div class="section-title">
+        <i class="fas fa-calculator"></i>
+        ค่าเฉลี่ยการวัดทั้งหมด ({{ areaSummary.totalPoints }} จุด)
+      </div>
 
       <div class="sensors-grid">
         <div class="sensor-card temperature">
@@ -71,7 +109,7 @@
             <img src="https://cdn-icons-png.flaticon.com/512/3534/3534501.png" alt="temperature" />
           </div>
           <div class="sensor-content">
-            <div class="sensor-value">{{ temperature }}</div>
+            <div class="sensor-value">{{ formatNumber(areaSummary.averages.temperature) }}</div>
             <div class="sensor-unit">°C</div>
             <div class="sensor-label">อุณหภูมิ</div>
             <div class="sensor-status" [ngClass]="getTemperatureStatus()">
@@ -85,7 +123,7 @@
             <img src="https://cdn-icons-png.flaticon.com/512/6393/6393411.png" alt="moisture" />
           </div>
           <div class="sensor-content">
-            <div class="sensor-value">{{ moisture }}</div>
+            <div class="sensor-value">{{ formatNumber(areaSummary.averages.moisture) }}</div>
             <div class="sensor-unit">%</div>
             <div class="sensor-label">ความชื้น</div>
             <div class="sensor-status" [ngClass]="getMoistureStatus()">
@@ -99,7 +137,7 @@
             <img src="https://cdn-icons-png.flaticon.com/512/6678/6678672.png" alt="nitrogen" />
           </div>
           <div class="sensor-content">
-            <div class="sensor-value">{{ nitrogen }}</div>
+            <div class="sensor-value">{{ formatNumber(areaSummary.averages.nitrogen) }}</div>
             <div class="sensor-unit">mg/kg</div>
             <div class="sensor-label">ไนโตรเจน (N)</div>
             <div class="sensor-status" [ngClass]="getNitrogenStatus()">
@@ -113,7 +151,7 @@
             <img src="https://cdn-icons-png.flaticon.com/512/6678/6678656.png" alt="phosphorus" />
           </div>
           <div class="sensor-content">
-            <div class="sensor-value">{{ phosphorus }}</div>
+            <div class="sensor-value">{{ formatNumber(areaSummary.averages.phosphorus) }}</div>
             <div class="sensor-unit">mg/kg</div>
             <div class="sensor-label">ฟอสฟอรัส (P)</div>
             <div class="sensor-status" [ngClass]="getPhosphorusStatus()">
@@ -127,7 +165,7 @@
             <img src="https://cdn-icons-png.flaticon.com/512/6678/6678660.png" alt="potassium" />
           </div>
           <div class="sensor-content">
-            <div class="sensor-value">{{ potassium }}</div>
+            <div class="sensor-value">{{ formatNumber(areaSummary.averages.potassium) }}</div>
             <div class="sensor-unit">mg/kg</div>
             <div class="sensor-label">โพแทสเซียม (K)</div>
             <div class="sensor-status" [ngClass]="getPotassiumStatus()">
@@ -141,7 +179,7 @@
             <img src="https://cdn-icons-png.flaticon.com/512/9162/9162345.png" alt="ph" />
           </div>
           <div class="sensor-content">
-            <div class="sensor-value">{{ ph }}</div>
+            <div class="sensor-value">{{ formatNumber(areaSummary.averages.ph, 1) }}</div>
             <div class="sensor-unit">pH</div>
             <div class="sensor-label">ค่าความเป็นกรด-ด่าง</div>
             <div class="sensor-status" [ngClass]="getPhStatus()">
@@ -162,36 +200,82 @@
       <div class="points-grid" *ngIf="!loading">
         <div class="point-card" *ngFor="let point of measurementPoints; let i = index"
           (click)="showMeasurementPointDetail(point)">
+
+          <!-- Header Section -->
           <div class="point-header">
-            <div class="point-number">จุดที่ {{ point.measurementPoint }}</div>
-            <div class="point-date">{{ getPointDate(point) }}</div>
+            <div class="point-number">
+              <i class="fas fa-map-marker-alt"></i>
+              จุดที่ {{ point.measurementPoint || (i + 1) }}
+            </div>
+            <div class="point-date">
+              <i class="fas fa-calendar"></i>
+              {{ getPointDate(point) }}
+            </div>
           </div>
 
+          <!-- ID Section -->
           <div class="point-id">
             <i class="fas fa-hashtag"></i>
-            Measurement ID: {{ point.id }}
+            <span class="id-label">Measurement ID:</span>
+            <span class="id-value">{{ point.measurementid || point.id || 'ไม่ระบุ' }}</span>
           </div>
 
-          <div class="point-location">
+          <!-- Areas ID Section -->
+          <div class="point-areasid" *ngIf="point.areasid && point.areasid !== 'null' && point.areasid !== 'undefined'">
+            <i class="fas fa-layer-group"></i>
+            <span class="areasid-label">Areas ID:</span>
+            <span class="areasid-value">{{ point.areasid }}</span>
+          </div>
+
+          <!-- Location Section -->
+          <div class="point-location" *ngIf="point.lat && point.lng">
             <i class="fas fa-location-dot"></i>
-            {{ getPointDisplayLocation(point) }}
+            <span class="location-label">พิกัด:</span>
+            <span class="location-value">{{ point.lat.toFixed(6) }}, {{ point.lng.toFixed(6) }}</span>
           </div>
 
+          <!-- Measurements Section -->
           <div class="point-measurements">
-            <div class="measurement-item">
-              <span class="measurement-label">อุณหภูมิ:</span>
-              <span class="measurement-value">{{ point.temperature }}°C</span>
-            </div>
-            <div class="measurement-item">
-              <span class="measurement-label">ความชื้น:</span>
-              <span class="measurement-value">{{ point.moisture }}%</span>
-            </div>
-            <div class="measurement-item">
-              <span class="measurement-label">pH:</span>
-              <span class="measurement-value">{{ point.ph }}</span>
+            <div class="measurements-grid">
+              <div class="measurement-item temperature">
+                <i class="fas fa-thermometer-half"></i>
+                <span class="measurement-label">อุณหภูมิ</span>
+                <span class="measurement-value">{{ formatNumber(point.temperature) }}°C</span>
+              </div>
+
+              <div class="measurement-item moisture">
+                <i class="fas fa-tint"></i>
+                <span class="measurement-label">ความชื้น</span>
+                <span class="measurement-value">{{ formatNumber(point.moisture) }}%</span>
+              </div>
+
+              <div class="measurement-item nitrogen">
+                <i class="fas fa-atom"></i>
+                <span class="measurement-label">N</span>
+                <span class="measurement-value">{{ formatNumber(point.nitrogen) }}</span>
+              </div>
+
+              <div class="measurement-item phosphorus">
+                <i class="fas fa-circle"></i>
+                <span class="measurement-label">P</span>
+                <span class="measurement-value">{{ formatNumber(point.phosphorus) }}</span>
+              </div>
+
+              <div class="measurement-item potassium">
+                <i class="fas fa-circle"></i>
+                <span class="measurement-label">K</span>
+                <span class="measurement-value">{{ formatNumber(point.potassium) }}</span>
+              </div>
+
+              <div class="measurement-item ph">
+                <i class="fas fa-flask"></i>
+                <span class="measurement-label">pH</span>
+                <span class="measurement-value">{{ formatNumber(point.ph, 1) }}</span>
+              </div>
             </div>
           </div>
 
+          <!-- Actions Section -->
           <div class="point-actions">
             <button class="view-detail-btn">
               <i class="fas fa-eye"></i>

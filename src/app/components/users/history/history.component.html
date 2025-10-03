@@ -51,12 +51,26 @@
       <div *ngFor="let area of areaGroups" class="area-item">
         <div class="area-header">
           <h3 class="area-name">{{ getDisplayAreaName(area) }}</h3>
-          <p class="area-details">
-            {{ area.totalMeasurements }} จุดวัด |
-            <span *ngIf="area.areaSizeFormatted" class="area-size">ขนาด: {{ area.areaSizeFormatted }}</span>
-            <span *ngIf="!area.areaSizeFormatted">ขนาด: ไม่ระบุ</span>
-          </p>
-          <p class="area-date">วันที่ล่าสุด: {{ area.lastMeasurementDate }}</p>
+          <div class="area-info-row">
+            <div class="area-info-item">
+              <i class="fas fa-map-marker-alt"></i>
+              <span class="info-label">จุดวัด:</span>
+              <span class="info-value">{{ area.totalMeasurements }} จุด</span>
+              <span class="info-detail" *ngIf="area.totalMeasurements > 0">(Measurement ID: {{
+                getMeasurementIdRange(area) }})</span>
+            </div>
+            <div class="area-info-item">
+              <i class="fas fa-expand-arrows-alt"></i>
+              <span class="info-label">ขนาด:</span>
+              <span class="info-value" *ngIf="area.areaSizeFormatted">{{ area.areaSizeFormatted }}</span>
+              <span class="info-value" *ngIf="!area.areaSizeFormatted">ไม่ระบุ</span>
+            </div>
+            <div class="area-info-item">
+              <i class="fas fa-calendar-alt"></i>
+              <span class="info-label">วันที่ล่าสุด:</span>
+              <span class="info-value">{{ area.lastMeasurementDate | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          </div>
         </div>
         <div class="area-averages">
           <div class="avg-grid">
@@ -96,46 +110,139 @@
     </div>
 
     <div *ngIf="!isLoading && showAreaDetails && selectedArea" class="area-details-view">
+      <!-- Header Section -->
       <div class="area-detail-header">
         <button class="back-to-list" (click)="backToAreaList()">
           <i class="fas fa-arrow-left"></i> กลับ
         </button>
-        <h3>{{ selectedArea.areaName }}</h3>
-        <p>{{ selectedArea.totalMeasurements }} จุดวัด</p>
+        <div class="area-title-section">
+          <h3>{{ selectedArea.areaName }}</h3>
+          <div class="area-info">
+            <span class="area-date">{{ selectedArea.lastMeasurementDate | date:'dd/MM/yyyy' }}</span>
+            <span class="area-size">{{ selectedArea.areaSizeFormatted }}</span>
+            <span class="area-points">{{ selectedArea.totalMeasurements }} จุดวัด</span>
+          </div>
+        </div>
       </div>
 
+      <!-- Map Section -->
       <div class="area-summary">
-        <h4>แผนที่พื้นที่วัด</h4>
-        <div id="mapContainer" style="height: 300px; width: 100%; border-radius: 12px;"></div>
-        <p style="text-align: center; margin-top: 10px;">คลิกที่จุดสีแดงเพื่อดูรายละเอียดการวัด</p>
+        <h4>
+          <i class="fas fa-map"></i>
+          แผนที่พื้นที่วัด
+        </h4>
+        <div id="mapContainer" style="height: 400px; width: 100%; border-radius: 12px; border: 2px solid #e0e0e0;">
+        </div>
+        <p style="text-align: center; margin-top: 10px; color: #666;">
+          <i class="fas fa-info-circle"></i>
+          คลิกที่จุดสีเขียวเพื่อดูรายละเอียดการวัดแต่ละจุด
+        </p>
       </div>
 
+      <!-- Summary Statistics Section -->
       <div class="area-summary">
-        <h4>ค่าเฉลี่ยของพื้นที่</h4>
+        <h4>
+          <i class="fas fa-chart-line"></i>
+          สรุปข้อมูลพื้นที่
+        </h4>
+        <div class="area-stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-map-marker-alt"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">จำนวนจุดวัด</div>
+              <div class="stat-value">{{ selectedArea.totalMeasurements }} จุด</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-expand-arrows-alt"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">ขนาดพื้นที่</div>
+              <div class="stat-value">{{ selectedArea.areaSizeFormatted }}</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-calendar-alt"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">วันที่วัดล่าสุด</div>
+              <div class="stat-value">{{ selectedArea.lastMeasurementDate | date:'dd/MM/yyyy HH:mm' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Average Values Section -->
+      <div class="area-summary">
+        <h4>
+          <i class="fas fa-calculator"></i>
+          ค่าเฉลี่ยการวัดทั้งหมด ({{ selectedArea.totalMeasurements }} จุด)
+        </h4>
         <div class="summary-grid">
-          <div class="summary-item">
-            <span class="summary-label">อุณหภูมิ</span>
-            <span class="summary-value temperature">{{ selectedArea.averages.temperature }}°C</span>
+          <div class="summary-item temperature">
+            <div class="summary-icon">
+              <i class="fas fa-thermometer-half"></i>
+            </div>
+            <div class="summary-content">
+              <span class="summary-label">อุณหภูมิ</span>
+              <span class="summary-value">{{ formatNumber(selectedArea.averages.temperature) }}°C</span>
+            </div>
           </div>
-          <div class="summary-item">
-            <span class="summary-label">ความชื้น</span>
-            <span class="summary-value moisture">{{ selectedArea.averages.moisture }}%</span>
+
+          <div class="summary-item moisture">
+            <div class="summary-icon">
+              <i class="fas fa-tint"></i>
+            </div>
+            <div class="summary-content">
+              <span class="summary-label">ความชื้น</span>
+              <span class="summary-value">{{ formatNumber(selectedArea.averages.moisture) }}%</span>
+            </div>
           </div>
-          <div class="summary-item">
-            <span class="summary-label">ไนโตรเจน</span>
-            <span class="summary-value nitrogen">{{ selectedArea.averages.nitrogen }} mg/kg</span>
+
+          <div class="summary-item nitrogen">
+            <div class="summary-icon">
+              <i class="fas fa-atom"></i>
+            </div>
+            <div class="summary-content">
+              <span class="summary-label">ไนโตรเจน (N)</span>
+              <span class="summary-value">{{ formatNumber(selectedArea.averages.nitrogen) }} mg/kg</span>
+            </div>
           </div>
-          <div class="summary-item">
-            <span class="summary-label">ฟอสฟอรัส</span>
-            <span class="summary-value phosphorus">{{ selectedArea.averages.phosphorus }} mg/kg</span>
+
+          <div class="summary-item phosphorus">
+            <div class="summary-icon">
+              <i class="fas fa-circle"></i>
+            </div>
+            <div class="summary-content">
+              <span class="summary-label">ฟอสฟอรัส (P)</span>
+              <span class="summary-value">{{ formatNumber(selectedArea.averages.phosphorus) }} mg/kg</span>
+            </div>
           </div>
-          <div class="summary-item">
-            <span class="summary-label">โพแทสเซียม</span>
-            <span class="summary-value potassium">{{ selectedArea.averages.potassium }} mg/kg</span>
+
+          <div class="summary-item potassium">
+            <div class="summary-icon">
+              <i class="fas fa-circle"></i>
+            </div>
+            <div class="summary-content">
+              <span class="summary-label">โพแทสเซียม (K)</span>
+              <span class="summary-value">{{ formatNumber(selectedArea.averages.potassium) }} mg/kg</span>
+            </div>
           </div>
-          <div class="summary-item">
-            <span class="summary-label">ค่า pH</span>
-            <span class="summary-value ph">{{ selectedArea.averages.ph }}</span>
+
+          <div class="summary-item ph">
+            <div class="summary-icon">
+              <i class="fas fa-flask"></i>
+            </div>
+            <div class="summary-content">
+              <span class="summary-label">ค่า pH</span>
+              <span class="summary-value">{{ formatNumber(selectedArea.averages.ph, 1) }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -156,12 +263,16 @@
       </div>
 
       <div class="measurements-list">
-        <h4>รายการจุดวัด</h4>
+        <h4>รายการจุดวัด (Measurement ID)</h4>
         <div *ngFor="let measurement of selectedArea.measurements" class="measurement-item">
           <div class="measurement-info">
-            <div class="measurement-point">จุดที่ {{ measurement.measurementPoint || 'ไม่ระบุ' }}</div>
-            <div class="measurement-location">{{ measurement.location }}</div>
-            <div class="measurement-date">{{ measurement.date }}</div>
+            <div class="measurement-point">Measurement ID: {{ measurement['measurementid'] || measurement['id'] ||
+              'ไม่ระบุ'
+              }}</div>
+            <div class="measurement-location">{{ measurement.location || 'ไม่ระบุตำแหน่ง' }}</div>
+            <div class="measurement-date">{{ measurement.measurement_date || measurement.date || 'ไม่ระบุวันที่' }}
+            </div>
+            <div class="measurement-areasid">Areas ID: {{ measurement['areasid'] || 'ไม่ระบุ' }}</div>
           </div>
           <button class="view-detail-btn" (click)="viewMeasurementDetail(measurement)">ดูรายละเอียด</button>
         </div>

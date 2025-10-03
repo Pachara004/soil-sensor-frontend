@@ -36,7 +36,6 @@ interface Measurement {
   phosphorus: number;
   potassium: number;
   ph: number;
-  location: string;
   lat: number;
   lng: number;
   date: string;
@@ -576,6 +575,13 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
   async saveMeasurementData(deviceData: FirebaseLiveData) {
     if (!this.currentUser) return;
     
+    // ตรวจสอบ currentAreaId
+    if (!this.currentAreaId) {
+      console.error('❌ No currentAreaId available for real device measurement');
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'ไม่พบ Area ID กรุณาสร้างพื้นที่ใหม่');
+      return;
+    }
+    
     try {
       const token = await this.currentUser.getIdToken();
       const measurementData: Measurement = {
@@ -588,12 +594,14 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
         ph: deviceData.ph,
         lat: deviceData.latitude || 0,
         lng: deviceData.longitude || 0,
-        location: this.locationDetail || 'Auto Location',
         date: new Date(deviceData.timestamp).toISOString(),
         areasid: this.currentAreaId || undefined,
         measurementPoint: this.currentPointIndex + 1,
         timestamp: deviceData.timestamp
       };
+      
+      console.log('🔍 Real device measurement data:', measurementData);
+      console.log('🔍 Current areaId:', this.currentAreaId);
       
       // บันทึกใน PostgreSQL
       await this.saveSingleMeasurement(token, measurementData);
@@ -605,7 +613,7 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       this.notificationService.showNotification(
         'success', 
         '✅ วัดเสร็จแล้ว!', 
-        `จุดที่ ${this.currentPointIndex + 1} วัดเสร็จแล้ว\n\n📊 ความคืบหน้า: ${progressPercentage}%\n✅ วัดแล้ว: ${this.currentPointIndex + 1}/${this.measurementPoints.length} จุด\n⏳ เหลืออีก: ${remainingCount} จุด`
+        `จุดที่ ${this.currentPointIndex + 1} วัดเสร็จแล้ว\nAreas ID: ${this.currentAreaId}\n\n📊 ความคืบหน้า: ${progressPercentage}%\n✅ วัดแล้ว: ${this.currentPointIndex + 1}/${this.measurementPoints.length} จุด\n⏳ เหลืออีก: ${remainingCount} จุด`
       );
       
       // อัปเดต UI
@@ -809,6 +817,14 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     );
     
     try {
+      // ตรวจสอบ currentAreaId
+      console.log('🔍 Current areaId before measurement:', this.currentAreaId);
+      if (!this.currentAreaId) {
+        console.error('❌ No currentAreaId available for measurement');
+        this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'ไม่พบ Area ID กรุณาสร้างพื้นที่ใหม่');
+        return;
+      }
+      
       // วัดทีละจุด
       for (let i = 0; i < this.measurementPoints.length; i++) {
         const [lng, lat] = this.measurementPoints[i];
@@ -827,14 +843,15 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
           moisture: this.limitPrecision(this.liveData?.moisture || 0, 2),
           nitrogen: this.limitPrecision(this.liveData?.nitrogen || 0, 2),
           phosphorus: this.limitPrecision(this.liveData?.phosphorus || 0, 2),
-          potassium: this.limitPrecision(this.liveData?.potassium || 0, 2),
+          potassium_avg: this.limitPrecision(this.liveData?.potassium || 0, 2), // ✅ ใช้ potassium_avg
           ph: this.limitPrecision(this.liveData?.ph || 7.0, 2),
-          location: this.locationDetail || 'Auto Location',
           lat: this.roundLatLng(lat, 6),
           lng: this.roundLatLng(lng, 6),
           measurementPoint: i + 1, // เพิ่ม measurementPoint
-          areasid: this.currentAreaId
+          areaId: this.currentAreaId // ✅ ใช้ areaId แทน areasid
         };
+        
+        console.log(`📊 Measurement data for point ${i + 1}:`, measurementData);
         
         try {
           // บันทึก measurement ไปยัง PostgreSQL
@@ -905,8 +922,17 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   // ✅ บันทึก measurement เดียว
   async saveSingleMeasurement(token: string, newMeasurement: Measurement) {
+    // ✅ แปลง areasid เป็น areaId และ potassium เป็น potassium_avg สำหรับ API
+    const measurementData = {
+      ...newMeasurement,
+      areaId: newMeasurement.areasid, // ✅ ใช้ areaId แทน areasid
+      potassium_avg: newMeasurement.potassium, // ✅ แปลง potassium เป็น potassium_avg
+      areasid: undefined, // ✅ ลบ areasid ออก
+      potassium: undefined // ✅ ลบ potassium ออก
+    };
+    
     const response = await lastValueFrom(
-      this.http.post(`${this.apiUrl}/api/measurements`, newMeasurement, {
+      this.http.post(`${this.apiUrl}/api/measurements`, measurementData, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -1207,13 +1233,17 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       // เก็บ area ID สำหรับใช้ในการบันทึก measurements
       if (response && (response as any).areaId) {
         this.currentAreaId = (response as any).areaId;
+        console.log('✅ Area created with areaId:', this.currentAreaId);
       } else if (response && (response as any).areasid) {
         this.currentAreaId = (response as any).areasid;
+        console.log('✅ Area created with areasid:', this.currentAreaId);
+      } else {
+        console.error('❌ No areaId or areasid in response:', response);
       }
       this.notificationService.showNotification(
         'success', 
         'สร้างพื้นที่สำเร็จ', 
-        `สร้างพื้นที่ "${areaData.area_name}" เรียบร้อยแล้ว พร้อมสำหรับการวัด ${this.measurementPoints.length} จุด`
+        `สร้างพื้นที่ "${areaData.area_name}" เรียบร้อยแล้ว\nArea ID: ${this.currentAreaId}\nพร้อมสำหรับการวัด ${this.measurementPoints.length} จุด`
       );
     } catch (error: any) {
       console.error('❌ Error creating area immediately:', error);

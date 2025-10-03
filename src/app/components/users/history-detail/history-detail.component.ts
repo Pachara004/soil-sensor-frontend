@@ -46,6 +46,24 @@ interface MeasurementPoint {
   measurementPoint: number;
   createdAt: string;
   updatedAt: string;
+  date?: string; // เพิ่ม property date
+}
+
+interface AreaSummary {
+  areasid: string;
+  areaName: string;
+  totalPoints: number;
+  areaSize: number;
+  areaSizeFormatted: string;
+  averages: {
+    temperature: number;
+    moisture: number;
+    nitrogen: number;
+    phosphorus: number;
+    potassium: number;
+    ph: number;
+  };
+  lastMeasurementDate: string;
 }
 
 interface FertilizerRecommendation {
@@ -84,6 +102,9 @@ export class HistoryDetailComponent implements OnInit, AfterViewInit, OnDestroy 
   loading = false;
   areasid: string = '';
   
+  // ข้อมูลสรุปพื้นที่
+  areaSummary: AreaSummary | null = null;
+  
   // แผนที่
   map: Map | undefined;
   @ViewChild('mapContainer') mapContainer!: ElementRef<HTMLElement>;
@@ -105,6 +126,7 @@ export class HistoryDetailComponent implements OnInit, AfterViewInit, OnDestroy 
 
   ngOnInit() {
     this.loadMeasurementData();
+    this.loadAreaSummary();
     this.loadMeasurementPoints();
   }
   
@@ -163,7 +185,46 @@ export class HistoryDetailComponent implements OnInit, AfterViewInit, OnDestroy 
     this.areasid = data.areasid || '';
   }
 
-  // โหลดจุดวัดทั้งหมดของ areas id
+  // โหลดข้อมูลสรุปพื้นที่
+  async loadAreaSummary() {
+    if (!this.areasid) {
+      return;
+    }
+
+    try {
+      const headers = await this.getAuthHeaders();
+      
+      const response = await lastValueFrom(
+        this.http.get<any>(`${this.apiUrl}/api/measurements/areas/with-measurements?areasid=${this.areasid}`, { headers })
+      );
+
+      if (response && Array.isArray(response) && response.length > 0) {
+        const areaData = response[0];
+        this.areaSummary = {
+          areasid: areaData.areasid?.toString() || areaData.id?.toString() || '',
+          areaName: areaData.area_name || 'ไม่ระบุพื้นที่',
+          totalPoints: areaData.totalmeasurement || areaData.measurements?.length || 0,
+          areaSize: this.calculateAreaFromBounds(areaData.polygon_bounds || []),
+          areaSizeFormatted: this.formatAreaToThaiUnits(this.calculateAreaFromBounds(areaData.polygon_bounds || [])),
+          averages: {
+            temperature: parseFloat(areaData.temperature_avg) || 0,
+            moisture: parseFloat(areaData.moisture_avg) || 0,
+            nitrogen: parseFloat(areaData.nitrogen_avg) || 0,
+            phosphorus: parseFloat(areaData.phosphorus_avg) || 0,
+            potassium: parseFloat(areaData.potassium_avg) || 0,
+            ph: parseFloat(areaData.ph_avg) || 0
+          },
+          lastMeasurementDate: areaData.created_at || ''
+        };
+      }
+    } catch (error: any) {
+      console.error('Error loading area summary:', error);
+      // ถ้าไม่สามารถโหลดข้อมูลสรุปได้ ให้คำนวณจากจุดวัด
+      this.calculateSummaryFromPoints();
+    }
+  }
+
+  // โหลดจุดวัดทั้งหมดของ areas id (measurementid ที่มี areasid เดียวกัน)
   async loadMeasurementPoints() {
     if (!this.areasid) {
       return;
@@ -173,22 +234,44 @@ export class HistoryDetailComponent implements OnInit, AfterViewInit, OnDestroy 
       this.loading = true;
       const headers = await this.getAuthHeaders();
       
+      // ดึงข้อมูล measurements ที่มี areasid เดียวกัน
       const response = await lastValueFrom(
-        this.http.get<any>(`${this.apiUrl}/api/measurements/area/${this.areasid}`, { headers })
+        this.http.get<any>(`${this.apiUrl}/api/measurements?areasid=${this.areasid}`, { headers })
       );
 
       if (response && Array.isArray(response)) {
         this.measurementPoints = response;
+        console.log(`🔍 Loaded ${response.length} measurement points for areasid ${this.areasid}:`, response);
       } else if (response && Array.isArray(response.data)) {
         this.measurementPoints = response.data;
+        console.log(`🔍 Loaded ${response.data.length} measurement points from data:`, response.data);
       } else if (response && Array.isArray(response.measurements)) {
         this.measurementPoints = response.measurements;
+        console.log(`🔍 Loaded ${response.measurements.length} measurement points from measurements:`, response.measurements);
       } else {
         this.measurementPoints = [];
+        console.log('🔍 No measurement points found');
       }
 
-      // เรียงลำดับตาม measurementPoint
-      this.measurementPoints.sort((a, b) => a.measurementPoint - b.measurementPoint);
+      // กรองเฉพาะ measurements ที่มี areasid เดียวกัน
+      this.measurementPoints = this.measurementPoints.filter(point => 
+        point.areasid && point.areasid.toString() === this.areasid
+      );
+
+      // เรียงลำดับตาม measurementPoint หรือ createdAt
+      this.measurementPoints.sort((a, b) => {
+        if (a.measurementPoint && b.measurementPoint) {
+          return a.measurementPoint - b.measurementPoint;
+        }
+        return new Date(a.createdAt || a.date || 0).getTime() - new Date(b.createdAt || b.date || 0).getTime();
+      });
+
+      console.log(`📊 Loaded ${this.measurementPoints.length} measurement points for areasid: ${this.areasid}`);
+
+      // ถ้ายังไม่มีข้อมูลสรุป ให้คำนวณจากจุดวัด
+      if (!this.areaSummary) {
+        this.calculateSummaryFromPoints();
+      }
 
     } catch (error: any) {
       console.error('Error loading measurement points:', error);
@@ -197,6 +280,62 @@ export class HistoryDetailComponent implements OnInit, AfterViewInit, OnDestroy 
     } finally {
       this.loading = false;
     }
+  }
+
+  // คำนวณข้อมูลสรุปจากจุดวัด
+  calculateSummaryFromPoints() {
+    if (this.measurementPoints.length === 0) {
+      this.areaSummary = {
+        areasid: this.areasid,
+        areaName: 'ไม่ระบุพื้นที่',
+        totalPoints: 0,
+        areaSize: 0,
+        areaSizeFormatted: '0.00 ไร่',
+        averages: {
+          temperature: 0,
+          moisture: 0,
+          nitrogen: 0,
+          phosphorus: 0,
+          potassium: 0,
+          ph: 0
+        },
+        lastMeasurementDate: ''
+      };
+      return;
+    }
+
+    // คำนวณค่าเฉลี่ย
+    const totals = this.measurementPoints.reduce((acc, point) => ({
+      temperature: acc.temperature + (point.temperature || 0),
+      moisture: acc.moisture + (point.moisture || 0),
+      nitrogen: acc.nitrogen + (point.nitrogen || 0),
+      phosphorus: acc.phosphorus + (point.phosphorus || 0),
+      potassium: acc.potassium + (point.potassium || 0),
+      ph: acc.ph + (point.ph || 0)
+    }), { temperature: 0, moisture: 0, nitrogen: 0, phosphorus: 0, potassium: 0, ph: 0 });
+
+    const count = this.measurementPoints.length;
+    const averages = {
+      temperature: totals.temperature / count,
+      moisture: totals.moisture / count,
+      nitrogen: totals.nitrogen / count,
+      phosphorus: totals.phosphorus / count,
+      potassium: totals.potassium / count,
+      ph: totals.ph / count
+    };
+
+    // คำนวณขนาดพื้นที่จากจุดวัด (ประมาณการ)
+    const areaSize = this.calculateAreaFromPoints(this.measurementPoints);
+
+    this.areaSummary = {
+      areasid: this.areasid,
+      areaName: this.measurementData['areaName'] || 'ไม่ระบุพื้นที่',
+      totalPoints: count,
+      areaSize: areaSize,
+      areaSizeFormatted: this.formatAreaToThaiUnits(areaSize),
+      averages: averages,
+      lastMeasurementDate: this.measurementPoints[0]?.createdAt || ''
+    };
   }
 
   // ฟังก์ชันสำหรับ auth headers
@@ -434,5 +573,83 @@ export class HistoryDetailComponent implements OnInit, AfterViewInit, OnDestroy 
     );
     
     this.map.fitBounds(bounds, { padding: 50, maxZoom: 18 });
+  }
+
+  // ✅ คำนวณพื้นที่จากจุดวัด (ประมาณการ)
+  calculateAreaFromPoints(points: MeasurementPoint[]): number {
+    if (points.length < 3) return 0;
+    
+    // ใช้ Convex Hull หรือ Bounding Box
+    const lats = points.map(p => p.lat);
+    const lngs = points.map(p => p.lng);
+    
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    
+    // คำนวณพื้นที่จาก Bounding Box
+    const latDiff = maxLat - minLat;
+    const lngDiff = maxLng - minLng;
+    
+    // แปลงจาก degrees เป็น meters
+    const latToMeters = 111000;
+    const lngToMeters = 111000 * Math.cos((minLat + maxLat) / 2 * Math.PI / 180);
+    
+    const areaInSquareMeters = latDiff * lngDiff * latToMeters * lngToMeters;
+    
+    // แปลงเป็นไร่ (1 ไร่ = 1,600 ตารางเมตร)
+    return areaInSquareMeters / 1600;
+  }
+
+  // ✅ คำนวณพื้นที่จาก polygon bounds
+  calculateAreaFromBounds(bounds: [number, number][]): number {
+    if (bounds.length < 3) return 0;
+    
+    // ใช้ Shoelace formula
+    let area = 0;
+    const n = bounds.length;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      area += bounds[i][0] * bounds[j][1];
+      area -= bounds[j][0] * bounds[i][1];
+    }
+    area = Math.abs(area) / 2;
+    
+    // แปลงจาก degrees เป็น meters
+    const latToMeters = 111000;
+    const lngToMeters = 111000 * Math.cos(bounds[0][1] * Math.PI / 180);
+    const areaInSquareMeters = area * latToMeters * lngToMeters;
+    
+    // แปลงเป็นไร่ (1 ไร่ = 1,600 ตารางเมตร)
+    return areaInSquareMeters / 1600;
+  }
+  
+  // ✅ แปลงพื้นที่เป็นหน่วยไทย
+  formatAreaToThaiUnits(areaInRai: number): string {
+    if (areaInRai === 0) return '0.00 ไร่';
+    
+    const rai = Math.floor(areaInRai);
+    const remainingArea = (areaInRai - rai) * 1600;
+    const ngan = Math.floor(remainingArea / 400);
+    const remainingAfterNgan = remainingArea % 400;
+    const squareWa = Math.floor(remainingAfterNgan / 4);
+    const squareMeters = Math.round(remainingAfterNgan % 4);
+    
+    let result = '';
+    if (rai > 0) result += `${rai} ไร่`;
+    if (ngan > 0) result += (result ? ' ' : '') + `${ngan} งาน`;
+    if (squareWa > 0) result += (result ? ' ' : '') + `${squareWa} ตารางวา`;
+    if (squareMeters > 0) result += (result ? ' ' : '') + `${squareMeters} ตารางเมตร`;
+    
+    return result || '0.00 ไร่';
+  }
+
+  // ✅ ฟังก์ชันสำหรับ format ตัวเลข
+  formatNumber(value: number, decimals: number = 2): string {
+    if (value === null || value === undefined || isNaN(value)) {
+      return '0.00';
+    }
+    return value.toFixed(decimals);
   }
 }
