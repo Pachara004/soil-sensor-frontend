@@ -60,12 +60,6 @@
                 getMeasurementIdRange(area) }})</span>
             </div>
             <div class="area-info-item">
-              <i class="fas fa-expand-arrows-alt"></i>
-              <span class="info-label">ขนาด:</span>
-              <span class="info-value" *ngIf="area.areaSizeFormatted">{{ area.areaSizeFormatted }}</span>
-              <span class="info-value" *ngIf="!area.areaSizeFormatted">ไม่ระบุ</span>
-            </div>
-            <div class="area-info-item">
               <i class="fas fa-calendar-alt"></i>
               <span class="info-label">วันที่ล่าสุด:</span>
               <span class="info-value">{{ area.lastMeasurementDate | date:'dd/MM/yyyy HH:mm' }}</span>
@@ -119,7 +113,6 @@
           <h3>{{ selectedArea.areaName }}</h3>
           <div class="area-info">
             <span class="area-date">{{ selectedArea.lastMeasurementDate | date:'dd/MM/yyyy' }}</span>
-            <span class="area-size">{{ selectedArea.areaSizeFormatted }}</span>
             <span class="area-points">{{ selectedArea.totalMeasurements }} จุดวัด</span>
           </div>
         </div>
@@ -153,16 +146,6 @@
             <div class="stat-content">
               <div class="stat-label">จำนวนจุดวัด</div>
               <div class="stat-value">{{ selectedArea.totalMeasurements }} จุด</div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon">
-              <i class="fas fa-expand-arrows-alt"></i>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">ขนาดพื้นที่</div>
-              <div class="stat-value">{{ selectedArea.areaSizeFormatted }}</div>
             </div>
           </div>
 
@@ -244,22 +227,85 @@
               <span class="summary-value">{{ formatNumber(selectedArea.averages.ph, 1) }}</span>
             </div>
           </div>
+
+          <!-- แสดงผลลัพธ์การคำนวณค่าเฉลี่ย -->
+          <div class="calculation-results" *ngIf="selectedArea.averages">
+            <h4>📊 ผลลัพธ์การคำนวณค่าเฉลี่ย</h4>
+            <div class="results-grid">
+              <div class="result-item">
+                <span class="result-label">🌡️ อุณหภูมิเฉลี่ย:</span>
+                <span class="result-value">{{ formatNumber(selectedArea.averages.temperature) }}°C</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">💧 ความชื้นเฉลี่ย:</span>
+                <span class="result-value">{{ formatNumber(selectedArea.averages.moisture) }}%</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">🧪 pH เฉลี่ย:</span>
+                <span class="result-value">{{ formatNumber(selectedArea.averages.ph, 1) }}</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">🌱 ไนโตรเจนเฉลี่ย:</span>
+                <span class="result-value">{{ formatNumber(selectedArea.averages.nitrogen) }} mg/kg</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">🔬 ฟอสฟอรัสเฉลี่ย:</span>
+                <span class="result-value">{{ formatNumber(selectedArea.averages.phosphorus) }} mg/kg</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">⚡ โพแทสเซียมเฉลี่ย:</span>
+                <span class="result-value">{{ formatNumber(selectedArea.averages.potassium) }} mg/kg</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
+      <!-- Fertilizer Recommendation Section -->
       <div class="area-summary recommendation-section">
-        <h4>คำแนะนำการปรับปรุงดิน</h4>
-        <p class="recommendation-text">{{ recommendSoilImprovement(selectedArea).message }}</p>
-        <h4>สูตรปุ๋ยที่แนะนำ</h4>
-        <div class="summary-grid">
-          <div *ngFor="let fertilizer of recommendSoilImprovement(selectedArea).fertilizers"
-            class="summary-item fertilizer-item">
-            <span class="summary-label">{{ fertilizer.formula }}</span>
-            <span class="summary-value">{{ fertilizer.amount }} - {{ fertilizer.description }}</span>
+        <h4>
+          <i class="fas fa-seedling"></i>
+          คำแนะนำการปรับปรุงดินและปุ๋ย
+        </h4>
+        <div class="recommendation-card">
+          <div class="recommendation-header">
+            <i class="fas fa-lightbulb"></i>
+            <h5>การวิเคราะห์ดิน</h5>
+          </div>
+          <p class="recommendation-text">{{ recommendSoilImprovement(selectedArea).message }}</p>
+        </div>
+
+        <div class="fertilizer-recommendations">
+          <h5>
+            <i class="fas fa-flask"></i>
+            สูตรปุ๋ยที่แนะนำ
+          </h5>
+          <div class="fertilizer-grid">
+            <div *ngFor="let fertilizer of recommendSoilImprovement(selectedArea).fertilizers" class="fertilizer-card">
+              <div class="fertilizer-icon">
+                <i class="fas fa-pills"></i>
+              </div>
+              <div class="fertilizer-content">
+                <h6>{{ fertilizer.formula }}</h6>
+                <p class="fertilizer-amount">{{ fertilizer.amount }}</p>
+                <p class="fertilizer-description">{{ fertilizer.description }}</p>
+              </div>
+            </div>
           </div>
         </div>
-        <h4>พืชที่เหมาะสม</h4>
-        <p class="crop-text">{{ recommendCrops(selectedArea).join(', ') }}</p>
+
+        <div class="crop-recommendations">
+          <h5>
+            <i class="fas fa-leaf"></i>
+            พืชที่เหมาะสมสำหรับพื้นที่นี้
+          </h5>
+          <div class="crop-tags">
+            <span *ngFor="let crop of recommendCrops(selectedArea)" class="crop-tag">
+              <i class="fas fa-seedling"></i>
+              {{ crop }}
+            </span>
+          </div>
+        </div>
       </div>
 
       <div class="measurements-list">
@@ -280,3 +326,84 @@
     </div>
   </div>
 </div>
+
+<!-- CSS สำหรับผลลัพธ์การคำนวณค่าเฉลี่ย -->
+<style>
+  .calculation-results {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 1px solid #dee2e6;
+  }
+
+  .calculation-results h4 {
+    color: #495057;
+    margin-bottom: 15px;
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+    border-bottom: 2px solid #4ecdc4;
+    padding-bottom: 10px;
+  }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+  }
+
+  .result-item {
+    background: white;
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+  }
+
+  .result-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .result-label {
+    font-size: 14px;
+    color: #6c757d;
+    font-weight: 500;
+  }
+
+  .result-value {
+    font-size: 16px;
+    font-weight: bold;
+    color: #495057;
+    background: linear-gradient(135deg, #4ecdc4, #44a08d);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .results-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .result-item {
+      flex-direction: column;
+      text-align: center;
+      gap: 8px;
+    }
+
+    .result-label {
+      font-size: 12px;
+    }
+
+    .result-value {
+      font-size: 14px;
+    }
+  }
+</style>

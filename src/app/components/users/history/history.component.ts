@@ -13,7 +13,7 @@ import { Location } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { Map, Marker, config, LngLatBounds } from '@maptiler/sdk';
+import { Map, Marker, config, LngLatBounds, Popup } from '@maptiler/sdk';
 import '@maptiler/sdk/dist/maptiler-sdk.css';
 import { environment } from '../../../service/environment';
 import { Constants } from '../../../config/constants';
@@ -51,8 +51,6 @@ interface AreaGroup {
   };
   lastMeasurementDate: string;
   polygonBounds?: [number, number][];
-  areaSize?: number; // ขนาดพื้นที่ในไร่
-  areaSizeFormatted?: string; // ขนาดพื้นที่ในรูปแบบไทย
 }
 interface UserData {
   username: string;
@@ -88,6 +86,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
   isLoading = true;
   showCardMenu = false;
   map: Map | undefined;
+  markers: any[] = [];
   currentUser: any = null;
   @ViewChild('mapContainer') mapContainer!: ElementRef<HTMLElement>;
   private apiUrl: string;
@@ -228,6 +227,20 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
             headers: { 'Authorization': `Bearer ${token}` }
           })
         );
+        
+        console.log('🔍 All measurements from API:', measurementsResponse);
+        
+        // Debug: ดูข้อมูล measurements ที่มี lat/lng
+        const measurementsWithCoords = measurementsResponse.filter(m => m.lat && m.lng);
+        console.log('🔍 Measurements with coordinates:', measurementsWithCoords);
+        
+        // Debug: ดูข้อมูล measurements ที่มี lat/lng และไม่เป็น 0
+        const measurementsWithValidCoords = measurementsResponse.filter(m => {
+          const lat = parseFloat(String(m.lat || '0'));
+          const lng = parseFloat(String(m.lng || '0'));
+          return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+        });
+        console.log('🔍 Measurements with valid coordinates from API:', measurementsWithValidCoords);
 
         // แปลงข้อมูลจาก Areas API เป็น format ที่ต้องการ
         const areaGroups: AreaGroup[] = areasResponse.map(area => {
@@ -239,13 +252,43 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
           );
 
           console.log(`🔍 Area ${areasid} measurements from DB:`, areaMeasurements);
+          
+          // Debug: ดูข้อมูล measurements ที่มี lat/lng สำหรับ area นี้
+          const areaMeasurementsWithCoords = areaMeasurements.filter(m => m.lat && m.lng);
+          console.log(`🔍 Area ${areasid} measurements with coordinates:`, areaMeasurementsWithCoords);
+          
+          // Debug: ดูข้อมูล measurements ที่มี lat/lng และไม่เป็น 0 สำหรับ area นี้
+          const areaMeasurementsWithValidCoords = areaMeasurements.filter(m => {
+            const lat = parseFloat(String(m.lat || '0'));
+            const lng = parseFloat(String(m.lng || '0'));
+            return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+          });
+          console.log(`🔍 Area ${areasid} measurements with valid coordinates:`, areaMeasurementsWithValidCoords);
 
-          // คำนวณขนาดพื้นที่จาก polygon bounds
+          // ✅ คำนวณขนาดพื้นที่จาก polygon bounds
           const areaSize = this.calculateAreaFromBounds(area.polygon_bounds || []);
           const areaSizeFormatted = this.formatAreaToThaiUnits(areaSize);
           
-          // คำนวณค่าเฉลี่ยจาก measurements จริง
-          const averages = this.calculateAveragesFromMeasurements(areaMeasurements);
+          // ✅ ใช้ค่าเฉลี่ยจาก backend แทนการคำนวณใหม่
+          const averages = {
+            temperature: parseFloat(area.temperature_avg) || 0,
+            moisture: parseFloat(area.moisture_avg) || 0,
+            nitrogen: parseFloat(area.nitrogen_avg) || 0,
+            phosphorus: parseFloat(area.phosphorus_avg) || 0,
+            potassium: parseFloat(area.potassium_avg) || 0,
+            ph: parseFloat(area.ph_avg) || 0
+          };
+          
+          // ✅ Debug: ตรวจสอบข้อมูลที่ได้รับจาก backend
+          console.log(`🔍 Area ${areasid} backend data:`, {
+            temperature_avg: area.temperature_avg,
+            moisture_avg: area.moisture_avg,
+            ph_avg: area.ph_avg,
+            phosphorus_avg: area.phosphorus_avg,
+            potassium_avg: area.potassium_avg,
+            nitrogen_avg: area.nitrogen_avg
+          });
+          console.log(`🔍 Area ${areasid} parsed averages:`, averages);
           
           return {
             areasid: areasid,
@@ -255,9 +298,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
             averages: averages,
             lastMeasurementDate: areaMeasurements.length > 0 
               ? areaMeasurements[0].createdAt || areaMeasurements[0].date || area.created_at || ''
-              : area.created_at || '',
-            areaSize: areaSize,
-            areaSizeFormatted: areaSizeFormatted
+              : area.created_at || ''
           };
         });
         
@@ -320,7 +361,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
         const areaGroups: AreaGroup[] = response.map(area => ({
           areasid: area.id || area.areasid || '',
           areaName: area.name || area.location || 'ไม่ระบุสถานที่',
-          measurements: area.measurements || [],
+        measurements: area.measurements || [],
           totalMeasurements: area.measurements?.length || 0,
           averages: {
             temperature: 0,
@@ -392,6 +433,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
   getDisplayAreaName(area: AreaGroup): string {
     return area.areaName || 'ไม่ระบุพื้นที่';
   }
+
   // ✅ ฟังก์ชันสำหรับ format ตัวเลข
   formatNumber(value: number, decimals: number = 2): string {
     if (value === null || value === undefined || isNaN(value)) {
@@ -485,8 +527,6 @@ pH: ${measurement.ph}
       deviceId: this.deviceId,
       totalMeasurements: area.totalMeasurements,
       averages: area.averages,
-      areaSize: area.areaSize,
-      areaSizeFormatted: area.areaSizeFormatted,
       lastMeasurementDate: area.lastMeasurementDate,
       polygonBounds: area.polygonBounds
     };
@@ -621,53 +661,179 @@ pH: ${measurement.ph}
     if (!this.selectedArea || !this.selectedArea.measurements.length) {
       return;
     }
+    
     // ใช้ setTimeout เพื่อให้ DOM อัปเดตก่อน
     setTimeout(() => {
       const mapContainer = document.querySelector('#mapContainer') as HTMLElement;
       if (!mapContainer) {
+        console.log('❌ Map container not found');
         return;
       }
-      // ตรวจสอบว่า Leaflet library โหลดแล้วหรือไม่
-      if (typeof (window as any).L === 'undefined') {
+      
+      // ล้างแผนที่เก่า (ถ้ามี)
+      mapContainer.innerHTML = '';
+      
+      console.log('✅ Creating MapTiler map');
+      
+      // Debug: ดูข้อมูล measurements
+      console.log('🔍 All measurements:', this.selectedArea!.measurements);
+      console.log('🔍 First measurement:', this.selectedArea!.measurements[0]);
+      
+      // Debug: ดูข้อมูล measurements ที่มี lat/lng
+      const measurementsWithCoords = this.selectedArea!.measurements.filter(m => m.lat && m.lng);
+      console.log('🔍 Measurements with coordinates for map:', measurementsWithCoords);
+      
+      // Debug: ดูข้อมูล measurements ที่มี lat/lng และไม่เป็น 0
+      const measurementsWithValidCoords = this.selectedArea!.measurements.filter(m => {
+        const lat = parseFloat(String(m.lat || '0'));
+        const lng = parseFloat(String(m.lng || '0'));
+        return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+      });
+      console.log('🔍 Measurements with valid coordinates:', measurementsWithValidCoords);
+      
+      // คำนวณจุดกึ่งกลางของพื้นที่
+      const validMeasurements = this.selectedArea!.measurements.filter(m => {
+        const lat = parseFloat(String(m.lat || '0'));
+        const lng = parseFloat(String(m.lng || '0'));
+        return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+      });
+      
+      console.log(`🔍 Found ${validMeasurements.length} valid measurements out of ${this.selectedArea!.measurements.length}`);
+      console.log('🔍 Valid measurements for map:', validMeasurements);
+      
+      // Debug: ดูข้อมูล measurements ที่ถูกส่งไปยังแผนที่
+      console.log('🔍 Measurements being sent to map:', validMeasurements.map(m => ({
+        measurementPoint: m.measurementPoint,
+        lat: m.lat,
+        lng: m.lng,
+        parsed_lat: parseFloat(String(m.lat || '0')),
+        parsed_lng: parseFloat(String(m.lng || '0')),
+        marker_position: [parseFloat(String(m.lng || '0')), parseFloat(String(m.lat || '0'))]
+      })));
+      
+      if (validMeasurements.length === 0) {
+        console.log('❌ No valid measurements with coordinates');
         this.showSimpleMap(mapContainer);
         return;
       }
-      const L = (window as any).L;
-      // สร้างแผนที่แบบง่าย (ใช้ OpenStreetMap)
-      const map = L.map(mapContainer).setView([16.2464504, 103.2501379], 15);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(map);
-      // เพิ่ม markers สำหรับแต่ละจุดวัด
-      this.selectedArea!.measurements.forEach((measurement, index) => {
-        if (measurement.lat && measurement.lng) {
-          const marker = L.marker([measurement.lat, measurement.lng])
-            .addTo(map)
-            .bindPopup(`
-              <div style="min-width: 200px;">
-                <h4>จุดที่ ${measurement.measurementPoint || index + 1}</h4>
-                <p><strong>วันที่:</strong> ${new Date(measurement.date).toLocaleDateString('th-TH')}</p>
-                <p><strong>อุณหภูมิ:</strong> ${measurement.temperature}°C</p>
-                <p><strong>ความชื้น:</strong> ${measurement.moisture}%</p>
-                <p><strong>pH:</strong> ${measurement.ph}</p>
-                <p><strong>ไนโตรเจน:</strong> ${measurement.nitrogen} ppm</p>
-                <p><strong>ฟอสฟอรัส:</strong> ${measurement.phosphorus} ppm</p>
-                <p><strong>โพแทสเซียม:</strong> ${measurement.potassium} ppm</p>
+      
+      const centerLat = validMeasurements.reduce((sum, m) => sum + parseFloat(String(m.lat || '0')), 0) / validMeasurements.length;
+      const centerLng = validMeasurements.reduce((sum, m) => sum + parseFloat(String(m.lng || '0')), 0) / validMeasurements.length;
+      
+      console.log(`📍 Map center: ${centerLat}, ${centerLng}`);
+      
+      // สร้างแผนที่แบบ MapTiler SDK - ใช้พิกัดจากหน้า measurement
+      this.map = new Map({
+        container: mapContainer,
+        style: `https://api.maptiler.com/maps/satellite/style.json?key=${environment.mapTilerApiKey}`,
+        center: [103.2501379, 16.2464504], // ✅ ใช้พิกัดจากหน้า measurement (คณะวิทยาการสารสนเทศ มหาวิทยาลัยมหาสารคาม)
+        zoom: 17, // ✅ ขยายให้เห็นรายละเอียดของคณะ
+        pitch: 0,
+        bearing: 0
+      });
+      
+      const bounds = new LngLatBounds();
+      let hasPoint = false;
+      
+      // สร้าง markers สำหรับแต่ละจุดวัด
+      const markers: any[] = [];
+      validMeasurements.forEach((measurement, index) => {
+        // ✅ ใช้พิกัดจริงจาก database แทนพิกัดปลอม
+        const lat = parseFloat(String(measurement.lat || '0'));
+        const lng = parseFloat(String(measurement.lng || '0'));
+        
+        console.log(`🔍 Measurement ${index + 1}:`, {
+          original_lat: measurement.lat,
+          original_lng: measurement.lng,
+          parsed_lat: lat,
+          parsed_lng: lng,
+          measurementPoint: measurement.measurementPoint,
+          marker_position: [lng, lat]
+        });
+        
+        // ✅ ตรวจสอบพิกัดจริงจาก database
+        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+          // สร้าง marker แบบ MapTiler SDK
+          const marker = new Marker({ 
+            color: '#4ecdc4',
+            scale: 1.2
+          }).setLngLat([lng, lat]).addTo(this.map!);
+          
+          console.log(`📍 Marker created at [${lng}, ${lat}] for measurement ${measurement.measurementPoint || index + 1}`);
+          
+          // เพิ่ม popup สำหรับแสดงข้อมูล
+          marker.setPopup(new Popup({
+            offset: 25,
+            closeButton: true,
+            closeOnClick: false
+          }).setHTML(`
+              <div style="min-width: 280px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                <div style="background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%); color: white; padding: 15px; border-radius: 10px 10px 0 0; margin: -10px -10px 15px -10px; text-align: center;">
+                  <h4 style="margin: 0; font-size: 18px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">📍 จุดวัดที่ ${measurement.measurementPoint || index + 1}</h4>
+                </div>
+                <div style="padding: 10px 0; background: #f8f9fa; border-radius: 0 0 10px 10px; margin: -10px -10px -10px -10px;">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px;">
+                    <div style="background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                      <p style="margin: 0; font-size: 12px; color: #666;"><strong>🌡️ อุณหภูมิ</strong></p>
+                      <p style="margin: 4px 0 0 0; font-size: 16px; color: #e74c3c; font-weight: bold;">${this.formatNumber(parseFloat(String(measurement.temperature || '0')) || 0)}°C</p>
+                    </div>
+                    <div style="background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                      <p style="margin: 0; font-size: 12px; color: #666;"><strong>💧 ความชื้น</strong></p>
+                      <p style="margin: 4px 0 0 0; font-size: 16px; color: #3498db; font-weight: bold;">${this.formatNumber(parseFloat(String(measurement.moisture || '0')) || 0)}%</p>
+                    </div>
+                    <div style="background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                      <p style="margin: 0; font-size: 12px; color: #666;"><strong>🧪 pH</strong></p>
+                      <p style="margin: 4px 0 0 0; font-size: 16px; color: #9b59b6; font-weight: bold;">${this.formatNumber(parseFloat(String(measurement.ph || '0')) || 0, 1)}</p>
+                    </div>
+                    <div style="background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                      <p style="margin: 0; font-size: 12px; color: #666;"><strong>🌱 ไนโตรเจน</strong></p>
+                      <p style="margin: 4px 0 0 0; font-size: 16px; color: #27ae60; font-weight: bold;">${this.formatNumber(parseFloat(String(measurement.nitrogen || '0')) || 0)}</p>
+                    </div>
+                    <div style="background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                      <p style="margin: 0; font-size: 12px; color: #666;"><strong>🔬 ฟอสฟอรัส</strong></p>
+                      <p style="margin: 4px 0 0 0; font-size: 16px; color: #f39c12; font-weight: bold;">${this.formatNumber(parseFloat(String(measurement.phosphorus || '0')) || 0)}</p>
+                    </div>
+                    <div style="background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                      <p style="margin: 0; font-size: 12px; color: #666;"><strong>⚡ โพแทสเซียม</strong></p>
+                      <p style="margin: 4px 0 0 0; font-size: 16px; color: #e67e22; font-weight: bold;">${this.formatNumber(parseFloat(String(measurement.potassium || '0')) || 0)}</p>
+                    </div>
+                  </div>
+                  <div style="padding: 10px; background: #e9ecef; border-radius: 0 0 10px 10px; margin: 10px -10px -10px -10px;">
+                    <p style="margin: 0; font-size: 12px; color: #6c757d;"><strong>📅 วันที่:</strong> ${measurement['measurement_date'] || 'ไม่ระบุ'}</p>
+                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #6c757d;"><strong>⏰ เวลา:</strong> ${measurement['measurement_time'] || 'ไม่ระบุ'}</p>
+                  </div>
+                </div>
               </div>
-            `);
+            `));
+          
+          bounds.extend([lng, lat]);
+          hasPoint = true;
+          markers.push(marker);
+          console.log(`✅ Added marker for point ${measurement.measurementPoint || index + 1} at ${lat}, ${lng}`);
+          console.log(`📍 Marker position: [${lng}, ${lat}]`);
+          console.log(`📍 Marker bounds extended with: [${lng}, ${lat}]`);
         }
       });
-      // ปรับ view ให้แสดงทุก markers
-      if (this.selectedArea!.measurements.length > 0) {
-        const group = new L.featureGroup();
-        this.selectedArea!.measurements.forEach(measurement => {
-          if (measurement.lat && measurement.lng) {
-            group.addLayer(L.marker([measurement.lat, measurement.lng]));
-          }
-        });
-        map.fitBounds(group.getBounds().pad(0.1));
-      }
-    }, 100);
+      
+      // เก็บ reference ของ markers
+      this.markers = markers;
+      
+      this.map.once('load', () => {
+        if (hasPoint) {
+          console.log(`📍 Map bounds:`, bounds.toArray());
+          console.log(`📍 Map bounds SW: [${bounds.getSouthWest().lng}, ${bounds.getSouthWest().lat}]`);
+          console.log(`📍 Map bounds NE: [${bounds.getNorthEast().lng}, ${bounds.getNorthEast().lat}]`);
+          this.map!.fitBounds(bounds, { padding: 40, maxZoom: 17, duration: 0 });
+        }
+      });
+      
+      console.log(`✅ MapTiler map initialized with ${markers.length} markers`);
+      console.log(`📍 Map center: [${centerLng}, ${centerLat}]`);
+      console.log(`📍 Map bounds:`, bounds.toArray());
+      console.log(`📍 Map bounds SW: [${bounds.getSouthWest().lng}, ${bounds.getSouthWest().lat}]`);
+      console.log(`📍 Map bounds NE: [${bounds.getNorthEast().lng}, ${bounds.getNorthEast().lat}]`);
+      
+    }, 200);
   }
   // ✅ ฟังก์ชันแสดงแผนที่แบบง่าย (เมื่อไม่มี Leaflet)
   showSimpleMap(container: HTMLElement) {
@@ -731,6 +897,7 @@ pH: ${measurement.ph}
     
     return result || '0.00 ไร่';
   }
+
 
   // ✅ คำนวณค่าเฉลี่ยจาก measurements จริง
   calculateAveragesFromMeasurements(measurements: any[]): {

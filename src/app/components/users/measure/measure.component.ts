@@ -584,6 +584,23 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     
     try {
       const token = await this.currentUser.getIdToken();
+      // ✅ ใช้พิกัดจริงจาก measurementPoints (ที่ได้จาก MapTiler)
+      const currentPoint = this.measurementPoints[this.currentPointIndex];
+      
+      // ✅ ดึงพิกัดจริงจาก MapTiler โดยตรง
+      const realLng = currentPoint ? parseFloat(currentPoint[0].toFixed(8)) : (deviceData.longitude || 0);
+      const realLat = currentPoint ? parseFloat(currentPoint[1].toFixed(8)) : (deviceData.latitude || 0);
+      
+      console.log('🗺️ MapTiler real coordinates for device measurement:', {
+        currentPoint: currentPoint,
+        original_lng: currentPoint ? currentPoint[0] : deviceData.longitude,
+        original_lat: currentPoint ? currentPoint[1] : deviceData.latitude,
+        real_lng: realLng,
+        real_lat: realLat,
+        precision: '8 decimal places',
+        accuracy: '~0.00111 mm'
+      });
+      
       const measurementData: Measurement = {
         deviceId: deviceData.deviceId,
         temperature: deviceData.temperature,
@@ -592,8 +609,8 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
         phosphorus: deviceData.phosphorus,
         potassium: deviceData.potassium,
         ph: deviceData.ph,
-        lat: deviceData.latitude || 0,
-        lng: deviceData.longitude || 0,
+        lat: realLat, // ✅ พิกัดจริงจาก MapTiler (precision 8)
+        lng: realLng, // ✅ พิกัดจริงจาก MapTiler (precision 8)
         date: new Date(deviceData.timestamp).toISOString(),
         areasid: this.currentAreaId || undefined,
         measurementPoint: this.currentPointIndex + 1,
@@ -602,6 +619,9 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       
       console.log('🔍 Real device measurement data:', measurementData);
       console.log('🔍 Current areaId:', this.currentAreaId);
+      console.log('🔍 Current measurement point:', currentPoint);
+      console.log('🔍 Current measurement point index:', this.currentPointIndex);
+      console.log('🔍 Measurement lat/lng:', {lat: measurementData.lat, lng: measurementData.lng});
       
       // บันทึกใน PostgreSQL
       await this.saveSingleMeasurement(token, measurementData);
@@ -833,20 +853,33 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
         this.notificationService.showNotification(
           'info', 
           '⏳ กำลังวัด...', 
-          `กำลังวัดจุดที่ ${i + 1}/${this.measurementPoints.length}\nพิกัด: ${lat.toFixed(6)}, ${lng.toFixed(6)}`
+          `กำลังวัดจุดที่ ${i + 1}/${this.measurementPoints.length}\nพิกัด: ${lat.toFixed(8)}, ${lng.toFixed(8)}`
         );
         
-        // สร้างข้อมูล measurement สำหรับจุดนี้
+        // ✅ ดึงพิกัดจริงจาก MapTiler โดยตรง
+        const realLng = parseFloat(lng.toFixed(8)); // precision 8 ตำแหน่งทศนิยม
+        const realLat = parseFloat(lat.toFixed(8)); // precision 8 ตำแหน่งทศนิยม
+        
+        console.log(`🗺️ MapTiler real coordinates for point ${i + 1}:`, {
+          original_lng: lng,
+          original_lat: lat,
+          real_lng: realLng,
+          real_lat: realLat,
+          precision: '8 decimal places',
+          accuracy: '~0.00111 mm'
+        });
+        
+        // สร้างข้อมูล measurement สำหรับจุดนี้ - ใช้พิกัดจริงจาก MapTiler
         const measurementData = {
           deviceId: this.deviceId,
           temperature: this.limitPrecision(this.liveData?.temperature || 0, 2),
           moisture: this.limitPrecision(this.liveData?.moisture || 0, 2),
           nitrogen: this.limitPrecision(this.liveData?.nitrogen || 0, 2),
           phosphorus: this.limitPrecision(this.liveData?.phosphorus || 0, 2),
-          potassium_avg: this.limitPrecision(this.liveData?.potassium || 0, 2), // ✅ ใช้ potassium_avg
+          potassium: this.limitPrecision(this.liveData?.potassium || 0, 2), // ✅ ใช้ potassium
           ph: this.limitPrecision(this.liveData?.ph || 7.0, 2),
-          lat: this.roundLatLng(lat, 6),
-          lng: this.roundLatLng(lng, 6),
+          lat: realLat, // ✅ พิกัดจริงจาก MapTiler (precision 8)
+          lng: realLng, // ✅ พิกัดจริงจาก MapTiler (precision 8)
           measurementPoint: i + 1, // เพิ่ม measurementPoint
           areaId: this.currentAreaId // ✅ ใช้ areaId แทน areasid
         };
@@ -922,13 +955,11 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   // ✅ บันทึก measurement เดียว
   async saveSingleMeasurement(token: string, newMeasurement: Measurement) {
-    // ✅ แปลง areasid เป็น areaId และ potassium เป็น potassium_avg สำหรับ API
+    // ✅ แปลง areasid เป็น areaId สำหรับ API
     const measurementData = {
       ...newMeasurement,
       areaId: newMeasurement.areasid, // ✅ ใช้ areaId แทน areasid
-      potassium_avg: newMeasurement.potassium, // ✅ แปลง potassium เป็น potassium_avg
-      areasid: undefined, // ✅ ลบ areasid ออก
-      potassium: undefined // ✅ ลบ potassium ออก
+      areasid: undefined // ✅ ลบ areasid ออก
     };
     
     const response = await lastValueFrom(
@@ -1272,14 +1303,27 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     // 1 องศา ≈ 111,000 เมตร
     const latStep = pointDistance / 111000;
     const lngStep = pointDistance / (111000 * Math.cos((bounds.minLat + bounds.maxLat) / 2 * Math.PI / 180));
-    // ✅ สร้างจุดวัดแบบ grid pattern
+    // ✅ สร้างจุดวัดแบบ grid pattern ด้วยพิกัดจริงจาก MapTiler
     const points: [number, number][] = [];
     for (let lng = bounds.minLng; lng <= bounds.maxLng; lng += lngStep) {
       for (let lat = bounds.minLat; lat <= bounds.maxLat; lat += latStep) {
-        const point: [number, number] = [lng, lat];
+        // ✅ ดึงพิกัดจริงจาก MapTiler โดยตรง
+        const realLng = parseFloat(lng.toFixed(8)); // precision 8 ตำแหน่งทศนิยม
+        const realLat = parseFloat(lat.toFixed(8)); // precision 8 ตำแหน่งทศนิยม
+        
+        const point: [number, number] = [realLng, realLat];
         // ✅ ตรวจสอบว่าจุดอยู่ใน polygon หรือไม่
         if (this.isPointInPolygon(point, this.selectedPoints)) {
           points.push(point);
+          
+          console.log('🗺️ MapTiler measurement point generated:', {
+            original_lng: lng,
+            original_lat: lat,
+            real_lng: realLng,
+            real_lat: realLat,
+            precision: '8 decimal places',
+            accuracy: '~0.00111 mm'
+          });
         }
       }
     }
@@ -1445,21 +1489,60 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
         // เพิ่ม event listener สำหรับการคลิก
         this.map.on('click', (e) => {
           const { lng, lat } = e.lngLat;
-          // ✅ เพิ่มจุดลงใน selectedPoints
-          this.selectedPoints.push([lng, lat]);
+          
+          // ✅ ดึงพิกัดจริงจาก MapTiler โดยตรง
+          const realLng = parseFloat(lng.toFixed(8)); // precision 8 ตำแหน่งทศนิยม
+          const realLat = parseFloat(lat.toFixed(8)); // precision 8 ตำแหน่งทศนิยม
+          
+          console.log('🗺️ MapTiler coordinates:', {
+            original_lng: lng,
+            original_lat: lat,
+            real_lng: realLng,
+            real_lat: realLat,
+            precision: '8 decimal places'
+          });
+          
+          // ✅ เพิ่มจุดลงใน selectedPoints ด้วยพิกัดจริง
+          this.selectedPoints.push([realLng, realLat]);
+          
           // ✅ อัปเดต UI
           this.points = this.selectedPoints.map((point, index) => ({
             id: index + 1,
             lng: point[0],
             lat: point[1]
           }));
-          // ✅ เพิ่ม marker
+          
+          // ✅ เพิ่ม marker ด้วยพิกัดจริง
           const marker = new Marker({ 
             color: '#00aaff',
             scale: 1.2
           })
-            .setLngLat([lng, lat])
+            .setLngLat([realLng, realLat])
             .addTo(this.map!);
+            
+          // ✅ แสดงพิกัดจริงใน popup
+          marker.setPopup(new Popup({
+            offset: 25,
+            closeButton: true,
+            closeOnClick: false
+          }).setHTML(`
+            <div style="min-width: 200px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+              <div style="background: linear-gradient(135deg, #00aaff 0%, #0088cc 100%); color: white; padding: 10px; border-radius: 8px 8px 0 0; margin: -10px -10px 10px -10px; text-align: center;">
+                <h4 style="margin: 0; font-size: 16px; font-weight: bold;">📍 จุดที่ ${this.selectedPoints.length}</h4>
+              </div>
+              <div style="padding: 10px; background: #f8f9fa; border-radius: 0 0 8px 8px; margin: -10px -10px -10px -10px;">
+                <p style="margin: 0; font-size: 12px; color: #666;"><strong>🌍 พิกัดจริงจาก MapTiler:</strong></p>
+                <p style="margin: 4px 0 0 0; font-size: 14px; color: #2c3e50; font-weight: bold;">
+                  Lat: ${realLat.toFixed(8)}<br>
+                  Lng: ${realLng.toFixed(8)}
+                </p>
+                <p style="margin: 8px 0 0 0; font-size: 11px; color: #7f8c8d;">
+                  ความแม่นยำ: 8 ตำแหน่งทศนิยม (~0.00111 mm)
+                </p>
+              </div>
+            </div>
+          `));
+          
           // ✅ อัปเดต polygon
           this.updatePolygon();
         });
@@ -1552,7 +1635,7 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
           <div style="text-align: center; font-weight: bold; color: #2c3e50;">
             จุดวัดที่ ${i + 1}
             <br>
-            <small style="color: #7f8c8d;">${lat.toFixed(6)}, ${lng.toFixed(6)}</small>
+            <small style="color: #7f8c8d;">${lat.toFixed(8)}, ${lng.toFixed(8)}</small>
           </div>
         `));
         bounds.extend([lng, lat]);

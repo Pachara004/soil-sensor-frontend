@@ -183,7 +183,7 @@
                 </div>
                 <div class="coordinates-list">
                   <div *ngFor="let point of selectedPoints; let i = index" class="coordinate-item">
-                    จุดที่ {{ i + 1 }}: {{ point[0].toFixed(6) }}, {{ point[1].toFixed(6) }}
+                    จุดที่ {{ i + 1 }}: {{ point[0].toFixed(8) }}, {{ point[1].toFixed(8) }}
                   </div>
                 </div>
               </div>
@@ -196,7 +196,7 @@
                 </div>
                 <div class="coordinates-list">
                   <div *ngFor="let point of measurementPoints; let i = index" class="coordinate-item measurement-point">
-                    จุดวัดที่ {{ i + 1 }}: {{ point[0].toFixed(6) }}, {{ point[1].toFixed(6) }}
+                    จุดวัดที่ {{ i + 1 }}: {{ point[0].toFixed(8) }}, {{ point[1].toFixed(8) }}
                   </div>
                 </div>
               </div>
