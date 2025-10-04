@@ -81,6 +81,8 @@ interface FertilizerRecommendation {
 })
 export class HistoryDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   username: string = '';
+  userName: string = ''; // เพิ่มสำหรับ template
+  userEmail: string = ''; // เพิ่มสำหรับ template
   deviceId: string = '';
   measureDate: string = '';
   measureTime: string = '';
@@ -109,6 +111,9 @@ export class HistoryDetailComponent implements OnInit, AfterViewInit, OnDestroy 
   map: Map | undefined;
   @ViewChild('mapContainer') mapContainer!: ElementRef<HTMLElement>;
   measurementMarkers: any[] = [];
+  
+  // Card menu properties
+  showCardMenu = false;
 
   private apiUrl: string;
 
@@ -154,6 +159,12 @@ export class HistoryDetailComponent implements OnInit, AfterViewInit, OnDestroy 
     this.username = userData
       ? JSON.parse(userData).username || 'Unknown'
       : 'Unknown';
+    
+    // ตั้งค่า userName และ userEmail สำหรับ template
+    this.userName = this.username;
+    this.userEmail = userData
+      ? JSON.parse(userData).email || 'ไม่ระบุ'
+      : 'ไม่ระบุ';
 
     // โหลดข้อมูลอุปกรณ์
     this.deviceId = data.deviceId || 'ไม่ระบุอุปกรณ์';
@@ -484,6 +495,15 @@ export class HistoryDetailComponent implements OnInit, AfterViewInit, OnDestroy 
 
   goToContactAdmin() {
     this.router.navigate(['/reports']);
+  }
+  
+  // Card menu functions
+  toggleCardMenu() {
+    this.showCardMenu = !this.showCardMenu;
+  }
+  
+  closeCardMenu() {
+    this.showCardMenu = false;
   }
   
   // ✅ สร้างแผนที่และแสดงจุดวัด
