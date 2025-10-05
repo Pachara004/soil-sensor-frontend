@@ -77,13 +77,6 @@ export const routes: Routes = [
       ),
   },
   {
-    path: 'history-detail',
-    loadComponent: () =>
-      import('./components/users/history-detail/history-detail.component').then(
-        (m) => m.HistoryDetailComponent
-      ),
-  },
-  {
     path: 'adregister',
     loadComponent: () =>
       import('./components/adregister/adregister.component').then(

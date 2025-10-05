@@ -518,23 +518,6 @@ pH: ${measurement.ph}
     // บันทึกข้อมูลสำหรับหน้า detail (ถ้าต้องการ)
     localStorage.setItem('selectedMeasurement', JSON.stringify(measurementData));
   }
-  // ฟังก์ชันสำหรับดูจุดวัดทั้งหมดของพื้นที่
-  viewAllMeasurementPoints(area: AreaGroup) {
-    // สร้างข้อมูลสำหรับส่งไปยังหน้า history detail
-    const areaData = {
-      areasid: area.areasid,
-      areaName: area.areaName,
-      deviceId: this.deviceId,
-      totalMeasurements: area.totalMeasurements,
-      averages: area.averages,
-      lastMeasurementDate: area.lastMeasurementDate,
-      polygonBounds: area.polygonBounds
-    };
-    // บันทึกข้อมูลพื้นที่ใน localStorage
-    localStorage.setItem('selectedMeasurement', JSON.stringify(areaData));
-    // นำทางไปยังหน้า history detail
-    this.router.navigate(['/history-detail']);
-  }
   backToAreaList() {
     this.showAreaDetails = false;
     this.selectedArea = null;
@@ -761,46 +744,33 @@ pH: ${measurement.ph}
           
           console.log(`📍 Marker created at [${lng}, ${lat}] for measurement ${measurement.measurementPoint || index + 1}`);
           
-          // เพิ่ม popup สำหรับแสดงข้อมูล
+          // เพิ่ม popup แบบเรียบง่าย - Simple Clean Design
           marker.setPopup(new Popup({
-            offset: 25,
+            offset: [0, -15],
             closeButton: true,
-            closeOnClick: false
+            closeOnClick: false,
+            maxWidth: '300px',
+            className: 'simple-popup'
           }).setHTML(`
-              <div style="min-width: 280px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-                <div style="background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%); color: white; padding: 15px; border-radius: 10px 10px 0 0; margin: -10px -10px 15px -10px; text-align: center;">
-                  <h4 style="margin: 0; font-size: 18px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">📍 จุดวัดที่ ${measurement.measurementPoint || index + 1}</h4>
+              <div style="font-family: Arial, sans-serif; padding: 10px;">
+                <div style="font-weight: bold; margin-bottom: 8px; font-size: 13px;">
+                  จุดวัดที่ ${measurement.measurementPoint || index + 1}
                 </div>
-                <div style="padding: 10px 0; background: #f8f9fa; border-radius: 0 0 10px 10px; margin: -10px -10px -10px -10px;">
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px;">
-                    <div style="background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                      <p style="margin: 0; font-size: 12px; color: #666;"><strong>🌡️ อุณหภูมิ</strong></p>
-                      <p style="margin: 4px 0 0 0; font-size: 16px; color: #e74c3c; font-weight: bold;">${this.formatNumber(parseFloat(String(measurement.temperature || '0')) || 0)}°C</p>
+                
+                <div style="font-size: 11px; line-height: 1.6;">
+                  <div>อุณหภูมิ: ${this.formatNumber(parseFloat(String(measurement.temperature || '0')) || 0)}°C</div>
+                  <div>ความชื้น: ${this.formatNumber(parseFloat(String(measurement.moisture || '0')) || 0)}%</div>
+                  <div>pH: ${this.formatNumber(parseFloat(String(measurement.ph || '0')) || 0, 1)}</div>
+                  <div>ไนโตรเจน: ${this.formatNumber(parseFloat(String(measurement.nitrogen || '0')) || 0)}</div>
+                  <div>ฟอสฟอรัส: ${this.formatNumber(parseFloat(String(measurement.phosphorus || '0')) || 0)}</div>
+                  <div>โพแทสเซียม: ${this.formatNumber(parseFloat(String(measurement.potassium || '0')) || 0)}</div>
+                  
+                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd;">
+                    <div>วันที่: ${measurement['measurement_date'] || 'ไม่ระบุ'}</div>
+                    <div>เวลา: ${measurement['measurement_time'] || 'ไม่ระบุ'}</div>
+                    <div style="font-size: 10px; color: #666; margin-top: 4px;">
+                      ${lat.toFixed(6)}, ${lng.toFixed(6)}
                     </div>
-                    <div style="background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                      <p style="margin: 0; font-size: 12px; color: #666;"><strong>💧 ความชื้น</strong></p>
-                      <p style="margin: 4px 0 0 0; font-size: 16px; color: #3498db; font-weight: bold;">${this.formatNumber(parseFloat(String(measurement.moisture || '0')) || 0)}%</p>
-                    </div>
-                    <div style="background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                      <p style="margin: 0; font-size: 12px; color: #666;"><strong>🧪 pH</strong></p>
-                      <p style="margin: 4px 0 0 0; font-size: 16px; color: #9b59b6; font-weight: bold;">${this.formatNumber(parseFloat(String(measurement.ph || '0')) || 0, 1)}</p>
-                    </div>
-                    <div style="background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                      <p style="margin: 0; font-size: 12px; color: #666;"><strong>🌱 ไนโตรเจน</strong></p>
-                      <p style="margin: 4px 0 0 0; font-size: 16px; color: #27ae60; font-weight: bold;">${this.formatNumber(parseFloat(String(measurement.nitrogen || '0')) || 0)}</p>
-                    </div>
-                    <div style="background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                      <p style="margin: 0; font-size: 12px; color: #666;"><strong>🔬 ฟอสฟอรัส</strong></p>
-                      <p style="margin: 4px 0 0 0; font-size: 16px; color: #f39c12; font-weight: bold;">${this.formatNumber(parseFloat(String(measurement.phosphorus || '0')) || 0)}</p>
-                    </div>
-                    <div style="background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                      <p style="margin: 0; font-size: 12px; color: #666;"><strong>⚡ โพแทสเซียม</strong></p>
-                      <p style="margin: 4px 0 0 0; font-size: 16px; color: #e67e22; font-weight: bold;">${this.formatNumber(parseFloat(String(measurement.potassium || '0')) || 0)}</p>
-                    </div>
-                  </div>
-                  <div style="padding: 10px; background: #e9ecef; border-radius: 0 0 10px 10px; margin: 10px -10px -10px -10px;">
-                    <p style="margin: 0; font-size: 12px; color: #6c757d;"><strong>📅 วันที่:</strong> ${measurement['measurement_date'] || 'ไม่ระบุ'}</p>
-                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #6c757d;"><strong>⏰ เวลา:</strong> ${measurement['measurement_time'] || 'ไม่ระบุ'}</p>
                   </div>
                 </div>
               </div>

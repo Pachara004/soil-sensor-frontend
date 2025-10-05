@@ -11,6 +11,66 @@ body {
     background-color: #F8F9FA;
 }
 
+/* Global MapTiler Popup Z-index Fix */
+.maptiler-popup {
+    z-index: 9999 !important;
+    position: relative !important;
+}
+
+.maptiler-popup-content {
+    z-index: 9999 !important;
+    position: relative !important;
+}
+
+.maptiler-popup-tip {
+    z-index: 9999 !important;
+}
+
+.maptiler-popup-close-button {
+    z-index: 10000 !important;
+}
+
+/* Simple Popup Global Styles */
+.simple-popup {
+    z-index: 9999 !important;
+}
+
+.simple-popup .maptiler-popup-content {
+    z-index: 9999 !important;
+    position: relative !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    border: 2px solid #4ecdc4 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.simple-popup .maptiler-popup-tip {
+    z-index: 9999 !important;
+    border-top-color: #4ecdc4 !important;
+}
+
+.simple-popup .maptiler-popup-close-button {
+    z-index: 10000 !important;
+    background: rgba(231, 76, 60, 0.9) !important;
+    color: white !important;
+    border-radius: 50% !important;
+    width: 24px !important;
+    height: 24px !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.3s ease !important;
+}
+
+.simple-popup .maptiler-popup-close-button:hover {
+    background: #e74c3c !important;
+    transform: scale(1.1) !important;
+}
+
 /* Import Inter font */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
