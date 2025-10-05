@@ -79,6 +79,8 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
   deviceId: string | null = null;
   devices: string[] = [];
   deviceMap: { [key: string]: string } = {}; // Map device_name to device_id
+  userData: any = null;
+  deviceData: any = null;
   areas: AreaGroup[] = [];
   areaGroups: AreaGroup[] = [];
   selectedArea: AreaGroup | null = null;
@@ -109,8 +111,8 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
         this.username = user.displayName || user.email?.split('@')[0] || '';
         this.userName = user.displayName || user.email?.split('@')[0] || '';
         this.userEmail = user.email || '';
-        // ดึงข้อมูล user และ device จาก backend
-        this.loadUserAndDeviceData();
+        // ดึงข้อมูล user และ device จาก backend with debounce
+        setTimeout(() => this.loadUserAndDeviceData(), 50);
       } else {
         this.router.navigate(['/login']);
       }
@@ -132,6 +134,24 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   async loadUserAndDeviceData() {
     if (!this.currentUser) return;
+    
+    // Check cache first for better performance
+    const cacheKey = `user_data_${this.userEmail}`;
+    const cachedData = localStorage.getItem(cacheKey);
+    if (cachedData) {
+      try {
+        const data = JSON.parse(cachedData);
+        if (Date.now() - data.timestamp < 300000) { // 5 minutes cache
+          this.userData = data.userData;
+          this.deviceData = data.deviceData;
+          this.loadAreas();
+          return;
+        }
+      } catch (e) {
+        // Cache invalid, continue with API call
+      }
+    }
+    
     try {
       // ดึงข้อมูล user และ device จาก backend
       const token = await this.currentUser.getIdToken();
@@ -163,7 +183,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
             break; // หยุดเมื่อเจอ endpoint ที่ทำงานได้
           }
         } catch (userError: any) {
-          console.log(`❌ User endpoint ${endpoint} failed:`, userError.status);
+          // User endpoint failed
           continue; // ลอง endpoint ถัดไป
         }
       }
@@ -192,6 +212,13 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
         }
       } catch (deviceError) {
       }
+      // Cache the data for better performance
+      localStorage.setItem(cacheKey, JSON.stringify({
+        userData: this.userData,
+        deviceData: this.deviceData,
+        timestamp: Date.now()
+      }));
+      
       // ดึงข้อมูล areas หลังจากได้ token แล้ว
       await this.loadAreas();
       // ✅ ไม่ต้องดึง measurements ทีละจุดแล้ว เพราะ areas API มีข้อมูลครบถ้วนแล้ว
@@ -203,6 +230,24 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!this.currentUser) {
       return;
     }
+    
+    // Check cache for areas data
+    const areasCacheKey = `areas_data_${this.userEmail}`;
+    const cachedAreas = localStorage.getItem(areasCacheKey);
+    if (cachedAreas) {
+      try {
+        const data = JSON.parse(cachedAreas);
+        if (Date.now() - data.timestamp < 600000) { // 10 minutes cache
+          this.areas = data.areas;
+          this.areaGroups = data.areaGroups;
+          this.isLoading = false;
+          return;
+        }
+      } catch (e) {
+        // Cache invalid, continue with API call
+      }
+    }
+    
     this.isLoading = true;
     try {
       const token = await this.currentUser.getIdToken();
@@ -228,11 +273,11 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
           })
         );
         
-        console.log('🔍 All measurements from API:', measurementsResponse);
+        // All measurements loaded from API
         
         // Debug: ดูข้อมูล measurements ที่มี lat/lng
         const measurementsWithCoords = measurementsResponse.filter(m => m.lat && m.lng);
-        console.log('🔍 Measurements with coordinates:', measurementsWithCoords);
+        // Measurements with coordinates processed
         
         // Debug: ดูข้อมูล measurements ที่มี lat/lng และไม่เป็น 0
         const measurementsWithValidCoords = measurementsResponse.filter(m => {
@@ -240,7 +285,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
           const lng = parseFloat(String(m.lng || '0'));
           return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
         });
-        console.log('🔍 Measurements with valid coordinates from API:', measurementsWithValidCoords);
+        // Valid measurements with coordinates processed
 
         // แปลงข้อมูลจาก Areas API เป็น format ที่ต้องการ
         const areaGroups: AreaGroup[] = areasResponse.map(area => {
@@ -251,11 +296,11 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
             measurement.areasid && measurement.areasid.toString() === areasid
           );
 
-          console.log(`🔍 Area ${areasid} measurements from DB:`, areaMeasurements);
+          // Area measurements from DB processed
           
           // Debug: ดูข้อมูล measurements ที่มี lat/lng สำหรับ area นี้
           const areaMeasurementsWithCoords = areaMeasurements.filter(m => m.lat && m.lng);
-          console.log(`🔍 Area ${areasid} measurements with coordinates:`, areaMeasurementsWithCoords);
+          // Area measurements with coordinates processed
           
           // Debug: ดูข้อมูล measurements ที่มี lat/lng และไม่เป็น 0 สำหรับ area นี้
           const areaMeasurementsWithValidCoords = areaMeasurements.filter(m => {
@@ -263,7 +308,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
             const lng = parseFloat(String(m.lng || '0'));
             return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
           });
-          console.log(`🔍 Area ${areasid} measurements with valid coordinates:`, areaMeasurementsWithValidCoords);
+          // Area measurements with valid coordinates processed
 
           // ✅ คำนวณขนาดพื้นที่จาก polygon bounds
           const areaSize = this.calculateAreaFromBounds(area.polygon_bounds || []);
@@ -279,16 +324,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
             ph: parseFloat(area.ph_avg) || 0
           };
           
-          // ✅ Debug: ตรวจสอบข้อมูลที่ได้รับจาก backend
-          console.log(`🔍 Area ${areasid} backend data:`, {
-            temperature_avg: area.temperature_avg,
-            moisture_avg: area.moisture_avg,
-            ph_avg: area.ph_avg,
-            phosphorus_avg: area.phosphorus_avg,
-            potassium_avg: area.potassium_avg,
-            nitrogen_avg: area.nitrogen_avg
-          });
-          console.log(`🔍 Area ${areasid} parsed averages:`, averages);
+          // Area backend data processed
           
           return {
             areasid: areasid,
@@ -304,9 +340,17 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
         
         this.areas = areaGroups;
         this.areaGroups = areaGroups;
+        
+        // Cache the areas data for better performance
+        localStorage.setItem(areasCacheKey, JSON.stringify({
+          areas: areaGroups,
+          areaGroups: areaGroups,
+          timestamp: Date.now()
+        }));
+        
         this.isLoading = false;
         
-        console.log(`📊 Loaded ${areaGroups.length} areas with measurements`);
+        // Areas with measurements loaded
         
         if (areaGroups.length === 0) {
           this.notificationService.showNotification(
@@ -649,22 +693,20 @@ pH: ${measurement.ph}
     setTimeout(() => {
       const mapContainer = document.querySelector('#mapContainer') as HTMLElement;
       if (!mapContainer) {
-        console.log('❌ Map container not found');
+        // Map container not found
         return;
       }
       
       // ล้างแผนที่เก่า (ถ้ามี)
       mapContainer.innerHTML = '';
       
-      console.log('✅ Creating MapTiler map');
+      // Creating MapTiler map
       
-      // Debug: ดูข้อมูล measurements
-      console.log('🔍 All measurements:', this.selectedArea!.measurements);
-      console.log('🔍 First measurement:', this.selectedArea!.measurements[0]);
+      // Processing measurements for map
       
       // Debug: ดูข้อมูล measurements ที่มี lat/lng
       const measurementsWithCoords = this.selectedArea!.measurements.filter(m => m.lat && m.lng);
-      console.log('🔍 Measurements with coordinates for map:', measurementsWithCoords);
+      // Measurements with coordinates processed for map
       
       // Debug: ดูข้อมูล measurements ที่มี lat/lng และไม่เป็น 0
       const measurementsWithValidCoords = this.selectedArea!.measurements.filter(m => {
@@ -672,7 +714,7 @@ pH: ${measurement.ph}
         const lng = parseFloat(String(m.lng || '0'));
         return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
       });
-      console.log('🔍 Measurements with valid coordinates:', measurementsWithValidCoords);
+      // Valid measurements with coordinates processed
       
       // คำนวณจุดกึ่งกลางของพื้นที่
       const validMeasurements = this.selectedArea!.measurements.filter(m => {
@@ -681,21 +723,12 @@ pH: ${measurement.ph}
         return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
       });
       
-      console.log(`🔍 Found ${validMeasurements.length} valid measurements out of ${this.selectedArea!.measurements.length}`);
-      console.log('🔍 Valid measurements for map:', validMeasurements);
+      // Valid measurements found for map
       
-      // Debug: ดูข้อมูล measurements ที่ถูกส่งไปยังแผนที่
-      console.log('🔍 Measurements being sent to map:', validMeasurements.map(m => ({
-        measurementPoint: m.measurementPoint,
-        lat: m.lat,
-        lng: m.lng,
-        parsed_lat: parseFloat(String(m.lat || '0')),
-        parsed_lng: parseFloat(String(m.lng || '0')),
-        marker_position: [parseFloat(String(m.lng || '0')), parseFloat(String(m.lat || '0'))]
-      })));
+      // Measurements being sent to map
       
       if (validMeasurements.length === 0) {
-        console.log('❌ No valid measurements with coordinates');
+        // No valid measurements with coordinates
         this.showSimpleMap(mapContainer);
         return;
       }
@@ -703,7 +736,7 @@ pH: ${measurement.ph}
       const centerLat = validMeasurements.reduce((sum, m) => sum + parseFloat(String(m.lat || '0')), 0) / validMeasurements.length;
       const centerLng = validMeasurements.reduce((sum, m) => sum + parseFloat(String(m.lng || '0')), 0) / validMeasurements.length;
       
-      console.log(`📍 Map center: ${centerLat}, ${centerLng}`);
+      // Map center calculated
       
       // สร้างแผนที่แบบ MapTiler SDK - ใช้พิกัดจากหน้า measurement
       this.map = new Map({
@@ -725,14 +758,7 @@ pH: ${measurement.ph}
         const lat = parseFloat(String(measurement.lat || '0'));
         const lng = parseFloat(String(measurement.lng || '0'));
         
-        console.log(`🔍 Measurement ${index + 1}:`, {
-          original_lat: measurement.lat,
-          original_lng: measurement.lng,
-          parsed_lat: lat,
-          parsed_lng: lng,
-          measurementPoint: measurement.measurementPoint,
-          marker_position: [lng, lat]
-        });
+        // Processing measurement for marker
         
         // ✅ ตรวจสอบพิกัดจริงจาก database
         if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
@@ -742,7 +768,7 @@ pH: ${measurement.ph}
             scale: 1.2
           }).setLngLat([lng, lat]).addTo(this.map!);
           
-          console.log(`📍 Marker created at [${lng}, ${lat}] for measurement ${measurement.measurementPoint || index + 1}`);
+          // Marker created
           
           // เพิ่ม popup แบบเรียบง่าย - Simple Clean Design
           marker.setPopup(new Popup({
@@ -779,9 +805,7 @@ pH: ${measurement.ph}
           bounds.extend([lng, lat]);
           hasPoint = true;
           markers.push(marker);
-          console.log(`✅ Added marker for point ${measurement.measurementPoint || index + 1} at ${lat}, ${lng}`);
-          console.log(`📍 Marker position: [${lng}, ${lat}]`);
-          console.log(`📍 Marker bounds extended with: [${lng}, ${lat}]`);
+          // Marker added to map
         }
       });
       
@@ -790,20 +814,15 @@ pH: ${measurement.ph}
       
       this.map.once('load', () => {
         if (hasPoint) {
-          console.log(`📍 Map bounds:`, bounds.toArray());
-          console.log(`📍 Map bounds SW: [${bounds.getSouthWest().lng}, ${bounds.getSouthWest().lat}]`);
-          console.log(`📍 Map bounds NE: [${bounds.getNorthEast().lng}, ${bounds.getNorthEast().lat}]`);
+        // Map bounds calculated
           this.map!.fitBounds(bounds, { padding: 40, maxZoom: 17, duration: 0 });
         }
       });
       
-      console.log(`✅ MapTiler map initialized with ${markers.length} markers`);
-      console.log(`📍 Map center: [${centerLng}, ${centerLat}]`);
-      console.log(`📍 Map bounds:`, bounds.toArray());
-      console.log(`📍 Map bounds SW: [${bounds.getSouthWest().lng}, ${bounds.getSouthWest().lat}]`);
-      console.log(`📍 Map bounds NE: [${bounds.getNorthEast().lng}, ${bounds.getNorthEast().lat}]`);
+      // MapTiler map initialized
+        // Map bounds calculated
       
-    }, 200);
+    }, 100);
   }
   // ✅ ฟังก์ชันแสดงแผนที่แบบง่าย (เมื่อไม่มี Leaflet)
   showSimpleMap(container: HTMLElement) {
@@ -920,8 +939,7 @@ pH: ${measurement.ph}
       .filter(id => id != null && id !== 'null' && id !== 'undefined' && id !== '')
       .sort((a, b) => Number(a) - Number(b));
 
-    console.log(`🔍 Area ${area.areasid} measurements:`, area.measurements);
-    console.log(`🔍 Filtered measurement IDs:`, measurementIds);
+    // Area measurements processed
 
     if (measurementIds.length === 0) {
       return 'ไม่มี ID';
