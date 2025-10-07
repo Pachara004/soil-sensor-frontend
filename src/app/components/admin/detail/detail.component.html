@@ -108,7 +108,7 @@
           <div class="measurement-info">
             <p class="measurement-point">จุดที่: {{ measurement.measurementPoint || 'ไม่ระบุ' }}</p>
             <p>วันที่: {{ measurement.date }}</p>
-            <p>ตำแหน่ง: {{ measurement.location }}</p>
+            <p>พิกัด: {{ measurement.lat || 'ไม่ระบุ' }}, {{ measurement.lng || 'ไม่ระบุ' }}</p>
           </div>
           <button class="view-btn" (click)="showMeasurementPopup(measurement)">ดูรายละเอียด</button>
         </div>

@@ -18,8 +18,6 @@ interface Device {
   [key: string]: any; // ✅ เพิ่ม index signature เพื่อรองรับ properties อื่นๆ
 }
 type LivePayload = {
-  ts_epoch?: number;
-  ts_uptime?: number;
   temperature?: number;
   moisture?: number;
   nitrogen?: number;

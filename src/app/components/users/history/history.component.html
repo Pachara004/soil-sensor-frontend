@@ -360,7 +360,7 @@
             <div class="measurement-point">Measurement ID: {{ measurement['measurementid'] || measurement['id'] ||
               'ไม่ระบุ'
               }}</div>
-            <div class="measurement-location">{{ measurement.location || 'ไม่ระบุตำแหน่ง' }}</div>
+            <div class="measurement-location">พิกัด: {{ measurement.lat || 'ไม่ระบุ' }}, {{ measurement.lng || 'ไม่ระบุ' }}</div>
             <div class="measurement-date">{{ measurement.measurement_date || measurement.date || 'ไม่ระบุวันที่' }}
             </div>
             <div class="measurement-areasid">Areas ID: {{ measurement['areasid'] || 'ไม่ระบุ' }}</div>

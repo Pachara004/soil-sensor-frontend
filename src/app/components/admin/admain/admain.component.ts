@@ -446,13 +446,17 @@ export class AdmainComponent implements OnInit, OnDestroy {
       try {
         // ✅ สร้างข้อมูล measurement แบบ random สำหรับ ESP32 Soil Sensor
         const measurementData = {
-          device_id: device['id'] || device['deviceid'],
+          deviceid: device['id'] || device['deviceid'],
           temperature: this.generateRandomValue(20, 35, 1), // 20-35°C
-          humidity: this.generateRandomValue(40, 80, 1), // 40-80%
-          soil_moisture: this.generateRandomValue(20, 90, 1), // 20-90%
-          ph_level: this.generateRandomValue(5.5, 7.5, 2), // 5.5-7.5
-          light_intensity: this.generateRandomValue(100, 1000, 0), // 100-1000 lux
-          timestamp: new Date().toISOString()
+          moisture: this.generateRandomValue(20, 90, 1), // 20-90%
+          ph: this.generateRandomValue(5.5, 7.5, 2), // 5.5-7.5
+          phosphorus: this.generateRandomValue(10, 30, 1), // 10-30 mg/kg
+          nitrogen: this.generateRandomValue(15, 40, 1), // 15-40 mg/kg
+          potassium: this.generateRandomValue(20, 50, 1), // 20-50 mg/kg
+          lat: this.generateRandomValue(16.0, 16.5, 6), // Random lat in Thailand
+          lng: this.generateRandomValue(99.0, 99.5, 6), // Random lng in Thailand
+          measurement_date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+          measurement_time: new Date().toTimeString().split(' ')[0] // HH:MM:SS
         };
         // ✅ ส่งข้อมูลไปยัง API พร้อม Authorization token
         const token = await this.currentUser.getIdToken();

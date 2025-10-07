@@ -201,7 +201,7 @@ export class DetailComponent implements OnInit, AfterViewInit, OnDestroy {
 ฟอสฟอรัส: ${measurement.phosphorus} mg/kg
 โพแทสเซียม: ${measurement.potassium} mg/kg
 pH: ${measurement.ph}
-ตำแหน่ง: ${measurement.location}`;
+พิกัด: ${measurement.lat || 'ไม่ระบุ'}, ${measurement.lng || 'ไม่ระบุ'}`;
     this.notificationService.showNotification('info', 'รายละเอียดการวัด', details);
   }
   goBack() {
