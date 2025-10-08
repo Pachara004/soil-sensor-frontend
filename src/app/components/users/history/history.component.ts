@@ -62,8 +62,13 @@ interface UserData {
 }
 interface FertilizerRecommendation {
   formula: string;
+  brand: string;
   amount: string;
   description: string;
+  application: string;
+  timing: string;
+  price: string;
+  availability: string;
 }
 @Component({
   selector: 'app-history',
@@ -164,19 +169,19 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
         '/api/profile'
       ];
       for (const endpoint of userEndpoints) {
-        try {
-          const userResponse = await lastValueFrom(
+      try {
+        const userResponse = await lastValueFrom(
             this.http.get<any>(`${this.apiUrl}${endpoint}`, {
-              headers: { 'Authorization': `Bearer ${token}` }
-            })
-          );
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        );
           let userData = userResponse;
           if (userResponse.user) {
             userData = userResponse.user;
           }
           if (userData && (userData.user_name || userData.username)) {
             // ✅ ตั้งค่า username และ userName จาก PostgreSQL
-            this.username = userData.user_name || userData.username || this.username;
+          this.username = userData.user_name || userData.username || this.username;
             this.userName = userData.user_name || userData.username || this.userName;
             this.userEmail = userData.user_email || userData.email || this.userEmail;
             userDataFound = true;
@@ -348,17 +353,17 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
           timestamp: Date.now()
         }));
         
-        this.isLoading = false;
-        
+      this.isLoading = false;
+      
         // Areas with measurements loaded
         
         if (areaGroups.length === 0) {
-          this.notificationService.showNotification(
-            'info',
-            'ไม่มีข้อมูล',
-            'ยังไม่มีข้อมูลการวัดค่าในระบบ'
-          );
-        }
+        this.notificationService.showNotification(
+          'info',
+          'ไม่มีข้อมูล',
+          'ยังไม่มีข้อมูลการวัดค่าในระบบ'
+        );
+      }
       } else {
         this.areas = [];
         this.areaGroups = [];
@@ -405,7 +410,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
         const areaGroups: AreaGroup[] = response.map(area => ({
           areasid: area.id || area.areasid || '',
           areaName: area.name || area.location || 'ไม่ระบุสถานที่',
-        measurements: area.measurements || [],
+          measurements: area.measurements || [],
           totalMeasurements: area.measurements?.length || 0,
           averages: {
             temperature: 0,
@@ -592,70 +597,319 @@ pH: ${measurement.ph}
       this.closeCardMenu();
     }
   }
-  // ✅ ฟังก์ชันคำแนะนำการปรับปรุงดิน
-  recommendSoilImprovement(area: AreaGroup | null): { message: string; fertilizers: any[] } {
+  // ✅ ฟังก์ชันคำแนะนำการปรับปรุงดินแบบละเอียด
+  recommendSoilImprovement(area: AreaGroup | null): { message: string; fertilizers: FertilizerRecommendation[]; soilAnalysis: any; improvementPlan: any } {
     if (!area || !area.averages) {
       return {
         message: 'ไม่สามารถให้คำแนะนำได้ เนื่องจากไม่มีข้อมูลการวัด',
-        fertilizers: []
+        fertilizers: [],
+        soilAnalysis: null,
+        improvementPlan: null
       };
     }
+    
     const { temperature, moisture, nitrogen, phosphorus, potassium, ph } = area.averages;
-    // วิเคราะห์สภาพดิน
-    let message = '';
-    const fertilizers: any[] = [];
-    // ตรวจสอบ pH
-    if (ph < 6.0) {
-      message += 'ดินมีสภาพเป็นกรด (pH ต่ำ) ควรปรับปรุงด้วยปูนขาว ';
-      fertilizers.push({
-        formula: 'ปูนขาว (CaCO3)',
-        amount: '1-2 ตัน/ไร่',
-        description: 'ปรับปรุงความเป็นกรด-ด่างของดิน'
-      });
-    } else if (ph > 7.5) {
-      message += 'ดินมีสภาพเป็นด่าง (pH สูง) ควรปรับปรุงด้วยกำมะถัน ';
-      fertilizers.push({
-        formula: 'กำมะถัน (S)',
-        amount: '100-200 กก./ไร่',
-        description: 'ลดความเป็นด่างของดิน'
-      });
+    
+    // วิเคราะห์สภาพดินแบบละเอียด
+    const soilAnalysis = this.analyzeSoilCondition(ph, nitrogen, phosphorus, potassium, moisture, temperature);
+    const improvementPlan = this.createImprovementPlan(soilAnalysis);
+    
+    let message = this.generateDetailedMessage(soilAnalysis);
+    const fertilizers = this.getDetailedFertilizerRecommendations(soilAnalysis);
+    
+    return { message, fertilizers, soilAnalysis, improvementPlan };
+  }
+
+  // ✅ วิเคราะห์สภาพดินแบบละเอียด
+  private analyzeSoilCondition(ph: number, nitrogen: number, phosphorus: number, potassium: number, moisture: number, temperature: number) {
+    return {
+      ph: {
+        value: ph,
+        status: ph < 5.5 ? 'กรดมาก' : ph < 6.5 ? 'กรดเล็กน้อย' : ph < 7.5 ? 'เป็นกลาง' : ph < 8.5 ? 'ด่างเล็กน้อย' : 'ด่างมาก',
+        recommendation: ph < 6.0 ? 'ต้องปรับปรุง' : ph > 8.0 ? 'ต้องปรับปรุง' : 'เหมาะสม'
+      },
+      nitrogen: {
+        value: nitrogen,
+        status: nitrogen < 15 ? 'ขาดมาก' : nitrogen < 25 ? 'ขาดเล็กน้อย' : nitrogen < 40 ? 'เหมาะสม' : 'เกินความต้องการ',
+        recommendation: nitrogen < 20 ? 'ต้องเพิ่ม' : nitrogen > 35 ? 'ลดการใส่' : 'เพียงพอ'
+      },
+      phosphorus: {
+        value: phosphorus,
+        status: phosphorus < 10 ? 'ขาดมาก' : phosphorus < 20 ? 'ขาดเล็กน้อย' : phosphorus < 30 ? 'เหมาะสม' : 'เกินความต้องการ',
+        recommendation: phosphorus < 15 ? 'ต้องเพิ่ม' : phosphorus > 25 ? 'ลดการใส่' : 'เพียงพอ'
+      },
+      potassium: {
+        value: potassium,
+        status: potassium < 15 ? 'ขาดมาก' : potassium < 25 ? 'ขาดเล็กน้อย' : potassium < 40 ? 'เหมาะสม' : 'เกินความต้องการ',
+        recommendation: potassium < 20 ? 'ต้องเพิ่ม' : potassium > 35 ? 'ลดการใส่' : 'เพียงพอ'
+      },
+      moisture: {
+        value: moisture,
+        status: moisture < 30 ? 'แห้งมาก' : moisture < 50 ? 'แห้งเล็กน้อย' : moisture < 70 ? 'เหมาะสม' : 'ชื้นมาก',
+        recommendation: moisture < 40 ? 'ต้องให้น้ำ' : moisture > 75 ? 'ระบายน้ำ' : 'เพียงพอ'
+      },
+      temperature: {
+        value: temperature,
+        status: temperature < 20 ? 'เย็น' : temperature < 30 ? 'เหมาะสม' : 'ร้อน',
+        recommendation: temperature < 25 ? 'ปลูกพืชทนหนาว' : temperature > 32 ? 'ปลูกพืชทนร้อน' : 'ปลูกพืชทั่วไป'
+      }
+    };
+  }
+
+  // ✅ สร้างแผนการปรับปรุงดิน
+  private createImprovementPlan(soilAnalysis: any) {
+    const plan = {
+      immediate: [] as string[],
+      shortTerm: [] as string[],
+      longTerm: [] as string[],
+      monitoring: [] as string[]
+    };
+
+    // แผนเร่งด่วน (1-2 สัปดาห์)
+    if (soilAnalysis.ph.recommendation === 'ต้องปรับปรุง') {
+      plan.immediate.push('ปรับ pH ดินด้วยปูนขาวหรือกำมะถัน');
     }
-    // ตรวจสอบธาตุอาหาร
-    if (nitrogen < 20) {
-      message += 'ดินขาดไนโตรเจน ';
+    if (soilAnalysis.moisture.recommendation === 'ต้องให้น้ำ') {
+      plan.immediate.push('ให้น้ำอย่างสม่ำเสมอ');
+    }
+
+    // แผนระยะสั้น (1-3 เดือน)
+    if (soilAnalysis.nitrogen.recommendation === 'ต้องเพิ่ม') {
+      plan.shortTerm.push('ใส่ปุ๋ยไนโตรเจนตามคำแนะนำ');
+    }
+    if (soilAnalysis.phosphorus.recommendation === 'ต้องเพิ่ม') {
+      plan.shortTerm.push('ใส่ปุ๋ยฟอสฟอรัสตามคำแนะนำ');
+    }
+    if (soilAnalysis.potassium.recommendation === 'ต้องเพิ่ม') {
+      plan.shortTerm.push('ใส่ปุ๋ยโพแทสเซียมตามคำแนะนำ');
+    }
+
+    // แผนระยะยาว (3-12 เดือน)
+    plan.longTerm.push('เพิ่มอินทรียวัตถุด้วยปุ๋ยหมักหรือปุ๋ยคอก');
+    plan.longTerm.push('ปลูกพืชปุ๋ยสดเพื่อปรับปรุงดิน');
+    plan.longTerm.push('หมุนเวียนพืชเพื่อรักษาความอุดมสมบูรณ์ของดิน');
+
+    // การติดตาม
+    plan.monitoring.push('วัดค่า pH ทุก 3 เดือน');
+    plan.monitoring.push('ตรวจสอบธาตุอาหารทุก 6 เดือน');
+    plan.monitoring.push('สังเกตการเจริญเติบโตของพืช');
+
+    return plan;
+  }
+
+  // ✅ สร้างข้อความวิเคราะห์แบบละเอียด
+  private generateDetailedMessage(soilAnalysis: any): string {
+    let message = '🔍 การวิเคราะห์ดินแบบละเอียด:\n\n';
+    
+    message += `📊 ค่า pH: ${soilAnalysis.ph.value.toFixed(1)} (${soilAnalysis.ph.status}) - ${soilAnalysis.ph.recommendation}\n`;
+    message += `🌱 ไนโตรเจน: ${soilAnalysis.nitrogen.value.toFixed(1)} mg/kg (${soilAnalysis.nitrogen.status}) - ${soilAnalysis.nitrogen.recommendation}\n`;
+    message += `⚡ ฟอสฟอรัส: ${soilAnalysis.phosphorus.value.toFixed(1)} mg/kg (${soilAnalysis.phosphorus.status}) - ${soilAnalysis.phosphorus.recommendation}\n`;
+    message += `💪 โพแทสเซียม: ${soilAnalysis.potassium.value.toFixed(1)} mg/kg (${soilAnalysis.potassium.status}) - ${soilAnalysis.potassium.recommendation}\n`;
+    message += `💧 ความชื้น: ${soilAnalysis.moisture.value.toFixed(1)}% (${soilAnalysis.moisture.status}) - ${soilAnalysis.moisture.recommendation}\n`;
+    message += `🌡️ อุณหภูมิ: ${soilAnalysis.temperature.value.toFixed(1)}°C (${soilAnalysis.temperature.status}) - ${soilAnalysis.temperature.recommendation}\n\n`;
+    
+    message += '💡 คำแนะนำ: ';
+    const recommendations = [];
+    if (soilAnalysis.ph.recommendation === 'ต้องปรับปรุง') recommendations.push('ปรับ pH');
+    if (soilAnalysis.nitrogen.recommendation === 'ต้องเพิ่ม') recommendations.push('เพิ่มไนโตรเจน');
+    if (soilAnalysis.phosphorus.recommendation === 'ต้องเพิ่ม') recommendations.push('เพิ่มฟอสฟอรัส');
+    if (soilAnalysis.potassium.recommendation === 'ต้องเพิ่ม') recommendations.push('เพิ่มโพแทสเซียม');
+    if (soilAnalysis.moisture.recommendation === 'ต้องให้น้ำ') recommendations.push('เพิ่มการให้น้ำ');
+    
+    if (recommendations.length === 0) {
+      message += 'ดินมีสภาพดี เหมาะสำหรับการปลูกพืช';
+    } else {
+      message += recommendations.join(', ');
+    }
+    
+    return message;
+  }
+
+  // ✅ คำแนะนำปุ๋ยแบบละเอียดพร้อมปุ๋ยจริงในท้องตลาด
+  private getDetailedFertilizerRecommendations(soilAnalysis: any): FertilizerRecommendation[] {
+    const fertilizers: FertilizerRecommendation[] = [];
+
+    // ปุ๋ยปรับ pH
+    if (soilAnalysis.ph.recommendation === 'ต้องปรับปรุง') {
+      if (soilAnalysis.ph.value < 6.0) {
+        fertilizers.push({
+          formula: 'ปูนขาว (CaCO3)',
+          brand: 'ปูนขาวตราไก่, ปูนขาวตราช้าง, ปูนขาวตราเสือ',
+          amount: '1-2 ตัน/ไร่',
+          description: 'ปรับปรุงความเป็นกรดของดิน เพิ่มแคลเซียม',
+          application: 'หว่านให้ทั่วแปลงแล้วไถกลบ',
+          timing: 'ก่อนปลูก 2-4 สัปดาห์',
+          price: '800-1,200 บาท/ตัน',
+          availability: 'หาซื้อได้ทั่วไปในร้านเกษตร'
+        });
+      } else if (soilAnalysis.ph.value > 8.0) {
+        fertilizers.push({
+          formula: 'กำมะถัน (S)',
+          brand: 'กำมะถันตราไก่, กำมะถันตราช้าง',
+          amount: '100-200 กก./ไร่',
+          description: 'ลดความเป็นด่างของดิน',
+          application: 'หว่านให้ทั่วแปลงแล้วไถกลบ',
+          timing: 'ก่อนปลูก 3-4 สัปดาห์',
+          price: '25-35 บาท/กก.',
+          availability: 'หาซื้อได้ทั่วไปในร้านเกษตร'
+        });
+      }
+    }
+
+    // ปุ๋ยไนโตรเจน
+    if (soilAnalysis.nitrogen.recommendation === 'ต้องเพิ่ม') {
       fertilizers.push({
         formula: 'ปุ๋ยยูเรีย (46-0-0)',
+        brand: 'ยูเรียตราไก่, ยูเรียตราช้าง, ยูเรียตราเสือ, ยูเรียตราโค',
         amount: '20-30 กก./ไร่',
-        description: 'เพิ่มไนโตรเจนในดิน'
+        description: 'เพิ่มไนโตรเจนในดิน เร่งการเจริญเติบโตของใบ',
+        application: 'หว่านรอบโคนต้นหรือโรยเป็นแถว',
+        timing: 'ช่วงแตกใบใหม่ หรือก่อนออกดอก',
+        price: '18-22 บาท/กก.',
+        availability: 'หาซื้อได้ทั่วไปในร้านเกษตร'
+      });
+
+      fertilizers.push({
+        formula: 'ปุ๋ยแอมโมเนียมซัลเฟต (21-0-0)',
+        brand: 'แอมโมเนียมซัลเฟตตราไก่, ตราช้าง',
+        amount: '25-35 กก./ไร่',
+        description: 'เพิ่มไนโตรเจนและกำมะถัน เหมาะสำหรับดินด่าง',
+        application: 'หว่านรอบโคนต้น',
+        timing: 'ช่วงแตกใบใหม่',
+        price: '15-18 บาท/กก.',
+        availability: 'หาซื้อได้ทั่วไปในร้านเกษตร'
       });
     }
-    if (phosphorus < 15) {
-      message += 'ดินขาดฟอสฟอรัส ';
+
+    // ปุ๋ยฟอสฟอรัส
+    if (soilAnalysis.phosphorus.recommendation === 'ต้องเพิ่ม') {
       fertilizers.push({
-        formula: 'ปุ๋ยฟอสเฟต (0-46-0)',
+        formula: 'ปุ๋ยซุปเปอร์ฟอสเฟต (0-46-0)',
+        brand: 'ซุปเปอร์ฟอสเฟตตราไก่, ตราช้าง, ตราเสือ',
         amount: '15-25 กก./ไร่',
-        description: 'เพิ่มฟอสฟอรัสในดิน'
+        description: 'เพิ่มฟอสฟอรัสในดิน เร่งการออกดอกและผล',
+        application: 'ใส่รองก้นหลุมหรือหว่านแล้วไถกลบ',
+        timing: 'ก่อนปลูก หรือช่วงออกดอก',
+        price: '22-28 บาท/กก.',
+        availability: 'หาซื้อได้ทั่วไปในร้านเกษตร'
       });
-    }
-    if (potassium < 15) {
-      message += 'ดินขาดโพแทสเซียม ';
+
       fertilizers.push({
-        formula: 'ปุ๋ยโพแทสเซียม (0-0-60)',
-        amount: '10-20 กก./ไร่',
-        description: 'เพิ่มโพแทสเซียมในดิน'
+        formula: 'ปุ๋ยไดแอมโมเนียมฟอสเฟต (18-46-0)',
+        brand: 'DAP ตราไก่, ตราช้าง',
+        amount: '20-30 กก./ไร่',
+        description: 'เพิ่มไนโตรเจนและฟอสฟอรัส เหมาะสำหรับดินขาดทั้งสองธาตุ',
+        application: 'ใส่รองก้นหลุม',
+        timing: 'ก่อนปลูก',
+        price: '25-30 บาท/กก.',
+        availability: 'หาซื้อได้ทั่วไปในร้านเกษตร'
       });
     }
-    // ตรวจสอบความชื้น
-    if (moisture < 40) {
-      message += 'ดินมีความชื้นต่ำ ควรเพิ่มการให้น้ำ ';
-    } else if (moisture > 80) {
-      message += 'ดินมีความชื้นสูง ควรปรับปรุงการระบายน้ำ ';
+
+    // ปุ๋ยโพแทสเซียม
+    if (soilAnalysis.potassium.recommendation === 'ต้องเพิ่ม') {
+      fertilizers.push({
+        formula: 'ปุ๋ยโพแทสเซียมคลอไรด์ (0-0-60)',
+        brand: 'โพแทสเซียมคลอไรด์ตราไก่, ตราช้าง, ตราเสือ',
+        amount: '10-20 กก./ไร่',
+        description: 'เพิ่มโพแทสเซียมในดิน เพิ่มความต้านทานโรคและคุณภาพผล',
+        application: 'หว่านรอบโคนต้น',
+        timing: 'ช่วงออกดอกหรือก่อนเก็บเกี่ยว',
+        price: '28-35 บาท/กก.',
+        availability: 'หาซื้อได้ทั่วไปในร้านเกษตร'
+      });
+
+      fertilizers.push({
+        formula: 'ปุ๋ยโพแทสเซียมซัลเฟต (0-0-50)',
+        brand: 'โพแทสเซียมซัลเฟตตราไก่, ตราช้าง',
+        amount: '15-25 กก./ไร่',
+        description: 'เพิ่มโพแทสเซียมและกำมะถัน เหมาะสำหรับดินขาดกำมะถัน',
+        application: 'หว่านรอบโคนต้น',
+        timing: 'ช่วงออกดอก',
+        price: '30-38 บาท/กก.',
+        availability: 'หาซื้อได้ทั่วไปในร้านเกษตร'
+      });
     }
-    if (message === '') {
-      message = 'ดินมีสภาพดี เหมาะสำหรับการเพาะปลูก';
+
+    // ปุ๋ยผสม
+    if (soilAnalysis.nitrogen.recommendation === 'ต้องเพิ่ม' && 
+        soilAnalysis.phosphorus.recommendation === 'ต้องเพิ่ม' && 
+        soilAnalysis.potassium.recommendation === 'ต้องเพิ่ม') {
+      fertilizers.push({
+        formula: 'ปุ๋ยผสม 15-15-15',
+        brand: 'ปุ๋ยผสมตราไก่, ตราช้าง, ตราเสือ, ตราโค',
+        amount: '30-50 กก./ไร่',
+        description: 'ปุ๋ยผสมครบธาตุ เหมาะสำหรับดินขาดธาตุอาหารหลายชนิด',
+        application: 'หว่านรอบโคนต้น',
+        timing: 'ช่วงแตกใบใหม่',
+        price: '20-25 บาท/กก.',
+        availability: 'หาซื้อได้ทั่วไปในร้านเกษตร'
+      });
+
+      fertilizers.push({
+        formula: 'ปุ๋ยผสม 16-16-16',
+        brand: 'ปุ๋ยผสมตราไก่, ตราช้าง',
+        amount: '25-40 กก./ไร่',
+        description: 'ปุ๋ยผสมสมดุล เหมาะสำหรับพืชทั่วไป',
+        application: 'หว่านรอบโคนต้น',
+        timing: 'ช่วงแตกใบใหม่',
+        price: '22-28 บาท/กก.',
+        availability: 'หาซื้อได้ทั่วไปในร้านเกษตร'
+      });
     }
-    return { message, fertilizers };
+
+    // ปุ๋ยอินทรีย์
+    fertilizers.push({
+      formula: 'ปุ๋ยหมัก',
+      brand: 'ปุ๋ยหมักตราไก่, ตราช้าง, ตราเสือ, ปุ๋ยหมักท้องถิ่น',
+      amount: '2-4 ตัน/ไร่',
+      description: 'เพิ่มอินทรียวัตถุ ปรับปรุงโครงสร้างดิน',
+      application: 'หว่านให้ทั่วแปลงแล้วไถกลบ',
+      timing: 'ก่อนปลูก 1-2 เดือน',
+      price: '1,500-2,500 บาท/ตัน',
+      availability: 'หาซื้อได้ทั่วไปในร้านเกษตร'
+    });
+
+    fertilizers.push({
+      formula: 'ปุ๋ยคอก',
+      brand: 'ปุ๋ยคอกวัว, ปุ๋ยคอกไก่, ปุ๋ยคอกหมู',
+      amount: '1-2 ตัน/ไร่',
+      description: 'เพิ่มอินทรียวัตถุและธาตุอาหาร',
+      application: 'หว่านให้ทั่วแปลงแล้วไถกลบ',
+      timing: 'ก่อนปลูก 2-3 สัปดาห์',
+      price: '800-1,500 บาท/ตัน',
+      availability: 'หาซื้อได้ทั่วไปในร้านเกษตร'
+    });
+
+    return fertilizers;
   }
+
+  // ✅ Helper functions for template
+  getAnalysisLabel(key: string): string {
+    const labels: { [key: string]: string } = {
+      'ph': 'ค่า pH',
+      'nitrogen': 'ไนโตรเจน',
+      'phosphorus': 'ฟอสฟอรัส',
+      'potassium': 'โพแทสเซียม',
+      'moisture': 'ความชื้น',
+      'temperature': 'อุณหภูมิ'
+    };
+    return labels[key] || key;
+  }
+
+  getStatusClass(status: string): string {
+    if (status.includes('ขาดมาก') || status.includes('กรดมาก') || status.includes('ด่างมาก') || status.includes('แห้งมาก') || status.includes('ชื้นมาก')) {
+      return 'status-critical';
+    } else if (status.includes('ขาดเล็กน้อย') || status.includes('กรดเล็กน้อย') || status.includes('ด่างเล็กน้อย') || status.includes('แห้งเล็กน้อย')) {
+      return 'status-warning';
+    } else if (status.includes('เหมาะสม') || status.includes('เป็นกลาง')) {
+      return 'status-good';
+    } else if (status.includes('เกินความต้องการ') || status.includes('ร้อน')) {
+      return 'status-excess';
+    }
+    return 'status-normal';
+  }
+
   // ✅ ฟังก์ชันแนะนำพืชที่เหมาะสม
   recommendCrops(area: AreaGroup | null): string[] {
     if (!area || !area.averages) {

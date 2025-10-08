@@ -306,34 +306,114 @@
         </div>
       </div>
 
-      <!-- Fertilizer Recommendation Section -->
+      <!-- Enhanced Fertilizer Recommendation Section -->
       <div class="area-summary recommendation-section">
         <h4>
           <i class="fas fa-seedling"></i>
-          คำแนะนำการปรับปรุงดินและปุ๋ย
+          คำแนะนำการปรับปรุงดินและปุ๋ยแบบละเอียด
         </h4>
+        
+        <!-- Soil Analysis Card -->
         <div class="recommendation-card">
           <div class="recommendation-header">
-            <i class="fas fa-lightbulb"></i>
-            <h5>การวิเคราะห์ดิน</h5>
+            <i class="fas fa-microscope"></i>
+            <h5>การวิเคราะห์ดินแบบละเอียด</h5>
           </div>
-          <p class="recommendation-text">{{ recommendSoilImprovement(selectedArea).message }}</p>
+          <div class="soil-analysis-grid">
+            <div *ngFor="let item of recommendSoilImprovement(selectedArea).soilAnalysis | keyvalue" class="analysis-item">
+              <div class="analysis-label">{{ getAnalysisLabel(item.key) }}</div>
+              <div class="analysis-value">{{ item.value.value.toFixed(1) }}</div>
+              <div class="analysis-status" [ngClass]="getStatusClass(item.value.status)">
+                {{ item.value.status }}
+              </div>
+              <div class="analysis-recommendation">{{ item.value.recommendation }}</div>
+            </div>
+          </div>
         </div>
 
+        <!-- Improvement Plan -->
+        <div class="improvement-plan-card" *ngIf="recommendSoilImprovement(selectedArea).improvementPlan">
+          <div class="plan-header">
+            <i class="fas fa-clipboard-list"></i>
+            <h5>แผนการปรับปรุงดิน</h5>
+          </div>
+          <div class="plan-sections">
+            <div class="plan-section" *ngIf="recommendSoilImprovement(selectedArea).improvementPlan.immediate.length > 0">
+              <h6><i class="fas fa-exclamation-triangle"></i> เร่งด่วน (1-2 สัปดาห์)</h6>
+              <ul>
+                <li *ngFor="let item of recommendSoilImprovement(selectedArea).improvementPlan.immediate">{{ item }}</li>
+              </ul>
+            </div>
+            <div class="plan-section" *ngIf="recommendSoilImprovement(selectedArea).improvementPlan.shortTerm.length > 0">
+              <h6><i class="fas fa-clock"></i> ระยะสั้น (1-3 เดือน)</h6>
+              <ul>
+                <li *ngFor="let item of recommendSoilImprovement(selectedArea).improvementPlan.shortTerm">{{ item }}</li>
+              </ul>
+            </div>
+            <div class="plan-section">
+              <h6><i class="fas fa-calendar-alt"></i> ระยะยาว (3-12 เดือน)</h6>
+              <ul>
+                <li *ngFor="let item of recommendSoilImprovement(selectedArea).improvementPlan.longTerm">{{ item }}</li>
+              </ul>
+            </div>
+            <div class="plan-section">
+              <h6><i class="fas fa-eye"></i> การติดตาม</h6>
+              <ul>
+                <li *ngFor="let item of recommendSoilImprovement(selectedArea).improvementPlan.monitoring">{{ item }}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detailed Fertilizer Recommendations -->
         <div class="fertilizer-recommendations">
           <h5>
             <i class="fas fa-flask"></i>
-            สูตรปุ๋ยที่แนะนำ
+            ปุ๋ยที่แนะนำพร้อมรายละเอียด
           </h5>
           <div class="fertilizer-grid">
-            <div *ngFor="let fertilizer of recommendSoilImprovement(selectedArea).fertilizers" class="fertilizer-card">
-              <div class="fertilizer-icon">
-                <i class="fas fa-pills"></i>
+            <div *ngFor="let fertilizer of recommendSoilImprovement(selectedArea).fertilizers" class="fertilizer-card detailed">
+              <div class="fertilizer-header">
+                <div class="fertilizer-icon">
+                  <i class="fas fa-pills"></i>
+                </div>
+                <div class="fertilizer-title">
+                  <h6>{{ fertilizer.formula }}</h6>
+                  <div class="fertilizer-brand">{{ fertilizer.brand }}</div>
+                </div>
               </div>
               <div class="fertilizer-content">
-                <h6>{{ fertilizer.formula }}</h6>
-                <p class="fertilizer-amount">{{ fertilizer.amount }}</p>
-                <p class="fertilizer-description">{{ fertilizer.description }}</p>
+                <div class="fertilizer-details">
+                  <div class="detail-row">
+                    <i class="fas fa-weight"></i>
+                    <span class="label">ปริมาณ:</span>
+                    <span class="value">{{ fertilizer.amount }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span class="label">ราคา:</span>
+                    <span class="value">{{ fertilizer.price }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span class="label">หาซื้อได้:</span>
+                    <span class="value">{{ fertilizer.availability }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <i class="fas fa-calendar"></i>
+                    <span class="label">เวลาที่เหมาะสม:</span>
+                    <span class="value">{{ fertilizer.timing }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <i class="fas fa-tools"></i>
+                    <span class="label">วิธีการใช้:</span>
+                    <span class="value">{{ fertilizer.application }}</span>
+                  </div>
+                </div>
+                <div class="fertilizer-description">
+                  <i class="fas fa-info-circle"></i>
+                  {{ fertilizer.description }}
+                </div>
               </div>
             </div>
           </div>
