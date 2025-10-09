@@ -77,13 +77,13 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
     }
   }
 
-  .logout-btn {
+.logout-btn {
     background: $secondary-gradient;
-    color: white;
-    border: none;
+  color: white;
+  border: none;
     padding: 12px 24px;
     border-radius: 25px;
-    cursor: pointer;
+  cursor: pointer;
     transition: $transition;
     font-size: 14px;
     display: flex;
@@ -92,7 +92,7 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
     box-shadow: $shadow-blue;
 
     &:hover {
-      transform: translateY(-2px);
+  transform: translateY(-2px);
       box-shadow: $shadow-hover;
     }
   }
@@ -115,13 +115,13 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
     gap: 15px;
     margin-bottom: 15px;
 
-    .chip-icon {
+.chip-icon {
       width: 50px;
       height: 50px;
-      transition: transform 0.3s ease;
+  transition: transform 0.3s ease;
 
       &:hover {
-        transform: scale(1.1);
+  transform: scale(1.1);
       }
     }
 
@@ -132,7 +132,7 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
     }
   }
 
-  .admin-name {
+.admin-name {
     color: $text-secondary;
     font-size: 18px;
     font-weight: 600;
@@ -151,7 +151,7 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
     border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: $border-radius-md;
     padding: 15px 20px;
-    cursor: pointer;
+  cursor: pointer;
     transition: $transition;
     text-align: center;
     box-shadow: $shadow-light;
@@ -167,9 +167,9 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
       width: 30px;
       height: 30px;
       margin-bottom: 8px;
-    }
+  }
 
-    .text {
+  .text {
       font-size: 12px;
       color: $text-secondary;
       font-weight: 500;
@@ -608,7 +608,7 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
 
           .detail-item {
             display: flex;
-            justify-content: space-between;
+    justify-content: space-between;
             align-items: center;
             padding: 8px 12px;
             background: white;
@@ -665,7 +665,7 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
       gap: 15px;
       margin-bottom: 20px;
 
-      .stats-icon {
+    .stats-icon {
         font-size: 40px;
         color: $primary-color;
       }
@@ -696,17 +696,17 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
 
       .view-all-btn {
         background: $primary-gradient;
-        color: white;
+      color: white;
         border: none;
         padding: 10px 20px;
-        border-radius: 25px;
-        cursor: pointer;
-        font-weight: 500;
+      border-radius: 25px;
+      cursor: pointer;
+      font-weight: 500;
         transition: $transition;
         width: 100%;
 
-        &:hover {
-          transform: translateY(-2px);
+      &:hover {
+        transform: translateY(-2px);
           box-shadow: $shadow-green;
         }
       }
@@ -822,8 +822,8 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
 
         &.highlight {
           color: $accent-color;
-          font-weight: 500;
-        }
+        font-weight: 500;
+      }
 
         &.user-role {
           background: linear-gradient(135deg, #4CAF50, #2E7D32);
@@ -874,21 +874,21 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
           background: $success-gradient;
           color: white;
 
-          &:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 3px 10px rgba(40, 167, 69, 0.3);
-          }
+        &:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 3px 10px rgba(40, 167, 69, 0.3);
         }
+      }
 
         &.btn-delete {
           background: $error-gradient;
-          color: white;
+        color: white;
 
-          &:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 3px 10px rgba(220, 53, 69, 0.3);
-          }
+        &:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 3px 10px rgba(220, 53, 69, 0.3);
         }
+      }
 
         &.btn-view {
           background: $secondary-gradient;
@@ -1011,23 +1011,23 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
     border-radius: $border-radius-lg;
     width: 90%;
     max-width: 600px;
-    max-height: 85vh;
-    overflow-y: auto;
+  max-height: 85vh;
+  overflow-y: auto;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     animation: slideInModal 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    -webkit-overflow-scrolling: touch;
+  -webkit-overflow-scrolling: touch;
 
-    &::-webkit-scrollbar {
-      width: 8px;
-    }
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
 
-    &::-webkit-scrollbar-thumb {
+  &::-webkit-scrollbar-thumb {
       background: $accent-color;
-      border-radius: 4px;
-    }
+    border-radius: 4px;
+  }
 
-    &::-webkit-scrollbar-track {
-      background: #f0f0f0;
+  &::-webkit-scrollbar-track {
+    background: #f0f0f0;
     }
   }
 }
@@ -1097,10 +1097,19 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
         box-shadow: 0 0 0 3px rgba(2, 119, 189, 0.1);
       }
 
+      // ✅ Read-only styling
       &[readonly] {
-        background-color: #f8f9fa;
+        background-color: #F5F5F5;
         color: $text-muted;
+        cursor: not-allowed;
+        border-color: #E0E0E0;
+        
+        &:focus {
+          border-color: #E0E0E0;
+          box-shadow: none;
+        }
       }
+
     }
   }
 }
@@ -1475,9 +1484,9 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
 }
 
 // ✅ Enhanced User Input Box with Dropdown Search
-.user-input-box {
+    .user-input-box {
   position: relative;
-  width: 100%;
+      width: 100%;
 
   input {
     width: 100%;
@@ -2078,7 +2087,7 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
       gap: 8px;
 
       .btn {
-        width: 100%;
+      width: 100%;
         justify-content: center;
       }
     }
@@ -2213,7 +2222,7 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
 
         i {
           width: 16px;
-          text-align: center;
+        text-align: center;
           color: $primary-color;
         }
       }

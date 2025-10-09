@@ -1,12 +1,11 @@
-export const environment = {
-  production: false,
+﻿export const environment = {
+  production: true,
   apiBaseUrl: 'https://soil-sensor-backend.onrender.com',
   mapTilerApiKey: 'gMPRNdZ7nFG7TFsWmEQr',
   firebase: {
     apiKey: 'AIzaSyCcRt14sMrziPLXMkOm3BCAMAWRCKkHWpI',
     authDomain: 'tripbooking-ajtawan.firebaseapp.com',
-    databaseURL:
-      'https://tripbooking-ajtawan-default-rtdb.asia-southeast1.firebasedatabase.app',
+    databaseURL: 'https://tripbooking-ajtawan-default-rtdb.asia-southeast1.firebasedatabase.app',
     projectId: 'tripbooking-ajtawan',
     storageBucket: 'tripbooking-ajtawan.appspot.com',
     messagingSenderId: '273977760323',

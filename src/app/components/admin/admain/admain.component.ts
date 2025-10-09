@@ -784,41 +784,75 @@ export class AdmainComponent implements OnInit, OnDestroy {
   }
   // ✅ User management methods
   editUser(user: UserData) {
-    this.editingUser = { ...user };
+    // ✅ Mapping ข้อมูลจาก backend format ไป frontend format
+    this.editingUser = {
+      username: user['user_name'] || user.username || '',
+      email: user['user_email'] || user.email || '',
+      user_phone: user['user_phone'] || user['phone'] || '',
+      type: user['role'] || user.type || 'user',
+      userid: user['userid'] || user['id'],
+      id: user['userid'] || user['id']
+    };
     this.newPassword = '';
     this.showEditModal = true;
+    
+    console.log('🔍 Editing user data:', this.editingUser);
   }
   closeEditModal() {
     this.showEditModal = false;
     this.editingUser = { username: '' };
     this.newPassword = '';
   }
+
+  // ✅ บันทึกการเปลี่ยนแปลงข้อมูล user
   async saveUserChanges() {
-    if (!this.editingUser.username) {
-      this.notificationService.showNotification('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณาเลือกผู้ใช้ที่ต้องการแก้ไข');
+    if (!this.editingUser['userid'] && !this.editingUser['id']) {
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'ไม่พบ ID ของผู้ใช้');
       return;
     }
+
     try {
+      const userId = this.editingUser['userid'] || this.editingUser['id'];
       const updateData: any = {
         user_name: this.editingUser.username,
-        user_email: this.editingUser.email,
+        // ✅ ไม่ส่ง email เนื่องจากเป็น read-only field
         role: this.editingUser.type || 'user'
       };
-      if (this.newPassword && this.newPassword.trim()) {
+
+      // เพิ่มเบอร์โทรศัพท์ถ้ามี
+      if (this.editingUser['user_phone']) {
+        updateData.user_phone = this.editingUser['user_phone'];
+      }
+
+      // เพิ่มรหัสผ่านถ้ามีการเปลี่ยนแปลง
+      if (this.newPassword && this.newPassword.trim() !== '') {
         updateData.user_password = this.newPassword;
       }
-      const token = await this.currentUser.getIdToken();
-      const response = await lastValueFrom(
-        this.http.put<any>(`${this.apiUrl}/api/users/${this.editingUser.username}`, updateData, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-      );
-      this.notificationService.showNotification('success', 'บันทึกสำเร็จ', 'ข้อมูลผู้ใช้ถูกอัปเดตเรียบร้อยแล้ว');
+
+      console.log('🔍 Updating user:', userId, 'with data:', updateData);
+
+      const headers = await this.getAuthHeaders();
+      const response = await this.http.put(`${this.apiUrl}/api/admin/users/${userId}`, updateData, { headers }).toPromise();
+
+      console.log('✅ User updated successfully:', response);
+
+      this.notificationService.showNotification('success', 'บันทึกสำเร็จ', 'แก้ไขข้อมูลผู้ใช้เรียบร้อยแล้ว');
       this.closeEditModal();
+      
+      // รีเฟรชข้อมูล users
       await this.loadAllUsersOnce();
+      await this.loadRegularUsers();
     } catch (error: any) {
-      console.error('Error saving user changes:', error);
-      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้');
+      console.error('❌ Error updating user:', error);
+      let errorMessage = 'เกิดข้อผิดพลาดในการแก้ไขข้อมูลผู้ใช้';
+      
+      if (error.error && error.error.message) {
+        errorMessage = error.error.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', errorMessage);
     }
   }
   async deleteUser(username: string) {
