@@ -3,14 +3,49 @@ import { LoginComponent } from './components/login/login.component';
 import { RegisterComponent } from './components/register/register.component';
 
 export const routes: Routes = [
+  {
+    path: "gps",
+    loadComponent: () =>
+      import("./components/gps-display.component").then(
+        (m) => m.GpsDisplayComponent
+      ),
+  },
   { path: '', component: LoginComponent },
+  {
+    path: "gps",
+    loadComponent: () =>
+      import("./components/gps-display.component").then(
+        (m) => m.GpsDisplayComponent
+      ),
+  },
   { path: 'login', component: LoginComponent },
+  {
+    path: "gps",
+    loadComponent: () =>
+      import("./components/gps-display.component").then(
+        (m) => m.GpsDisplayComponent
+      ),
+  },
   { path: 'register', component: RegisterComponent },
+  {
+    path: "gps",
+    loadComponent: () =>
+      import("./components/gps-display.component").then(
+        (m) => m.GpsDisplayComponent
+      ),
+  },
   {
     path: 'main',
     loadComponent: () =>
       import('./components/users/main/main.component').then(
         (m) => m.MainComponent
+      ),
+  },
+  {
+    path: "gps",
+    loadComponent: () =>
+      import("./components/gps-display.component").then(
+        (m) => m.GpsDisplayComponent
       ),
   },
   {
@@ -21,10 +56,24 @@ export const routes: Routes = [
       ),
   },
   {
+    path: "gps",
+    loadComponent: () =>
+      import("./components/gps-display.component").then(
+        (m) => m.GpsDisplayComponent
+      ),
+  },
+  {
     path: 'edit-profile',
     loadComponent: () =>
       import('./components/users/edit-profile/edit-profile.component').then(
         (m) => m.EditProfileComponent
+      ),
+  },
+  {
+    path: "gps",
+    loadComponent: () =>
+      import("./components/gps-display.component").then(
+        (m) => m.GpsDisplayComponent
       ),
   },
   {
@@ -35,10 +84,24 @@ export const routes: Routes = [
       ),
   },
   {
+    path: "gps",
+    loadComponent: () =>
+      import("./components/gps-display.component").then(
+        (m) => m.GpsDisplayComponent
+      ),
+  },
+  {
     path: 'forgotpass',
     loadComponent: () =>
       import('./components/users/forgotpass/forgotpass.component').then(
         (m) => m.ForgotpassComponent
+      ),
+  },
+  {
+    path: "gps",
+    loadComponent: () =>
+      import("./components/gps-display.component").then(
+        (m) => m.GpsDisplayComponent
       ),
   },
   {
@@ -49,10 +112,24 @@ export const routes: Routes = [
       ),
   },
   {
+    path: "gps",
+    loadComponent: () =>
+      import("./components/gps-display.component").then(
+        (m) => m.GpsDisplayComponent
+      ),
+  },
+  {
     path: 'history',
     loadComponent: () =>
       import('./components/users/history/history.component').then(
         (m) => m.HistoryComponent
+      ),
+  },
+  {
+    path: "gps",
+    loadComponent: () =>
+      import("./components/gps-display.component").then(
+        (m) => m.GpsDisplayComponent
       ),
   },
   {
@@ -63,10 +140,24 @@ export const routes: Routes = [
       ),
   },
   {
+    path: "gps",
+    loadComponent: () =>
+      import("./components/gps-display.component").then(
+        (m) => m.GpsDisplayComponent
+      ),
+  },
+  {
     path: 'device-detail',
     loadComponent: () =>
       import('./components/admin/detail/detail.component').then(
         (m) => m.DetailComponent
+      ),
+  },
+  {
+    path: "gps",
+    loadComponent: () =>
+      import("./components/gps-display.component").then(
+        (m) => m.GpsDisplayComponent
       ),
   },
   {
@@ -77,10 +168,24 @@ export const routes: Routes = [
       ),
   },
   {
+    path: "gps",
+    loadComponent: () =>
+      import("./components/gps-display.component").then(
+        (m) => m.GpsDisplayComponent
+      ),
+  },
+  {
     path: 'adregister',
     loadComponent: () =>
       import('./components/adregister/adregister.component').then(
         (m) => m.AdregisterComponent
+      ),
+  },
+  {
+    path: "gps",
+    loadComponent: () =>
+      import("./components/gps-display.component").then(
+        (m) => m.GpsDisplayComponent
       ),
   },
   {

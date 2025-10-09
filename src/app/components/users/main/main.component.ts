@@ -377,6 +377,7 @@ export class MainComponent implements OnInit, OnDestroy {
       return;
     }
     this.requestingClaim = true;
+    
     try {
       // ตรวจสอบ Firebase user และส่ง token ไปกับ request
       const currentUser = this.auth.currentUser;
@@ -385,19 +386,25 @@ export class MainComponent implements OnInit, OnDestroy {
         this.lastClaimMessage = 'ไม่พบผู้ใช้ กรุณาเข้าสู่ระบบใหม่';
         return;
       }
+      
       const token = await currentUser.getIdToken();
+      
       // ✅ ตรวจสอบว่าชื่ออุปกรณ์มีคำว่า "test" หรือไม่
       const deviceName = this.claimDeviceId.trim();
       const isTestDevice = deviceName.toLowerCase().includes('test');
+      
       const requestData = {
         deviceId: isTestDevice ? `esp32-soil-test-${Date.now()}` : deviceName,
         device_name: isTestDevice ? `esp32-soil-test-${Date.now()}` : deviceName,
         status: isTestDevice ? 'online' : 'offline', // ✅ test device = online, อุปกรณ์ทั่วไป = offline
         device_type: isTestDevice ? false : true, // ✅ false = test device, true = production device
-        description: isTestDevice ? 'อุปกรณ์ทดสอบ ESP32 Soil Sensor สำหรับทดสอบ API measurement' : 'อุปกรณ์ทั่วไป'
+        description: isTestDevice ? 'อุปกรณ์ทดสอบ ESP32 Soil Sensor สำหรับทดสอบ API measurement' : 'อุปกรณ์ทั่วไป',
+        userid: this.userID ? parseInt(this.userID) : null // ✅ ส่ง userid ไปด้วย
       };
+      
       console.log('📤 Sending request to:', `${this.apiUrl}/api/devices`);
       console.log('📤 Request data:', requestData);
+      
       const response = await lastValueFrom(
         this.http.post<ClaimResponse>(`${this.apiUrl}/api/devices`, requestData, {
           headers: {
@@ -406,36 +413,63 @@ export class MainComponent implements OnInit, OnDestroy {
           }
         })
       );
+      
       // ตรวจสอบ response หลายแบบ
       const isSuccess = response.success === true || 
                        response.message?.includes('successfully') || 
                        response.message?.includes('สำเร็จ') ||
                        response.device;
-           if (isSuccess) {
-             // แสดง notification popup เมื่อเพิ่มอุปกรณ์สำเร็จ
-             const deviceName = this.claimDeviceId.trim();
-             const isTestDevice = deviceName.toLowerCase().includes('test');
-             const deviceType = isTestDevice ? 'ESP32-soil-test' : 'ทั่วไป';
-             this.showNotificationPopup(
-               'success',
-               'เพิ่มอุปกรณ์สำเร็จ!',
-               `อุปกรณ์${deviceType}: ${isTestDevice ? `esp32-soil-test-${Date.now()}` : deviceName}\n\n${isTestDevice ? 'อุปกรณ์ทดสอบพร้อมใช้งานสำหรับทดสอบ API measurement' : 'อุปกรณ์พร้อมใช้งาน'}\n\nกดตกลงเพื่อรีเฟรซหน้า`,
-               true,
-               'ตกลง',
-               () => {
-                 window.location.reload();
-               }
-             );
+                       
+      if (isSuccess) {
+        console.log('✅ Device created in database:', response);
+        
+        // ✅ เพิ่ม device เข้าไปใน devices array จาก response จริง
+        const newDevice: Device = {
+          deviceid: response.device?.deviceid || Math.floor(Math.random() * 1000),
+          device_name: response.device?.device_name || deviceName,
+          created_at: response.device?.created_at || new Date().toISOString(),
+          updated_at: response.device?.updated_at || new Date().toISOString(),
+          userid: this.userID ? parseInt(this.userID) : 0,
+          status: (response.device?.status || requestData.status) as 'online' | 'offline',
+          device_type: response.device?.device_type || requestData.device_type,
+          description: response.device?.description || requestData.description,
+          api_key: response.device?.api_key
+        };
+        
+        // เพิ่ม device ใหม่เข้าไปใน devices array
+        this.devices.push(newDevice);
+        
+        // อัปเดต selectedDeviceId เป็น device ใหม่
+        this.selectedDeviceId = newDevice.device_name;
+        this.selectedDevice = newDevice;
+        
+        console.log('✅ Device added to devices array:', newDevice);
+        console.log('📋 Total devices:', this.devices.length);
+        
+        // แสดง notification popup เมื่อเพิ่มอุปกรณ์สำเร็จ
+        const deviceType = isTestDevice ? 'ESP32-soil-test' : 'ทั่วไป';
+        this.showNotificationPopup(
+          'success',
+          'เพิ่มอุปกรณ์สำเร็จ!',
+          `อุปกรณ์${deviceType}: ${isTestDevice ? `esp32-soil-test-${Date.now()}` : deviceName}\n\n${isTestDevice ? 'อุปกรณ์ทดสอบพร้อมใช้งานสำหรับทดสอบ API measurement' : 'อุปกรณ์พร้อมใช้งาน'}\n\nกดตกลงเพื่อรีเฟรซหน้า`,
+          true,
+          'ตกลง',
+          () => {
+            window.location.reload();
+          }
+        );
       } else {
         console.log('❌ Response indicates failure:', response.message);
         this.lastClaimType = 'err';
         this.lastClaimMessage = response.message || 'เพิ่มอุปกรณ์ไม่สำเร็จ';
       }
+      
     } catch (err: any) {
       console.error('❌ Add device error:', err);
       console.error('❌ Error status:', err.status);
       console.error('❌ Error message:', err.message);
       this.lastClaimType = 'err';
+      
       // ให้ข้อความ error ที่ชัดเจนขึ้น
       if (err.status === 400) {
         this.lastClaimMessage = 'ข้อมูลไม่ถูกต้อง หรือ Device ID ซ้ำ';
@@ -445,6 +479,8 @@ export class MainComponent implements OnInit, OnDestroy {
         this.lastClaimMessage = 'Device ID นี้มีอยู่แล้ว';
       } else if (err.status === 500) {
         this.lastClaimMessage = 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง';
+      } else if (err.status === 404) {
+        this.lastClaimMessage = 'API endpoint ไม่มีอยู่ กรุณาติดต่อผู้ดูแลระบบ';
       } else {
         this.lastClaimMessage = 'เพิ่มอุปกรณ์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
       }
