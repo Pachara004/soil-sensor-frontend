@@ -195,7 +195,7 @@ export class AdmainComponent implements OnInit, OnDestroy {
         return username.includes(query) || email.includes(query) || userid.includes(query);
       });
       this.showDropdown = true;
-    } else {
+      } else {
       this.filteredUsers = [];
       this.showDropdown = false;
     }
@@ -359,7 +359,7 @@ export class AdmainComponent implements OnInit, OnDestroy {
         setTimeout(() => {
           this.startDeviceSimulation();
         }, 1000);
-      } else {
+    } else {
         // ✅ สร้างอุปกรณ์ทั่วไป
         await this.adminService.addDevice(this.newDeviceName, this.newDeviceUser);
         this.notificationService.showNotification('success', 'เพิ่มอุปกรณ์สำเร็จ', 'อุปกรณ์ถูกเพิ่มเรียบร้อยแล้ว');
@@ -944,7 +944,7 @@ export class AdmainComponent implements OnInit, OnDestroy {
                userEmail.includes(query) ||
                description.includes(query);
       });
-    } else {
+        } else {
       this.devicesDisplay = [...this.devices];
     }
     this.cdr.detectChanges();

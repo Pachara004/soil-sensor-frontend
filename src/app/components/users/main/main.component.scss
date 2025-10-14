@@ -804,6 +804,150 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
   }
 }
 
+// ✅ Device Status Card (Firebase Data)
+.device-status-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: $border-radius-md;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: $shadow-medium;
+  border: 2px solid rgba(76, 175, 80, 0.2);
+  
+  .status-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.05);
+    
+    i {
+      font-size: 24px;
+      color: $primary-color;
+    }
+    
+    h4 {
+      flex: 1;
+      color: $text-primary;
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+    }
+    
+    .badge {
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: $transition;
+      
+      &.online {
+        background: linear-gradient(135deg, #4CAF50, #2E7D32);
+        color: white;
+        box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+      }
+      
+      &.offline {
+        background: linear-gradient(135deg, #9E9E9E, #616161);
+        color: white;
+        box-shadow: 0 2px 8px rgba(158, 158, 158, 0.3);
+      }
+    }
+  }
+  
+  .status-details {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 16px;
+    
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: rgba(0, 0, 0, 0.02);
+      border-radius: $border-radius-sm;
+      transition: $transition;
+      
+      &:hover {
+        background: rgba(76, 175, 80, 0.05);
+        transform: translateX(4px);
+      }
+      
+      .label {
+        color: $text-secondary;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      
+      .value {
+        color: $text-primary;
+        font-size: 15px;
+        font-weight: 600;
+        
+        &.text-success {
+          color: $primary-color;
+        }
+        
+        &.text-danger {
+          color: $error-color;
+        }
+      }
+    }
+  }
+  
+  .sync-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.08), rgba(46, 125, 50, 0.05));
+    border-radius: $border-radius-sm;
+    
+    i {
+      color: $primary-color;
+      font-size: 16px;
+    }
+    
+    small {
+      color: $text-secondary;
+      font-size: 13px;
+      font-weight: 500;
+    }
+  }
+}
+
+// ⚠️ Device Warning (Not in Firebase)
+.device-warning {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  border-radius: $border-radius-md;
+  padding: 20px;
+  margin-top: 20px;
+  text-align: center;
+  border: 2px solid rgba(251, 140, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(251, 140, 0, 0.15);
+  
+  i {
+    font-size: 48px;
+    color: $warning-color;
+    margin-bottom: 12px;
+    display: block;
+  }
+  
+  p {
+    color: $text-primary;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+  }
+  
+  small {
+    color: $text-secondary;
+    font-size: 14px;
+    display: block;
+  }
+}
+
 // Animations
 @keyframes fadeInOverlay {
   from {
@@ -824,6 +968,15 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes pulse-online {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 16px rgba(76, 175, 80, 0.5);
   }
 }
 

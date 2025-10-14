@@ -45,91 +45,193 @@
       </button>
     </div>
 
-    <!-- ✅ ข้อมูล Device -->
+    <!-- ✅ ข้อมูล Device จาก Firebase -->
     <div class="device-info" *ngIf="showDeviceInfo">
       <div class="info-row">
         <span class="label">ชื่ออุปกรณ์:</span>
-        <span class="value">{{ deviceName || 'ไม่ระบุ' }}</span>
+        <span class="value">{{ liveData?.deviceName || deviceName || 'ไม่ระบุ' }}</span>
       </div>
       <div class="info-row">
         <span class="label">Device ID:</span>
-        <span class="value">{{ deviceId || 'ไม่ระบุ' }}</span>
+        <span class="value">{{ liveData?.deviceId || deviceId || 'ไม่ระบุ' }}</span>
       </div>
-      <div class="info-row">
+      <div class="info-row" *ngIf="liveData?.sensorOnline !== undefined">
+        <span class="label">สถานะเซ็นเซอร์:</span>
+        <span class="value" [ngClass]="liveData.sensorOnline ? 'status-online' : 'status-offline'">
+          <i class="fas" [ngClass]="liveData.sensorOnline ? 'fa-check-circle' : 'fa-times-circle'"></i>
+          {{ liveData.sensorOnline ? 'ออนไลน์' : 'ออฟไลน์' }}
+        </span>
+      </div>
+      <div class="info-row" *ngIf="liveData?.soilContact !== undefined">
+        <span class="label">การติดต่อดิน:</span>
+        <span class="value" [ngClass]="liveData.soilContact ? 'status-online' : 'status-offline'">
+          <i class="fas" [ngClass]="liveData.soilContact ? 'fa-check-circle' : 'fa-times-circle'"></i>
+          {{ liveData.soilContact ? 'ติดต่อ' : 'ไม่ติดต่อ' }}
+        </span>
+      </div>
+      <div class="info-row" *ngIf="liveData?.status">
         <span class="label">สถานะ:</span>
-        <span class="status-indicator" [ngClass]="{
-            online: deviceStatus === 'online',
-            offline: deviceStatus === 'offline'
-          }">
-          <span class="status-dot"></span>
-          <span class="status-text">{{ deviceStatus === 'online' ? 'ออนไลน์' : 'ออฟไลน์' }}</span>
-        </span>
+        <span class="value status-{{ liveData.status }}">{{ liveData.status }}</span>
       </div>
-
-      <!-- แสดงข้อความเตือนเมื่ออุปกรณ์ออฟไลน์ -->
-      <div class="device-warning" *ngIf="deviceStatus === 'offline'">
-        <i class="fas fa-exclamation-triangle"></i>
-        <span>อุปกรณ์ออฟไลน์ - ไม่สามารถบันทึกข้อมูลได้</span>
+      <div class="info-row" *ngIf="liveData?.uptime">
+        <span class="label">เวลาทำงาน:</span>
+        <span class="value">{{ liveData.uptime }} วินาที</span>
+      </div>
+      <div class="info-row" *ngIf="liveData?.timestamp">
+        <span class="label">อัพเดทล่าสุด:</span>
+        <span class="value">{{ formatTimestamp(liveData.timestamp) }}</span>
       </div>
     </div>
 
-    <!-- ✅ สถานะการเชื่อมต่อ Firebase -->
-    <div class="connection-status">
-      <span class="status-indicator" [ngClass]="{
-          connected: isLiveDataConnected,
-          disconnected: !isLiveDataConnected
-        }">
-        <span class="status-dot"></span>
-        <span class="status-text">
-          {{ isLiveDataConnected ? 'เชื่อมต่อเซ็นเซอร์' : 'ไม่เชื่อมต่อเซ็นเซอร์' }}
+    <!-- ✅ ส่วนการเลือกจุดและการวัด -->
+    <div class="point-selection-section" *ngIf="measurementPoints.length > 0">
+      <div class="section-title">
+        <i class="fas fa-map-marker-alt"></i>
+        การเลือกจุดวัด
+      </div>
+      
+      <!-- สถานะจุดที่เลือก -->
+      <div class="selected-point-info" *ngIf="selectedPointIndex !== null">
+        <div class="point-card selected">
+          <div class="point-header">
+            <i class="fas fa-crosshairs"></i>
+            <span>จุดที่เลือก: {{ selectedPointIndex + 1 }}</span>
+          </div>
+          <div class="point-coordinates">
+            <span>พิกัด: {{ measurementPoints[selectedPointIndex][1].toFixed(6) }}, {{ measurementPoints[selectedPointIndex][0].toFixed(6) }}</span>
+          </div>
+          <div class="point-status" *ngIf="measuredPoints.includes(selectedPointIndex)">
+            <i class="fas fa-check-circle"></i>
+            <span>วัดแล้ว</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- สถิติการวัด -->
+      <div class="measurement-stats">
+        <div class="stat-item">
+          <span class="stat-label">ทั้งหมด:</span>
+          <span class="stat-value">{{ measurementPoints.length }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">วัดแล้ว:</span>
+          <span class="stat-value completed">{{ measuredPoints.length }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">เหลือ:</span>
+          <span class="stat-value remaining">{{ measurementPoints.length - measuredPoints.length }}</span>
+        </div>
+      </div>
+      
+      <!-- ปุ่มวัดจุดที่เลือก -->
+      <button class="measure-selected-btn" 
+              [ngClass]="{'waiting': isWaitingForStable, 'disabled': selectedPointIndex === null || measuredPoints.includes(selectedPointIndex!)}"
+              (click)="measureSelectedPoint()" 
+              [disabled]="isLoading || isWaitingForStable || selectedPointIndex === null || measuredPoints.includes(selectedPointIndex!)">
+        <span *ngIf="!isLoading && !isWaitingForStable">
+          <i class="fas fa-play"></i>
+          วัดจุดที่เลือก
         </span>
+        <span *ngIf="isLoading && !isWaitingForStable">
+          <i class="fas fa-spinner fa-spin"></i>
+          กำลังวัด...
+        </span>
+        <span *ngIf="isWaitingForStable">
+          <i class="fas fa-clock"></i>
+          รอให้ค่าคงที่... {{ countdownSeconds }} วินาที
+        </span>
+      </button>
+      
+      <!-- คำแนะนำ -->
+      <div class="instructions">
+        <div class="instruction-item">
+          <i class="fas fa-mouse-pointer"></i>
+          <span>คลิกจุดในแผนที่เพื่อเลือก</span>
+        </div>
+        <div class="instruction-item">
+          <i class="fas fa-play"></i>
+          <span>กดปุ่ม "วัดจุดที่เลือก" เพื่อวัดค่า</span>
+        </div>
+        <div class="instruction-item">
+          <i class="fas fa-check-circle"></i>
+          <span>จุดที่วัดแล้วจะเปลี่ยนเป็นสีเขียว</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ ปุ่มวัดทั้งหมด (เดิม) -->
+    <button class="save-btn" 
+            [ngClass]="{'waiting': isWaitingForStable}"
+            (click)="saveMeasurement()" 
+            [disabled]="isLoading || isWaitingForStable">
+      <span *ngIf="!isLoading && !isWaitingForStable">วัดและบันทึกค่า</span>
+      <span *ngIf="isLoading && !isWaitingForStable">กำลังบันทึก...</span>
+      <span *ngIf="isWaitingForStable">
+        <i class="fas fa-clock"></i>
+        รอให้ค่าคงที่... {{ countdownSeconds }} วินาที
       </span>
-    </div>
-
-    <button class="save-btn" (click)="saveMeasurement()"
-      [disabled]="isLoading || !isLiveDataConnected || deviceStatus === 'offline'">
-      <span *ngIf="!isLoading && isLiveDataConnected && deviceStatus === 'online'">วัดและบันทึกค่า</span>
-      <span *ngIf="!isLoading && !isLiveDataConnected">ไม่สามารถวัดได้ - ไม่เชื่อมต่อเซ็นเซอร์</span>
-      <span *ngIf="!isLoading && deviceStatus === 'offline'">ไม่สามารถวัดได้ - อุปกรณ์ออฟไลน์</span>
-      <span *ngIf="isLoading">กำลังบันทึก...</span>
     </button>
 
-    <div class="grid">
-      <div class="sensor-box">
-        <img src="https://cdn-icons-png.flaticon.com/512/4850/4850456.png" class="sensor-icon" alt="Temperature Icon" />
-        <span class="value">{{ temperature }}</span>
-        <span class="unit">°C</span>
-        <p class="label">Temperature</p>
+    <!-- ✅ แสดงค่าการวัดทั้งหมด 6 ค่าตาม ESP32 -->
+    <div class="sensor-grid">
+      <!-- Temperature -->
+      <div class="sensor-card">
+        <div class="sensor-icon">
+          <i class="fas fa-thermometer-half temperature-icon"></i>
+        </div>
+        <div class="sensor-value">{{ temperature || 0 }}</div>
+        <div class="sensor-unit">°C</div>
+        <div class="sensor-label">TEMPERATURE</div>
       </div>
-      <div class="sensor-box">
-        <img src="https://cdn-icons-png.flaticon.com/512/4148/4148460.png" class="sensor-icon" alt="Moisture Icon" />
-        <span class="value">{{ moisture }}</span>
-        <span class="unit">%</span>
-        <p class="label">Moisture</p>
+
+      <!-- Moisture -->
+      <div class="sensor-card">
+        <div class="sensor-icon">
+          <i class="fas fa-tint moisture-icon"></i>
+        </div>
+        <div class="sensor-value">{{ moisture || 0 }}</div>
+        <div class="sensor-unit">%</div>
+        <div class="sensor-label">MOISTURE</div>
       </div>
-      <div class="sensor-box">
-        <img src="https://cdn-icons-png.flaticon.com/512/6678/6678672.png" class="sensor-icon" alt="Nitrogen Icon" />
-        <span class="value">{{ nitrogen }}</span>
-        <span class="unit">mg/kg</span>
-        <p class="label">Nitrogen</p>
+
+      <!-- Nitrogen -->
+      <div class="sensor-card">
+        <div class="sensor-icon">
+          <div class="nitrogen-icon">N</div>
+        </div>
+        <div class="sensor-value">{{ nitrogen || 0 }}</div>
+        <div class="sensor-unit">mg/kg</div>
+        <div class="sensor-label">NITROGEN</div>
       </div>
-      <div class="sensor-box">
-        <img src="https://cdn-icons-png.flaticon.com/512/6678/6678656.png" class="sensor-icon" alt="Phosphorus Icon" />
-        <span class="value">{{ phosphorus }}</span>
-        <span class="unit">mg/kg</span>
-        <p class="label">Phosphorus</p>
+
+      <!-- Phosphorus -->
+      <div class="sensor-card">
+        <div class="sensor-icon">
+          <div class="phosphorus-icon">P</div>
+        </div>
+        <div class="sensor-value">{{ phosphorus || 0 }}</div>
+        <div class="sensor-unit">mg/kg</div>
+        <div class="sensor-label">PHOSPHORUS</div>
       </div>
-      <div class="sensor-box">
-        <img src="https://cdn-icons-png.flaticon.com/512/6678/6678660.png" class="sensor-icon" alt="Potassium Icon" />
-        <span class="value">{{ potassium }}</span>
-        <span class="unit">mg/kg</span>
-        <p class="label">Potassium</p>
+
+      <!-- Potassium -->
+      <div class="sensor-card">
+        <div class="sensor-icon">
+          <div class="potassium-icon">K</div>
+        </div>
+        <div class="sensor-value">{{ potassium || 0 }}</div>
+        <div class="sensor-unit">mg/kg</div>
+        <div class="sensor-label">POTASSIUM</div>
       </div>
-      <div class="sensor-box">
-        <img src="https://cdn-icons-png.flaticon.com/512/4236/4236740.png" class="sensor-icon" alt="PH Icon" />
-        <span class="value">{{ ph }}</span>
-        <span class="unit">%</span>
-        <p class="label">Potential of Hydrogen (PH)</p>
+
+      <!-- pH -->
+      <div class="sensor-card">
+        <div class="sensor-icon">
+          <i class="fas fa-flask ph-icon"></i>
+        </div>
+        <div class="sensor-value">{{ ph || 0 }}</div>
+        <div class="sensor-unit">pH</div>
+        <div class="sensor-label">POTENTIAL OF HYDROGEN (PH)</div>
       </div>
     </div>
 

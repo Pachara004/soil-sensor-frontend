@@ -109,13 +109,59 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     config.apiKey = environment.mapTilerApiKey;
   }
   ngOnInit(): void {
+    // ✅ แก้ไขการโหลดข้อมูลหลัง refresh - ใช้ข้อมูลจาก localStorage ก่อน
+    const cachedData = localStorage.getItem('history-cache');
+    if (cachedData) {
+      try {
+        const parsedData = JSON.parse(cachedData);
+        console.log('📦 Loading cached data:', parsedData);
+        
+        // ✅ ตรวจสอบ cache expiration (5 นาที)
+        const cacheAge = Date.now() - (parsedData.timestamp || 0);
+        const cacheExpired = cacheAge > 5 * 60 * 1000; // 5 minutes
+        
+        if (!cacheExpired) {
+          if (parsedData.username) this.username = parsedData.username;
+          if (parsedData.userName) this.userName = parsedData.userName;
+          if (parsedData.userEmail) this.userEmail = parsedData.userEmail;
+          if (parsedData.devices) this.devices = parsedData.devices;
+          if (parsedData.deviceId) this.deviceId = parsedData.deviceId;
+          if (parsedData.deviceMap) this.deviceMap = parsedData.deviceMap;
+          if (parsedData.areaGroups) this.areaGroups = parsedData.areaGroups;
+          if (parsedData.areas) this.areas = parsedData.areas;
+          
+          console.log('📦 Cached data loaded successfully');
+          console.log('📦 Username from cache:', this.username);
+          console.log('📦 Devices from cache:', this.devices);
+          console.log('📦 Device ID from cache:', this.deviceId);
+          console.log('📦 Cache age:', Math.round(cacheAge / 1000), 'seconds');
+        } else {
+          console.log('📦 Cache expired, will reload data');
+          localStorage.removeItem('history-cache');
+        }
+      } catch (error) {
+        console.error('❌ Error loading cached data:', error);
+        localStorage.removeItem('history-cache');
+      }
+    }
+    
     // ใช้ Firebase Auth แทน localStorage
     onAuthStateChanged(this.auth, (user) => {
       if (user) {
         this.currentUser = user;
-        this.username = user.displayName || user.email?.split('@')[0] || '';
-        this.userName = user.displayName || user.email?.split('@')[0] || '';
-        this.userEmail = user.email || '';
+        // ✅ แก้ไขการแสดงชื่อ user - ใช้ displayName ก่อน ถ้าไม่มีให้ใช้ email
+        this.username = user.displayName || user.email?.split('@')[0] || 'ไม่ระบุ';
+        this.userName = user.displayName || user.email?.split('@')[0] || 'ไม่ระบุ';
+        this.userEmail = user.email || 'ไม่ระบุ';
+        
+        console.log('👤 User info from Firebase:', {
+          displayName: user.displayName,
+          email: user.email,
+          username: this.username,
+          userName: this.userName,
+          userEmail: this.userEmail
+        });
+        
         // ดึงข้อมูล user และ device จาก backend with debounce
         setTimeout(() => this.loadUserAndDeviceData(), 50);
       } else {
@@ -132,8 +178,12 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
   async onDeviceChange() {
+    console.log('🔄 Device changed to:', this.deviceId);
+    console.log('🔄 Device map:', this.deviceMap);
+    
     if (this.deviceId) {
       // ✅ โหลดแค่ areas ที่เป็นจุดหลักๆ ตาม device ที่เลือก
+      console.log('🔄 Loading areas for device:', this.deviceId);
       await this.loadAreas();
     }
   }
@@ -180,11 +230,18 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
             userData = userResponse.user;
           }
           if (userData && (userData.user_name || userData.username)) {
-            // ✅ ตั้งค่า username และ userName จาก PostgreSQL
-          this.username = userData.user_name || userData.username || this.username;
+            // ✅ แก้ไขการแสดง user_name จาก PostgreSQL - ใช้ user_name จาก DB ก่อน
+            this.username = userData.user_name || userData.username || this.username;
             this.userName = userData.user_name || userData.username || this.userName;
             this.userEmail = userData.user_email || userData.email || this.userEmail;
+            this.userData = userData;
             userDataFound = true;
+            
+            console.log('👤 User data from PostgreSQL:', userData);
+            console.log('👤 PostgreSQL user_name:', userData.user_name);
+            console.log('👤 Username set to:', this.username);
+            console.log('👤 UserName set to:', this.userName);
+            console.log('👤 UserEmail set to:', this.userEmail);
             break; // หยุดเมื่อเจอ endpoint ที่ทำงานได้
           }
         } catch (userError: any) {
@@ -194,35 +251,79 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       }
       if (!userDataFound) {
         // ✅ ถ้าไม่สามารถดึงข้อมูลจาก backend ได้ ให้ใช้ข้อมูลจาก Firebase
+        // ✅ แก้ไขการแสดงชื่อ user - ใช้ displayName ก่อน ถ้าไม่มีให้ใช้ email
         this.username = this.currentUser.displayName || this.currentUser.email?.split('@')[0] || 'ไม่ระบุ';
         this.userName = this.currentUser.displayName || this.currentUser.email?.split('@')[0] || 'ไม่ระบุ';
         this.userEmail = this.currentUser.email || 'ไม่ระบุ';
+        
+        console.log('👤 User info from Firebase:', {
+          displayName: this.currentUser.displayName,
+          email: this.currentUser.email,
+          username: this.username,
+          userName: this.userName,
+          userEmail: this.userEmail
+        });
       }
       // ดึงข้อมูล device
       try {
+        console.log('🔍 Loading devices from API...');
         const devicesResponse = await lastValueFrom(
           this.http.get<any[]>(`${this.apiUrl}/api/devices`, {
             headers: { 'Authorization': `Bearer ${token}` }
           })
         );
+        console.log('📱 Devices response:', devicesResponse);
+        
         if (devicesResponse && devicesResponse.length > 0) {
-          this.devices = devicesResponse.map(device => device.device_name || device.deviceid);
+          // ✅ แก้ไขการแสดงชื่ออุปกรณ์ - ใช้ device_name ก่อน ถ้าไม่มีให้ใช้ deviceid
+          this.devices = devicesResponse.map(device => {
+            const deviceName = device.device_name || device.deviceid || `Device ${device.deviceid}`;
+            console.log('📱 Device mapping:', { deviceid: device.deviceid, device_name: device.device_name, finalName: deviceName });
+            return deviceName;
+          });
+          console.log('📱 Devices list:', this.devices);
+          
           // สร้าง map สำหรับแปลง device_name กลับเป็น device_id
           this.deviceMap = {};
           devicesResponse.forEach(device => {
-            const deviceName = device.device_name || device.deviceid;
+            const deviceName = device.device_name || device.deviceid || `Device ${device.deviceid}`;
             this.deviceMap[deviceName] = device.deviceid;
           });
+          console.log('📱 Device map:', this.deviceMap);
+          
           this.deviceId = this.devices[0] || null;
+          console.log('📱 Selected device ID:', this.deviceId);
+          console.log('📱 Selected device name:', this.deviceId);
+          
+          // ✅ Debug: ตรวจสอบการแสดงอุปกรณ์
+          console.log('🔍 Device display check:');
+          console.log('🔍 Devices array length:', this.devices.length);
+          console.log('🔍 First device:', this.devices[0]);
+          console.log('🔍 Device ID:', this.deviceId);
+        } else {
+          console.log('⚠️ No devices found');
+          // ✅ แสดงข้อความเมื่อไม่มีอุปกรณ์
+          this.devices = ['ไม่มีอุปกรณ์'];
+          this.deviceId = null;
         }
       } catch (deviceError) {
+        console.error('❌ Error loading devices:', deviceError);
       }
-      // Cache the data for better performance
-      localStorage.setItem(cacheKey, JSON.stringify({
+      // ✅ Cache the data for better performance - รวมข้อมูลทั้งหมด
+      const cacheData = {
+        username: this.username,
+        userName: this.userName,
+        userEmail: this.userEmail,
+        devices: this.devices,
+        deviceId: this.deviceId,
+        deviceMap: this.deviceMap,
         userData: this.userData,
         deviceData: this.deviceData,
         timestamp: Date.now()
-      }));
+      };
+      
+      localStorage.setItem('history-cache', JSON.stringify(cacheData));
+      console.log('💾 Data cached successfully:', cacheData);
       
       // ดึงข้อมูล areas หลังจากได้ token แล้ว
       await this.loadAreas();
@@ -231,6 +332,350 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       console.error('❌ Error loading user and device data:', error);
     }
   }
+  // ✅ ดึงข้อมูล measurements จาก database โดยตรง
+  private async loadMeasurementsFromDatabase(): Promise<any[]> {
+    if (!this.currentUser) {
+      console.log('⚠️ No current user for loading measurements');
+      return [];
+    }
+
+    try {
+      const token = await this.currentUser.getIdToken();
+      console.log('🔍 Loading measurements from database...');
+      
+      // ✅ ลองใช้ endpoint ที่มีอยู่จริง
+      const endpoints = [
+        '/api/firebase-measurements',
+        '/api/measurements',
+        '/api/measurements/all',
+        '/api/measurement-data',
+        '/api/measurement-records',
+        '/api/firebase-measurements/all',
+        '/api/firebase-measurements/list'
+      ];
+      
+      for (const endpoint of endpoints) {
+        try {
+          console.log(`🔍 Trying endpoint: ${endpoint}`);
+          const response = await lastValueFrom(
+            this.http.get<any[]>(`${this.apiUrl}${endpoint}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            })
+          );
+          
+          if (response && Array.isArray(response)) {
+            console.log(`✅ Successfully loaded measurements from ${endpoint}:`, response.length);
+            console.log('📊 Sample measurement data:', response[0]);
+            
+            // ✅ กรอง measurements ตาม device ที่เลือก
+            if (this.deviceId) {
+              const actualDeviceId = this.deviceMap[this.deviceId] || this.deviceId;
+              console.log('🔍 Filtering measurements by device:', actualDeviceId);
+              console.log('🔍 Device map:', this.deviceMap);
+              console.log('🔍 Selected device ID:', this.deviceId);
+              console.log('🔍 All measurements before filtering:', response);
+              
+              const filteredMeasurements = response.filter(measurement => {
+                const measurementDeviceId = measurement['deviceid'] || measurement['device_id'];
+                const match = measurementDeviceId && measurementDeviceId.toString() === actualDeviceId.toString();
+                console.log(`🔍 Measurement device: ${measurementDeviceId}, Match: ${match}`);
+                return match;
+              });
+              
+              console.log(`📊 Filtered measurements: ${filteredMeasurements.length} out of ${response.length}`);
+              return filteredMeasurements;
+            } else {
+              console.log('⚠️ No device selected, returning all measurements');
+              console.log('🔍 All measurements:', response);
+            }
+            
+            return response;
+          }
+        } catch (error: any) {
+          console.log(`❌ Endpoint ${endpoint} failed:`, error.status, error.message);
+        }
+      }
+      
+      console.log('⚠️ All measurement endpoints failed');
+      return [];
+      
+    } catch (error) {
+      console.error('❌ Error loading measurements from database:', error);
+      return [];
+    }
+  }
+
+  // ✅ ดึงข้อมูล measurements จาก PostgreSQL โดยใช้ API endpoints ใหม่
+  private async loadMeasurementsFromPostgreSQLAPI(areasid?: string): Promise<any[]> {
+    if (!this.currentUser) {
+      console.log('⚠️ No current user for loading measurements');
+      return [];
+    }
+
+    try {
+      const token = await this.currentUser.getIdToken();
+      console.log('🔍 Loading measurements from PostgreSQL API...');
+      console.log('🔍 Areasid filter:', areasid);
+      
+      let apiUrl: string;
+      
+      if (areasid) {
+        // ✅ ใช้ API endpoint สำหรับพื้นที่เฉพาะ
+        const deviceId = this.deviceId ? (this.deviceMap[this.deviceId] || this.deviceId) : '';
+        apiUrl = `${this.apiUrl}/api/areas/${areasid}/measurements?deviceid=${deviceId}`;
+        console.log('🔍 Using area-specific API:', apiUrl);
+        console.log('🔍 Device ID for area-specific API:', deviceId);
+      } else {
+        // ✅ ใช้ API endpoint สำหรับข้อมูลทั้งหมด
+        const deviceId = this.deviceId ? (this.deviceMap[this.deviceId] || this.deviceId) : '';
+        apiUrl = `${this.apiUrl}/api/areas/measurements/all?deviceid=${deviceId}`;
+        console.log('🔍 Using all measurements API:', apiUrl);
+        console.log('🔍 Device ID for all measurements API:', deviceId);
+      }
+      
+      const response = await lastValueFrom(
+        this.http.get<any[]>(apiUrl, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      );
+      
+      if (response && Array.isArray(response)) {
+        console.log(`✅ Successfully loaded measurements from PostgreSQL API:`, response.length);
+        console.log('📊 Sample measurement data:', response[0]);
+        
+        // ✅ Debug: ตรวจสอบข้อมูล measurements
+        response.forEach((measurement, index) => {
+          console.log(`📊 PostgreSQL API Measurement ${index + 1}:`, {
+            measurementid: measurement['measurementid'],
+            areasid: measurement['areasid'],
+            point_id: measurement['point_id'],
+            lat: measurement['lat'],
+            lng: measurement['lng'],
+            deviceid: measurement['deviceid'],
+            device_name: measurement['device_name'],
+            area_name: measurement['area_name'],
+            temperature: measurement['temperature'],
+            moisture: measurement['moisture'],
+            ph: measurement['ph'],
+            nitrogen: measurement['nitrogen'],
+            phosphorus: measurement['phosphorus'],
+            potassium: measurement['potassium'],
+            measurement_date: measurement['measurement_date'],
+            measurement_time: measurement['measurement_time']
+          });
+        });
+        
+        return response;
+      }
+      
+      console.log('⚠️ No measurements found in PostgreSQL API');
+      return [];
+      
+    } catch (error) {
+      console.error('❌ Error loading measurements from PostgreSQL API:', error);
+      return [];
+    }
+  }
+
+  // ✅ ดึงข้อมูล measurements จาก PostgreSQL โดยตรงผ่าน SQL query
+  private async loadMeasurementsFromPostgreSQLDirect(areasid?: string): Promise<any[]> {
+    if (!this.currentUser) {
+      console.log('⚠️ No current user for loading measurements');
+      return [];
+    }
+
+    try {
+      const token = await this.currentUser.getIdToken();
+      console.log('🔍 Loading measurements from PostgreSQL directly...');
+      console.log('🔍 Areasid filter:', areasid);
+      
+      // ✅ สร้าง SQL query สำหรับดึงข้อมูลจาก measurement table
+      let sqlQuery = `
+        SELECT 
+          measurementid,
+          deviceid,
+          areasid,
+          point_id,
+          lat,
+          lng,
+          temperature,
+          moisture,
+          nitrogen,
+          phosphorus,
+          potassium,
+          ph,
+          measurement_date,
+          measurement_time,
+          created_at,
+          updated_at
+        FROM measurement
+        WHERE 1=1
+      `;
+      
+      const params: any[] = [];
+      let paramIndex = 1;
+      
+      // ✅ เพิ่มเงื่อนไข areasid ถ้ามี
+      if (areasid) {
+        sqlQuery += ` AND areasid = $${paramIndex}`;
+        params.push(parseInt(areasid));
+        paramIndex++;
+      }
+      
+      // ✅ เพิ่มเงื่อนไข deviceid ถ้ามี
+      if (this.deviceId) {
+        const actualDeviceId = this.deviceMap[this.deviceId] || this.deviceId;
+        sqlQuery += ` AND deviceid = $${paramIndex}`;
+        params.push(parseInt(actualDeviceId));
+        paramIndex++;
+      }
+      
+      sqlQuery += ` ORDER BY measurementid DESC`;
+      
+      console.log('🔍 SQL Query:', sqlQuery);
+      console.log('🔍 SQL Params:', params);
+      
+      // ✅ ส่ง SQL query ไปยัง backend
+      const response = await lastValueFrom(
+        this.http.post<any[]>(`${this.apiUrl}/api/query`, {
+          query: sqlQuery,
+          params: params
+        }, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      );
+      
+      if (response && Array.isArray(response)) {
+        console.log(`✅ Successfully loaded measurements from PostgreSQL:`, response.length);
+        console.log('📊 Sample measurement data:', response[0]);
+        
+        // ✅ Debug: ตรวจสอบข้อมูล measurements
+        response.forEach((measurement, index) => {
+          console.log(`📊 PostgreSQL Measurement ${index + 1}:`, {
+            measurementid: measurement['measurementid'],
+            areasid: measurement['areasid'],
+            point_id: measurement['point_id'],
+            lat: measurement['lat'],
+            lng: measurement['lng'],
+            deviceid: measurement['deviceid'],
+            temperature: measurement['temperature'],
+            moisture: measurement['moisture'],
+            ph: measurement['ph'],
+            nitrogen: measurement['nitrogen'],
+            phosphorus: measurement['phosphorus'],
+            potassium: measurement['potassium'],
+            measurement_date: measurement['measurement_date'],
+            measurement_time: measurement['measurement_time']
+          });
+        });
+        
+        return response;
+      }
+      
+      console.log('⚠️ No measurements found in PostgreSQL');
+      return [];
+      
+    } catch (error) {
+      console.error('❌ Error loading measurements from PostgreSQL:', error);
+      return [];
+    }
+  }
+
+  // ✅ ดึงข้อมูล measurements จาก PostgreSQL โดยตรง
+  private async loadMeasurementsFromPostgreSQL(areasid?: string): Promise<any[]> {
+    if (!this.currentUser) {
+      console.log('⚠️ No current user for loading measurements');
+      return [];
+    }
+
+    try {
+      const token = await this.currentUser.getIdToken();
+      console.log('🔍 Loading measurements from PostgreSQL...');
+      console.log('🔍 Areasid filter:', areasid);
+      
+      // ✅ สร้าง URL สำหรับดึงข้อมูลจาก PostgreSQL
+      let apiUrl = `${this.apiUrl}/api/firebase-measurements`;
+      
+      // ✅ เพิ่ม query parameters
+      const params = new URLSearchParams();
+      if (areasid) {
+        params.append('areasid', areasid);
+      }
+      if (this.deviceId) {
+        const actualDeviceId = this.deviceMap[this.deviceId] || this.deviceId;
+        params.append('deviceid', actualDeviceId);
+      }
+      
+      if (params.toString()) {
+        apiUrl += `?${params.toString()}`;
+      }
+      
+      console.log('🔍 Firebase Measurements API URL:', apiUrl);
+      
+      const response = await lastValueFrom(
+        this.http.get<any[]>(apiUrl, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      );
+      
+      if (response && Array.isArray(response)) {
+        console.log(`✅ Successfully loaded measurements from PostgreSQL:`, response.length);
+        console.log('📊 Sample measurement data:', response[0]);
+        
+        // ✅ Debug: ตรวจสอบข้อมูล measurements
+        response.forEach((measurement, index) => {
+          console.log(`📊 PostgreSQL Measurement ${index + 1}:`, {
+            measurementid: measurement['measurementid'],
+            id: measurement['id'],
+            measurement_id: measurement['measurement_id'],
+            areasid: measurement['areasid'],
+            point_id: measurement['point_id'],
+            lat: measurement['lat'],
+            lng: measurement['lng'],
+            deviceid: measurement['deviceid'],
+            temperature: measurement['temperature'],
+            moisture: measurement['moisture'],
+            ph: measurement['ph'],
+            nitrogen: measurement['nitrogen'],
+            phosphorus: measurement['phosphorus'],
+            potassium: measurement['potassium'],
+            measurement_date: measurement['measurement_date'],
+            measurement_time: measurement['measurement_time']
+          });
+        });
+        
+        return response;
+      }
+      
+      console.log('⚠️ No measurements found in PostgreSQL');
+      return [];
+      
+    } catch (error) {
+      console.error('❌ Error loading measurements from PostgreSQL:', error);
+      return [];
+    }
+  }
+
+  // ✅ ดึงข้อมูล measurements สำหรับ areasid เฉพาะ
+  private async loadMeasurementsForArea(areasid: string): Promise<any[]> {
+    console.log(`🔍 Loading measurements for areasid: ${areasid}`);
+    
+    // ✅ ใช้ฟังก์ชันใหม่ที่ดึงข้อมูลจาก PostgreSQL โดยใช้ API endpoints ใหม่
+    const measurements = await this.loadMeasurementsFromPostgreSQLAPI(areasid);
+    
+    console.log(`📊 Area ${areasid} measurements loaded:`, measurements.length);
+    console.log(`📊 Area ${areasid} measurement details:`, measurements.map(m => ({
+      measurementid: m['measurementid'] || m.measurementid,
+      areasid: m['areasid'] || m.areasid,
+      point_id: m['point_id'] || m.point_id,
+      lat: m['lat'] || m.lat,
+      lng: m['lng'] || m.lng,
+      deviceid: m['deviceid'] || m.deviceid
+    })));
+    
+    return measurements;
+  }
+
   async loadAreas() {
     if (!this.currentUser) {
       return;
@@ -257,12 +702,16 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     try {
       const token = await this.currentUser.getIdToken();
       
-      // ✅ ดึงข้อมูล areas ก่อน
-      let areasApiUrl = `${this.apiUrl}/api/measurements/areas/with-measurements`;
+      // ✅ ดึงข้อมูล areas ก่อน - ใช้ endpoint ที่มีอยู่จริง
+      let areasApiUrl = `${this.apiUrl}/api/areas`;
       if (this.deviceId) {
         const actualDeviceId = this.deviceMap[this.deviceId] || this.deviceId;
         areasApiUrl += `?deviceid=${actualDeviceId}`;
       }
+      
+      console.log('🔍 Areas API URL:', areasApiUrl);
+      console.log('🔍 Device ID:', this.deviceId);
+      console.log('🔍 Actual Device ID:', this.deviceId ? (this.deviceMap[this.deviceId] || this.deviceId) : 'No device selected');
       
       const areasResponse = await lastValueFrom(
         this.http.get<any[]>(areasApiUrl, {
@@ -271,49 +720,130 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
       );
 
       if (areasResponse && Array.isArray(areasResponse)) {
-        // ✅ ดึงข้อมูล measurements ทั้งหมดจาก measurement table
-        const measurementsResponse = await lastValueFrom(
-          this.http.get<any[]>(`${this.apiUrl}/api/measurements`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
+        console.log('📊 Areas loaded from API:', areasResponse.length);
+        console.log('📊 Areas data:', areasResponse);
+        
+        // ✅ Debug: ตรวจสอบ areasid ที่มีใน areas
+        const uniqueAreasIds = [...new Set(areasResponse.map(area => area.areasid || area.id).filter(id => id != null))];
+        console.log('📊 Unique areasids in areas:', uniqueAreasIds);
+        // ✅ ดึงข้อมูล measurements จาก PostgreSQL โดยใช้ API endpoints ใหม่
+        console.log('🔍 Loading measurements from PostgreSQL API...');
+        console.log('🔍 Device ID for measurements:', this.deviceId);
+        console.log('🔍 Device Map for measurements:', this.deviceMap);
+        
+        const measurementsResponse = await this.loadMeasurementsFromPostgreSQLAPI();
+        console.log('📊 Measurements loaded:', measurementsResponse.length);
+        console.log('📊 Measurements data:', measurementsResponse);
+        
+        console.log('📊 Measurements loaded from API:', measurementsResponse.length);
+        console.log('📊 Measurements data:', measurementsResponse);
+        
+        // ✅ Debug: ตรวจสอบการโหลด measurements ทั้งหมด (ลด log ที่ซ้ำ)
+        console.log('🔍 All measurements before filtering:', measurementsResponse.length);
+        
+        // ✅ Debug: ตรวจสอบ areasid ที่มีใน measurements
+        const allMeasurementAreasids = measurementsResponse.map(m => m['areasid'] || m.areasid).filter(id => id != null);
+        const allAreaAreasids = areasResponse.map(area => area.areasid || area.id).filter(id => id != null);
+        const commonAreasids = [...new Set(allMeasurementAreasids)].filter(id => 
+          [...new Set(allAreaAreasids)].includes(id)
         );
+        console.log('🔍 Common areasids:', commonAreasids);
         
-        // All measurements loaded from API
+        // ✅ Debug: ตรวจสอบ measurement IDs และ areasid
+        console.log('📊 Looking for areasids:', uniqueAreasIds);
         
-        // Debug: ดูข้อมูล measurements ที่มี lat/lng
+        // ✅ กรอง measurements ตาม areasid ที่มีอยู่ (ลด log ที่ซ้ำ)
+        const filteredMeasurements = measurementsResponse.filter(measurement => {
+          const measurementAreasid = measurement['areasid']?.toString();
+          const match = uniqueAreasIds.includes(measurementAreasid);
+          return match;
+        });
+        
+        console.log(`📊 Filtered measurements: ${filteredMeasurements.length} out of ${measurementsResponse.length}`);
+        
+        // ✅ Debug: ตรวจสอบว่าทำไมไม่มี measurements
+        if (filteredMeasurements.length === 0) {
+          console.log('⚠️ No measurements found after filtering');
+          console.log('⚠️ Available measurements areasids:', measurementsResponse.map(m => m['areasid']));
+          console.log('⚠️ Looking for areasids:', uniqueAreasIds);
+        }
+        
+        // ✅ ลด log ที่ซ้ำ - แสดงเฉพาะข้อมูลสำคัญ
+        if (measurementsResponse.length > 0) {
+          console.log('📊 Sample measurement:', {
+            measurementid: measurementsResponse[0]['measurementid'],
+            areasid: measurementsResponse[0]['areasid'],
+            point_id: measurementsResponse[0]['point_id'],
+            deviceid: measurementsResponse[0]['deviceid']
+          });
+        }
+        
+        // ✅ ลด log ที่ซ้ำ - แสดงเฉพาะข้อมูลสำคัญ
+        const uniqueMeasurementsAreasIds = [...new Set(measurementsResponse.map(m => m.areasid).filter(id => id != null))];
+        console.log('📊 Unique areasids in measurements:', uniqueMeasurementsAreasIds);
+        
+        // ✅ ลด log ที่ซ้ำ - แสดงเฉพาะข้อมูลสำคัญ
+        const areasAreasIds = [...new Set(areasResponse.map(area => area.areasid || area.id).filter(id => id != null))];
+        const measurementsAreasIds = [...new Set(measurementsResponse.map(m => m.areasid).filter(id => id != null))];
+        console.log('📊 Areas vs Measurements areasids:', { areas: areasAreasIds, measurements: measurementsAreasIds });
+        console.log('📊 Missing areasids in measurements:', areasAreasIds.filter(id => !measurementsAreasIds.includes(id)));
+        
+        // ✅ ลด log ที่ซ้ำ - แสดงเฉพาะข้อมูลสำคัญ
         const measurementsWithCoords = measurementsResponse.filter(m => m.lat && m.lng);
-        // Measurements with coordinates processed
+        console.log('📊 Measurements with coordinates:', measurementsWithCoords.length);
         
-        // Debug: ดูข้อมูล measurements ที่มี lat/lng และไม่เป็น 0
+        // ✅ ลด log ที่ซ้ำ - แสดงเฉพาะข้อมูลสำคัญ
         const measurementsWithValidCoords = measurementsResponse.filter(m => {
           const lat = parseFloat(String(m.lat || '0'));
           const lng = parseFloat(String(m.lng || '0'));
           return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
         });
-        // Valid measurements with coordinates processed
+        console.log('📊 Valid measurements with coordinates:', measurementsWithValidCoords.length);
 
         // แปลงข้อมูลจาก Areas API เป็น format ที่ต้องการ
-        const areaGroups: AreaGroup[] = areasResponse.map(area => {
+        const areaGroups: AreaGroup[] = await Promise.all(areasResponse.map(async area => {
           const areasid = area.areasid?.toString() || area.id?.toString() || '';
+          console.log(`🔍 Processing area ${areasid}:`, area);
           
-          // ✅ กรอง measurements ที่มี areasid เดียวกันจาก measurement table
-          const areaMeasurements = measurementsResponse.filter(measurement => 
-            measurement.areasid && measurement.areasid.toString() === areasid
-          );
-
-          // Area measurements from DB processed
+        // ✅ แก้ไขการโหลด measurements - ใช้ filtered measurements และดึงเพิ่มเติมถ้าจำเป็น
+        let areaMeasurements = filteredMeasurements.filter(measurement => {
+          const measurementAreasid = measurement['areasid']?.toString();
+          const match = measurementAreasid === areasid;
+          console.log(`🔍 Area ${areasid} measurement areasid: ${measurementAreasid}, Match: ${match}`);
+          console.log(`🔍 Area ${areasid} measurement details:`, measurement);
+          return match;
+        });
+        
+        // ✅ ถ้าไม่มี measurements ใน filteredMeasurements ให้ดึงใหม่จาก API
+        if (areaMeasurements.length === 0) {
+          console.log(`⚠️ No measurements in filteredMeasurements for area ${areasid}, trying to load from API...`);
+          try {
+            const apiMeasurements = await this.loadMeasurementsForArea(areasid);
+            console.log(`📊 API measurements for area ${areasid}:`, apiMeasurements.length);
+            if (apiMeasurements.length > 0) {
+              areaMeasurements = apiMeasurements;
+              console.log(`✅ Successfully loaded ${apiMeasurements.length} measurements from API for area ${areasid}`);
+            }
+          } catch (error) {
+            console.error(`❌ Error loading measurements from API for area ${areasid}:`, error);
+          }
+        }
           
-          // Debug: ดูข้อมูล measurements ที่มี lat/lng สำหรับ area นี้
+          console.log(`📊 Area ${areasid} measurements loaded:`, areaMeasurements.length);
+          
+          // ✅ Debug: ตรวจสอบว่าทำไมไม่มี measurements สำหรับ area นี้
+          if (areaMeasurements.length === 0) {
+            console.log(`⚠️ No measurements found for area ${areasid}`);
+          }
+          
+          // ✅ ลด log ที่ซ้ำ - แสดงเฉพาะข้อมูลสำคัญ
           const areaMeasurementsWithCoords = areaMeasurements.filter(m => m.lat && m.lng);
-          // Area measurements with coordinates processed
-          
-          // Debug: ดูข้อมูล measurements ที่มี lat/lng และไม่เป็น 0 สำหรับ area นี้
           const areaMeasurementsWithValidCoords = areaMeasurements.filter(m => {
             const lat = parseFloat(String(m.lat || '0'));
             const lng = parseFloat(String(m.lng || '0'));
             return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
           });
-          // Area measurements with valid coordinates processed
+          console.log(`📊 Area ${areasid} valid coordinates:`, areaMeasurementsWithValidCoords.length);
 
           // ✅ คำนวณขนาดพื้นที่จาก polygon bounds
           const areaSize = this.calculateAreaFromBounds(area.polygon_bounds || []);
@@ -331,9 +861,9 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
           
           // Area backend data processed
           
-          return {
+          const areaGroup = {
             areasid: areasid,
-            areaName: area.area_name || 'ไม่ระบุพื้นที่',
+            areaName: area.area_name || area.name || area.location || `พื้นที่ ${areasid}`,
             measurements: areaMeasurements,
             totalMeasurements: areaMeasurements.length,
             averages: averages,
@@ -341,17 +871,68 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
               ? areaMeasurements[0].createdAt || areaMeasurements[0].date || area.created_at || ''
               : area.created_at || ''
           };
-        });
+          
+          console.log(`✅ Created area group for ${areasid}:`, areaGroup);
+          console.log(`✅ Area group measurements:`, areaGroup.measurements);
+          console.log(`✅ Area group measurement IDs:`, areaGroup.measurements.map(m => m['measurementid'] || m['id'] || m['measurement_id']));
+          
+          // ✅ Debug: ตรวจสอบ measurementid ใน area group
+          areaGroup.measurements.forEach((measurement, index) => {
+            console.log(`✅ Area Group ${areasid} Measurement ${index + 1}:`, {
+              measurementid: measurement.measurementid,
+              id: measurement.id,
+              measurement_id: measurement.measurement_id,
+              areasid: measurement.areasid,
+              point_id: measurement.point_id,
+              lat: measurement.lat,
+              lng: measurement.lng
+            });
+          });
+          
+          return areaGroup;
+        }));
         
         this.areas = areaGroups;
         this.areaGroups = areaGroups;
         
-        // Cache the areas data for better performance
-        localStorage.setItem(areasCacheKey, JSON.stringify({
+        console.log('🎯 Final areaGroups:', areaGroups);
+        console.log('🎯 AreaGroups length:', areaGroups.length);
+        console.log('🎯 AreaGroups details:', areaGroups.map(ag => ({
+          areasid: ag.areasid,
+          areaName: ag.areaName,
+          measurementsCount: ag.measurements.length,
+          measurementIds: ag.measurements.map(m => m['measurementid'] || m['id'] || m['measurement_id'])
+        })));
+        
+        // ✅ Debug: ตรวจสอบการแสดงผลในหน้าเว็บ
+        console.log('🌐 Frontend Display Check:');
+        console.log('🌐 areaGroups.length:', areaGroups.length);
+        console.log('🌐 areaGroups[0]?.measurements?.length:', areaGroups[0]?.measurements?.length);
+        console.log('🌐 areaGroups[0]?.measurements:', areaGroups[0]?.measurements);
+        console.log('🌐 Device ID for display:', this.deviceId);
+        console.log('🌐 Device Map for display:', this.deviceMap);
+        console.log('🌐 Username for display:', this.username);
+        console.log('🌐 UserName for display:', this.userName);
+        console.log('🌐 UserEmail for display:', this.userEmail);
+        
+        this.areas = areaGroups;
+        this.areaGroups = areaGroups;
+        
+        // ✅ Cache the areas data for better performance - รวมข้อมูลทั้งหมด
+        const cacheData = {
+          username: this.username,
+          userName: this.userName,
+          userEmail: this.userEmail,
+          devices: this.devices,
+          deviceId: this.deviceId,
+          deviceMap: this.deviceMap,
           areas: areaGroups,
           areaGroups: areaGroups,
           timestamp: Date.now()
-        }));
+        };
+        
+        localStorage.setItem('history-cache', JSON.stringify(cacheData));
+        console.log('💾 Areas data cached successfully:', cacheData);
         
       this.isLoading = false;
       
@@ -377,6 +958,7 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
     } catch (error: any) {
       console.error('❌ Error loading areas:', error);
       this.isLoading = false;
+      
       if (error.status === 401) {
         this.notificationService.showNotification(
           'error',
@@ -384,6 +966,19 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
           'กรุณาเข้าสู่ระบบใหม่'
         );
         this.router.navigate(['/login']);
+      } else if (error.status === 404) {
+        // ✅ ถ้า endpoint ไม่มีอยู่ ให้ลองใช้ fallback
+        console.log('🔄 Trying fallback endpoint...');
+        try {
+          await this.loadAreasAlternative();
+        } catch (fallbackError) {
+          console.error('❌ Fallback also failed:', fallbackError);
+          this.notificationService.showNotification(
+            'error',
+            'เกิดข้อผิดพลาด',
+            'ไม่สามารถโหลดข้อมูลประวัติการวัดได้ กรุณาลองใหม่อีกครั้ง'
+          );
+        }
       } else {
         this.notificationService.showNotification(
           'error',
@@ -484,17 +1079,69 @@ export class HistoryComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   // ✅ ฟังก์ชันสำหรับ format ตัวเลข
-  formatNumber(value: number, decimals: number = 2): string {
-    if (value === null || value === undefined || isNaN(value)) {
+  formatNumber(value: any, decimals: number = 2): string {
+    // ✅ แก้ไข error toFixed - ตรวจสอบค่าให้ครบถ้วน
+    if (value === null || value === undefined) {
       return '0.00';
     }
-    return value.toFixed(decimals);
+    
+    // ✅ แปลงเป็น number ก่อน
+    const numValue = Number(value);
+    
+    // ✅ ตรวจสอบว่าเป็น number ที่ถูกต้อง
+    if (isNaN(numValue)) {
+      console.warn('⚠️ formatNumber: Invalid number value:', value);
+      return '0.00';
+    }
+    
+    // ✅ ตรวจสอบว่าเป็น finite number
+    if (!isFinite(numValue)) {
+      console.warn('⚠️ formatNumber: Non-finite number value:', value);
+      return '0.00';
+    }
+    
+    try {
+      return numValue.toFixed(decimals);
+    } catch (error) {
+      console.error('❌ formatNumber error:', error, 'value:', value, 'type:', typeof value);
+      return '0.00';
+    }
   }
   viewAreaDetails(area: AreaGroup) {
+    console.log('🗺️ viewAreaDetails called with area:', area);
+    console.log('🗺️ Area measurements count:', area.measurements?.length);
+    console.log('🗺️ Area measurements data:', area.measurements);
+    
+    // ✅ Debug: ตรวจสอบการแสดงรายการ measurements (ลด log ที่ซ้ำ)
+    if (area.measurements && area.measurements.length > 0) {
+      console.log('📊 Measurements to display:', area.measurements.length);
+      // แสดงเฉพาะ measurement แรกเป็นตัวอย่าง
+      if (area.measurements[0]) {
+        console.log('📊 Sample measurement:', {
+          measurementid: area.measurements[0]['measurementid'],
+          areasid: area.measurements[0]['areasid'],
+          point_id: area.measurements[0]['point_id']
+        });
+      }
+    } else {
+      console.log('⚠️ No measurements to display for area:', area.areasid);
+    }
+    
     this.selectedArea = area;
     this.showAreaDetails = true;
+    console.log('🗺️ showAreaDetails set to true');
+    
+    // ✅ Debug: ตรวจสอบการแสดงผลในหน้าเว็บ
+    console.log('🌐 Frontend Display Status:');
+    console.log('🌐 isLoading:', this.isLoading);
+    console.log('🌐 showAreaDetails:', this.showAreaDetails);
+    console.log('🌐 areaGroups.length:', this.areaGroups.length);
+    console.log('🌐 selectedArea:', this.selectedArea);
+    console.log('🌐 selectedArea.measurements?.length:', this.selectedArea?.measurements?.length);
+    
     // แสดงแผนที่หลังจาก DOM อัปเดต
     setTimeout(() => {
+      console.log('🗺️ Calling showMapInAreaDetails after timeout');
       this.showMapInAreaDetails();
     }, 200);
   }
@@ -939,20 +1586,36 @@ pH: ${measurement.ph}
   }
   // ✅ ฟังก์ชันแสดงแผนที่ในรายละเอียดพื้นที่
   showMapInAreaDetails() {
-    if (!this.selectedArea || !this.selectedArea.measurements.length) {
+    console.log('🗺️ showMapInAreaDetails called');
+    console.log('🗺️ selectedArea:', this.selectedArea);
+    
+    if (!this.selectedArea) {
+      console.log('⚠️ No selectedArea');
       return;
     }
+    
+    // ✅ แสดงแผนที่แม้ไม่มี measurements
+    if (!this.selectedArea.measurements.length) {
+      console.log('⚠️ No measurements, showing empty map');
+      this.showEmptyMap();
+      return;
+    }
+    
+    console.log('🗺️ measurements:', this.selectedArea.measurements);
     
     // ใช้ setTimeout เพื่อให้ DOM อัปเดตก่อน
     setTimeout(() => {
       const mapContainer = document.querySelector('#mapContainer') as HTMLElement;
+      console.log('🗺️ mapContainer:', mapContainer);
+      
       if (!mapContainer) {
-        // Map container not found
+        console.log('❌ Map container not found');
         return;
       }
       
       // ล้างแผนที่เก่า (ถ้ามี)
       mapContainer.innerHTML = '';
+      console.log('🗺️ Map container cleared');
       
       // Creating MapTiler map
       
@@ -960,7 +1623,7 @@ pH: ${measurement.ph}
       
       // Debug: ดูข้อมูล measurements ที่มี lat/lng
       const measurementsWithCoords = this.selectedArea!.measurements.filter(m => m.lat && m.lng);
-      // Measurements with coordinates processed for map
+      console.log('🗺️ measurementsWithCoords:', measurementsWithCoords.length);
       
       // Debug: ดูข้อมูล measurements ที่มี lat/lng และไม่เป็น 0
       const measurementsWithValidCoords = this.selectedArea!.measurements.filter(m => {
@@ -968,7 +1631,7 @@ pH: ${measurement.ph}
         const lng = parseFloat(String(m.lng || '0'));
         return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
       });
-      // Valid measurements with coordinates processed
+      console.log('🗺️ measurementsWithValidCoords:', measurementsWithValidCoords.length);
       
       // คำนวณจุดกึ่งกลางของพื้นที่
       const validMeasurements = this.selectedArea!.measurements.filter(m => {
@@ -977,12 +1640,10 @@ pH: ${measurement.ph}
         return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
       });
       
-      // Valid measurements found for map
-      
-      // Measurements being sent to map
+      console.log('🗺️ validMeasurements:', validMeasurements.length);
       
       if (validMeasurements.length === 0) {
-        // No valid measurements with coordinates
+        console.log('⚠️ No valid measurements with coordinates, showing simple map');
         this.showSimpleMap(mapContainer);
         return;
       }
@@ -990,112 +1651,230 @@ pH: ${measurement.ph}
       const centerLat = validMeasurements.reduce((sum, m) => sum + parseFloat(String(m.lat || '0')), 0) / validMeasurements.length;
       const centerLng = validMeasurements.reduce((sum, m) => sum + parseFloat(String(m.lng || '0')), 0) / validMeasurements.length;
       
-      // Map center calculated
+      console.log('🗺️ Map center:', [centerLng, centerLat]);
       
       // สร้างแผนที่แบบ MapTiler SDK - ใช้พิกัดจากหน้า measurement
-      this.map = new Map({
-        container: mapContainer,
-        style: `https://api.maptiler.com/maps/satellite/style.json?key=${environment.mapTilerApiKey}`,
-        center: [103.2501379, 16.2464504], // ✅ ใช้พิกัดจากหน้า measurement (คณะวิทยาการสารสนเทศ มหาวิทยาลัยมหาสารคาม)
-        zoom: 17, // ✅ ขยายให้เห็นรายละเอียดของคณะ
-        pitch: 0,
-        bearing: 0
-      });
-      
-      const bounds = new LngLatBounds();
-      let hasPoint = false;
-      
-      // สร้าง markers สำหรับแต่ละจุดวัด
-      const markers: any[] = [];
-      validMeasurements.forEach((measurement, index) => {
-        // ✅ ใช้พิกัดจริงจาก database แทนพิกัดปลอม
-        const lat = parseFloat(String(measurement.lat || '0'));
-        const lng = parseFloat(String(measurement.lng || '0'));
+      try {
+        this.map = new Map({
+          container: mapContainer,
+          style: `https://api.maptiler.com/maps/satellite/style.json?key=${environment.mapTilerApiKey}`,
+          center: [centerLng, centerLat], // ✅ ใช้พิกัดที่คำนวณได้
+          zoom: 17, // ✅ ขยายให้เห็นรายละเอียดของคณะ
+          pitch: 0,
+          bearing: 0
+        });
         
-        // Processing measurement for marker
+        console.log('🗺️ Map created successfully');
         
-        // ✅ ตรวจสอบพิกัดจริงจาก database
-        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-          // สร้าง marker แบบ MapTiler SDK
-          const marker = new Marker({ 
-            color: '#4ecdc4',
-            scale: 1.2
-          }).setLngLat([lng, lat]).addTo(this.map!);
+        const bounds = new LngLatBounds();
+        let hasPoint = false;
+        
+        // สร้าง markers สำหรับแต่ละจุดวัด
+        const markers: any[] = [];
+        console.log('🗺️ Creating markers for validMeasurements:', validMeasurements.length);
+        validMeasurements.forEach((measurement, index) => {
+          // ✅ ใช้พิกัดจริงจาก database แทนพิกัดปลอม
+          const lat = parseFloat(String(measurement.lat || '0'));
+          const lng = parseFloat(String(measurement.lng || '0'));
           
-          // Marker created
+          console.log(`🗺️ Processing measurement ${index + 1}:`, { 
+            lat, 
+            lng, 
+            measurementid: measurement['measurementid'],
+            areasid: measurement['areasid'],
+            point_id: measurement['point_id'],
+            temperature: measurement['temperature'],
+            moisture: measurement['moisture']
+          });
           
-          // เพิ่ม popup แบบเรียบง่าย - Simple Clean Design
-          marker.setPopup(new Popup({
+          // ✅ ตรวจสอบพิกัดจริงจาก database
+          if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+            // สร้าง marker แบบ MapTiler SDK
+            const marker = new Marker({ 
+              color: '#4ecdc4',
+              scale: 1.5
+            }).setLngLat([lng, lat]).addTo(this.map!);
+            
+            console.log(`🗺️ Marker ${index + 1} created at:`, [lng, lat]);
+            
+            // เพิ่ม popup แบบเรียบง่าย - Simple Clean Design
+            marker.setPopup(new Popup({
+              offset: [0, -15],
+              closeButton: true,
+              closeOnClick: false,
+              maxWidth: '300px',
+              className: 'simple-popup'
+            }).setHTML(`
+                <div style="font-family: Arial, sans-serif; padding: 10px;">
+                  <div style="font-weight: bold; margin-bottom: 8px; font-size: 13px;">
+                    จุดวัดที่ ${measurement['point_id'] || index + 1}
+                  </div>
+                  
+                  <div style="font-size: 11px; line-height: 1.6;">
+                    <div>อุณหภูมิ: ${this.formatNumber(parseFloat(String(measurement['temperature'] || '0')) || 0)}°C</div>
+                    <div>ความชื้น: ${this.formatNumber(parseFloat(String(measurement['moisture'] || '0')) || 0)}%</div>
+                    <div>pH: ${this.formatNumber(parseFloat(String(measurement['ph'] || '0')) || 0, 1)}</div>
+                    <div>ไนโตรเจน: ${this.formatNumber(parseFloat(String(measurement['nitrogen'] || '0')) || 0)}</div>
+                    <div>ฟอสฟอรัส: ${this.formatNumber(parseFloat(String(measurement['phosphorus'] || '0')) || 0)}</div>
+                    <div>โพแทสเซียม: ${this.formatNumber(parseFloat(String(measurement['potassium'] || '0')) || 0)}</div>
+                    
+                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd;">
+                      <div>วันที่: ${measurement['measurement_date'] || 'ไม่ระบุ'}</div>
+                      <div>เวลา: ${measurement['measurement_time'] || 'ไม่ระบุ'}</div>
+                      <div style="font-size: 10px; color: #666; margin-top: 4px;">
+                        ${lat.toFixed(6)}, ${lng.toFixed(6)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `));
+            
+            bounds.extend([lng, lat]);
+            hasPoint = true;
+            markers.push(marker);
+            console.log(`🗺️ Marker ${index + 1} added to map`);
+          }
+        });
+        
+        // เก็บ reference ของ markers
+        this.markers = markers;
+        console.log('🗺️ Total markers created:', markers.length);
+        
+        this.map.once('load', () => {
+          console.log('🗺️ Map loaded');
+          if (hasPoint) {
+            console.log('🗺️ Fitting bounds');
+            this.map!.fitBounds(bounds, { padding: 40, maxZoom: 17, duration: 0 });
+          }
+        });
+        
+        console.log('🗺️ MapTiler map initialized successfully');
+        
+      } catch (error) {
+        console.error('❌ Error creating map:', error);
+        this.showSimpleMap(mapContainer);
+      }
+      
+    }, 100);
+  }
+
+  // ✅ ฟังก์ชันแสดงแผนที่ว่าง (เมื่อไม่มี measurements)
+  showEmptyMap() {
+    console.log('🗺️ showEmptyMap called');
+    
+    setTimeout(() => {
+      const mapContainer = document.querySelector('#mapContainer') as HTMLElement;
+      console.log('🗺️ mapContainer for empty map:', mapContainer);
+      
+      if (!mapContainer) {
+        console.log('❌ Map container not found for empty map');
+        return;
+      }
+      
+      // ล้างแผนที่เก่า (ถ้ามี)
+      mapContainer.innerHTML = '';
+      console.log('🗺️ Map container cleared for empty map');
+      
+      try {
+        // สร้างแผนที่แบบ MapTiler SDK - ใช้พิกัดเริ่มต้น
+        this.map = new Map({
+          container: mapContainer,
+          style: `https://api.maptiler.com/maps/satellite/style.json?key=${environment.mapTilerApiKey}`,
+          center: [103.25013790, 16.24645040], // ✅ พิกัดเริ่มต้น
+          zoom: 15, // ✅ ขยายให้เห็นพื้นที่
+          pitch: 0,
+          bearing: 0
+        });
+        
+        console.log('🗺️ Empty map created successfully');
+        
+        // เพิ่มข้อความแจ้งเตือน
+        this.map.once('load', () => {
+          console.log('🗺️ Empty map loaded');
+          
+          // สร้าง marker แสดงข้อความแจ้งเตือน
+          const infoMarker = new Marker({ 
+            color: '#ff9800',
+            scale: 1.5
+          }).setLngLat([103.25013790, 16.24645040]).addTo(this.map!);
+          
+          infoMarker.setPopup(new Popup({
             offset: [0, -15],
             closeButton: true,
             closeOnClick: false,
             maxWidth: '300px',
-            className: 'simple-popup'
+            className: 'info-popup'
           }).setHTML(`
-              <div style="font-family: Arial, sans-serif; padding: 10px;">
-                <div style="font-weight: bold; margin-bottom: 8px; font-size: 13px;">
-                  จุดวัดที่ ${measurement.measurementPoint || index + 1}
-                </div>
-                
-                <div style="font-size: 11px; line-height: 1.6;">
-                  <div>อุณหภูมิ: ${this.formatNumber(parseFloat(String(measurement.temperature || '0')) || 0)}°C</div>
-                  <div>ความชื้น: ${this.formatNumber(parseFloat(String(measurement.moisture || '0')) || 0)}%</div>
-                  <div>pH: ${this.formatNumber(parseFloat(String(measurement.ph || '0')) || 0, 1)}</div>
-                  <div>ไนโตรเจน: ${this.formatNumber(parseFloat(String(measurement.nitrogen || '0')) || 0)}</div>
-                  <div>ฟอสฟอรัส: ${this.formatNumber(parseFloat(String(measurement.phosphorus || '0')) || 0)}</div>
-                  <div>โพแทสเซียม: ${this.formatNumber(parseFloat(String(measurement.potassium || '0')) || 0)}</div>
-                  
-                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd;">
-                    <div>วันที่: ${measurement['measurement_date'] || 'ไม่ระบุ'}</div>
-                    <div>เวลา: ${measurement['measurement_time'] || 'ไม่ระบุ'}</div>
-                    <div style="font-size: 10px; color: #666; margin-top: 4px;">
-                      ${lat.toFixed(6)}, ${lng.toFixed(6)}
-                    </div>
-                  </div>
+            <div style="font-family: Arial, sans-serif; padding: 15px; text-align: center;">
+              <div style="font-weight: bold; margin-bottom: 10px; font-size: 14px; color: #ff9800;">
+                <i class="fas fa-info-circle"></i> ไม่มีข้อมูลการวัด
+              </div>
+              <div style="font-size: 12px; line-height: 1.6; color: #666;">
+                <div>พื้นที่: ${this.selectedArea?.areaName || 'ไม่ระบุ'}</div>
+                <div>จำนวนจุดวัด: 0 จุด</div>
+                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd;">
+                  <div>กรุณาไปที่หน้าวัดค่าเพื่อเพิ่มข้อมูลการวัด</div>
                 </div>
               </div>
-            `));
+            </div>
+          `));
           
-          bounds.extend([lng, lat]);
-          hasPoint = true;
-          markers.push(marker);
-          // Marker added to map
-        }
-      });
-      
-      // เก็บ reference ของ markers
-      this.markers = markers;
-      
-      this.map.once('load', () => {
-        if (hasPoint) {
-        // Map bounds calculated
-          this.map!.fitBounds(bounds, { padding: 40, maxZoom: 17, duration: 0 });
-        }
-      });
-      
-      // MapTiler map initialized
-        // Map bounds calculated
+          // เปิด popup โดยอัตโนมัติ
+          infoMarker.togglePopup();
+        });
+        
+        console.log('🗺️ Empty map initialized successfully');
+        
+      } catch (error) {
+        console.error('❌ Error creating empty map:', error);
+        this.showSimpleMap(mapContainer);
+      }
       
     }, 100);
   }
+
   // ✅ ฟังก์ชันแสดงแผนที่แบบง่าย (เมื่อไม่มี Leaflet)
   showSimpleMap(container: HTMLElement) {
+    console.log('🗺️ showSimpleMap called');
+    console.log('🗺️ container:', container);
+    
     const measurements = this.selectedArea!.measurements;
+    console.log('🗺️ measurements for simple map:', measurements);
+    
     let mapHtml = '<div style="background: #f0f0f0; padding: 20px; border-radius: 8px;">';
     mapHtml += '<h4>จุดวัดในพื้นที่</h4>';
-    measurements.forEach((measurement, index) => {
-      if (measurement.lat && measurement.lng) {
-        mapHtml += `
-          <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 5px; border-left: 4px solid #4CAF50;">
-            <strong>จุดที่ ${measurement.measurementPoint || index + 1}</strong><br>
-            <small>พิกัด: ${measurement.lat}, ${measurement.lng}</small><br>
-            <small>วันที่: ${new Date(measurement.date).toLocaleDateString('th-TH')}</small>
-          </div>
-        `;
-      }
-    });
+    
+    if (measurements.length === 0) {
+      mapHtml += '<p>ไม่มีข้อมูลการวัดในพื้นที่นี้</p>';
+    } else {
+      measurements.forEach((measurement, index) => {
+        console.log(`🗺️ Processing measurement ${index + 1} for simple map:`, measurement);
+        
+        if (measurement.lat && measurement.lng) {
+          mapHtml += `
+            <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 5px; border-left: 4px solid #4CAF50;">
+              <strong>จุดที่ ${measurement.measurementPoint || index + 1}</strong><br>
+              <small>พิกัด: ${measurement.lat}, ${measurement.lng}</small><br>
+              <small>วันที่: ${measurement['measurement_date'] || measurement.date || 'ไม่ระบุ'}</small><br>
+              <small>อุณหภูมิ: ${this.formatNumber(parseFloat(String(measurement.temperature || '0')) || 0)}°C</small><br>
+              <small>ความชื้น: ${this.formatNumber(parseFloat(String(measurement.moisture || '0')) || 0)}%</small>
+            </div>
+          `;
+        } else {
+          mapHtml += `
+            <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 5px; border-left: 4px solid #ff9800;">
+              <strong>จุดที่ ${measurement.measurementPoint || index + 1}</strong><br>
+              <small>ไม่มีข้อมูลพิกัด</small><br>
+              <small>วันที่: ${measurement['measurement_date'] || measurement.date || 'ไม่ระบุ'}</small>
+            </div>
+          `;
+        }
+      });
+    }
+    
     mapHtml += '</div>';
     container.innerHTML = mapHtml;
+    console.log('🗺️ Simple map HTML set');
   }
   
   // ✅ คำนวณพื้นที่จาก polygon bounds
@@ -1182,24 +1961,68 @@ pH: ${measurement.ph}
     };
   }
 
+  // ✅ ฟังก์ชันทดสอบข้อมูล measurements
+  testMeasurementsData() {
+    console.log('🧪 Testing measurements data...');
+    console.log('🧪 selectedArea:', this.selectedArea);
+    
+    if (this.selectedArea && this.selectedArea.measurements) {
+      console.log('🧪 measurements count:', this.selectedArea.measurements.length);
+      this.selectedArea.measurements.forEach((measurement, index) => {
+        console.log(`🧪 Measurement ${index + 1}:`, {
+          measurementid: measurement['measurementid'],
+          id: measurement['id'],
+          measurement_id: measurement['measurement_id'],
+          areasid: measurement['areasid'],
+          point_id: measurement['point_id'],
+          lat: measurement['lat'],
+          lng: measurement['lng'],
+          temperature: measurement['temperature'],
+          moisture: measurement['moisture'],
+          ph: measurement['ph'],
+          nitrogen: measurement['nitrogen'],
+          phosphorus: measurement['phosphorus'],
+          potassium: measurement['potassium'],
+          measurement_date: measurement['measurement_date'],
+          measurement_time: measurement['measurement_time']
+        });
+      });
+    } else {
+      console.log('🧪 No measurements data found');
+    }
+  }
+
   // ✅ แสดงช่วง Measurement ID
   getMeasurementIdRange(area: AreaGroup): string {
+    console.log('🔍 getMeasurementIdRange called for area:', area.areasid);
+    console.log('🔍 area.measurements:', area.measurements);
+    
     if (!area.measurements || area.measurements.length === 0) {
+      console.log('⚠️ No measurements found');
       return 'ไม่มีข้อมูล';
     }
 
     const measurementIds = area.measurements
-      .map(m => m['measurementid'] || m['id'])
+      .map(m => {
+        console.log('🔍 Processing measurement:', m);
+        const id = m['measurementid'] || m['id'] || m['measurement_id'];
+        console.log('🔍 Found ID:', id);
+        console.log('🔍 Measurement object keys:', Object.keys(m));
+        console.log('🔍 Measurement object values:', Object.values(m));
+        return id;
+      })
       .filter(id => id != null && id !== 'null' && id !== 'undefined' && id !== '')
       .sort((a, b) => Number(a) - Number(b));
 
-    // Area measurements processed
+    console.log('🔍 Filtered measurement IDs:', measurementIds);
 
     if (measurementIds.length === 0) {
+      console.log('⚠️ No valid measurement IDs found');
       return 'ไม่มี ID';
     }
 
     if (measurementIds.length === 1) {
+      console.log('✅ Single measurement ID:', measurementIds[0]);
       return measurementIds[0].toString();
     }
 
@@ -1207,9 +2030,11 @@ pH: ${measurement.ph}
     const maxId = measurementIds[measurementIds.length - 1];
     
     if (minId === maxId) {
+      console.log('✅ Same measurement ID:', minId);
       return minId.toString();
     }
 
+    console.log('✅ Measurement ID range:', `${minId}-${maxId}`);
     return `${minId}-${maxId}`;
   }
 }

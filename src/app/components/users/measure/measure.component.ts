@@ -20,6 +20,7 @@ import { Database, ref, onValue, off } from '@angular/fire/database';
 import { Auth, onAuthStateChanged } from '@angular/fire/auth';
 import { NotificationService } from '../../../service/notification.service';
 import { DeviceService, SelectedDeviceData } from '../../../service/device.service';
+import { AuthService } from '../../../service/auth.service';
 interface UserData {
   username: string;
   userID: string;
@@ -113,6 +114,9 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
   showMeasurementPoints = false; // ✅ แสดงจุดที่ต้องวัด
   measuredPoints: number[] = []; // ✅ จุดที่วัดแล้ว
   currentPointIndex = 0; // ✅ จุดที่กำลังวัด
+  selectedPointIndex: number | null = null; // ✅ จุดที่เลือกอยู่
+  pointSelectionEnabled: boolean = true; // ✅ เปิดใช้งานการเลือกจุด
+  currentMeasuringPoint: number | null = null; // ✅ จุดที่กำลังวัด
   deviceMarker: any = null; // ✅ Marker ของอุปกรณ์
   measurementMarkers: any[] = []; // ✅ Markers ของจุดวัด
   // ✅ Firebase live data properties
@@ -131,6 +135,10 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
   showDeviceInfo = false;
   showMainMap = false;
   showCardMenu = false;
+  
+  // ✅ Measurement status properties
+  isWaitingForStable = false;
+  countdownSeconds = 0;
   map: Map | undefined;
   @ViewChild('mapContainer') mapContainer!: ElementRef<HTMLElement>;
   private apiUrl: string;
@@ -144,6 +152,7 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     private constants: Constants,
     private database: Database,
     private auth: Auth,
+    private authService: AuthService,
     private notificationService: NotificationService,
     private deviceService: DeviceService
   ) {
@@ -195,8 +204,8 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     });
   }
-  ngAfterViewInit() {
-    this.initializeMap();
+  async ngAfterViewInit() {
+    await this.initializeMap();
     // ✅ เริ่มต้นแผนที่ใน popup เมื่อ popup แสดง
     if (this.showPopup) {
       this.initializePopupMap();
@@ -392,50 +401,379 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     const rounded = Math.round(value * Math.pow(10, decimals)) / Math.pow(10, decimals);
     return Math.min(Math.max(rounded, -maxValue), maxValue);
   }
+  
+  // ✅ แสดงตำแหน่ง ESP32 บนแผนที่
+  addESP32MarkerToMap(lat: number, lng: number, pointNumber: number, measurementData: any) {
+    if (!this.map) {
+      console.error('❌ Map not initialized');
+      return;
+    }
+    
+    console.log(`📍 Adding ESP32 marker for point ${pointNumber} at:`, { lat, lng });
+    
+    // สร้าง popup HTML สำหรับแสดงข้อมูลการวัด
+    const popupHTML = `
+      <div class="esp32-marker-popup">
+        <h4 class="popup-title">📍 จุดที่ ${pointNumber}</h4>
+        <div class="popup-subtitle">🛰️ ตำแหน่ง GPS จาก ESP32</div>
+        <div class="popup-content">
+          <div class="popup-section">
+            <div class="popup-label">📍 พิกัด GPS:</div>
+            <div class="popup-value">
+              <strong>Lat:</strong> ${lat.toFixed(8)}<br>
+              <strong>Lng:</strong> ${lng.toFixed(8)}
+            </div>
+          </div>
+          <div class="popup-section">
+            <div class="popup-label">🌡️ ข้อมูลการวัด:</div>
+            <div class="popup-value">
+              <strong>อุณหภูมิ:</strong> ${measurementData.temperature?.toFixed(1) || 'N/A'}°C<br>
+              <strong>ความชื้น:</strong> ${measurementData.moisture?.toFixed(1) || 'N/A'}%<br>
+              <strong>pH:</strong> ${measurementData.ph?.toFixed(2) || 'N/A'}
+            </div>
+          </div>
+          <div class="popup-section">
+            <div class="popup-label">🌱 ธาตุอาหารพืช:</div>
+            <div class="popup-value">
+              <strong>N:</strong> ${measurementData.nitrogen?.toFixed(0) || 'N/A'} mg/kg<br>
+              <strong>P:</strong> ${measurementData.phosphorus?.toFixed(0) || 'N/A'} mg/kg<br>
+              <strong>K:</strong> ${measurementData.potassium?.toFixed(0) || 'N/A'} mg/kg
+            </div>
+          </div>
+          <div class="popup-footer">
+            <small>⏱️ ${new Date().toLocaleString('th-TH')}</small>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // สร้าง marker element
+    const markerEl = document.createElement('div');
+    markerEl.className = 'esp32-marker';
+    markerEl.innerHTML = `
+      <div class="marker-icon">
+        <svg width="40" height="40" viewBox="0 0 40 40">
+          <circle cx="20" cy="20" r="18" fill="#4CAF50" stroke="#fff" stroke-width="3"/>
+          <text x="20" y="26" text-anchor="middle" fill="#fff" font-size="16" font-weight="bold">${pointNumber}</text>
+        </svg>
+      </div>
+    `;
+    
+    // เพิ่ม animation
+    markerEl.style.animation = 'marker-bounce 0.6s ease-out';
+    
+    // สร้าง marker
+    const marker = new Marker({ element: markerEl })
+      .setLngLat([lng, lat])
+      .setPopup(new Popup({ offset: 25 }).setHTML(popupHTML))
+      .addTo(this.map);
+    
+    // เก็บ marker ไว้ใน array
+    this.measurementMarkers.push(marker);
+    
+    console.log(`✅ ESP32 marker added for point ${pointNumber}`);
+    
+    // ✅ ปรับ map view ให้เห็น marker ใหม่
+    this.map.flyTo({
+      center: [lng, lat],
+      zoom: 17,
+      duration: 1500,
+      essential: true
+    });
+  }
+  
+  // ✅ ลบ markers ทั้งหมดออกจากแผนที่
+  clearESP32Markers() {
+    if (this.measurementMarkers && this.measurementMarkers.length > 0) {
+      console.log(`🗑️ Removing ${this.measurementMarkers.length} ESP32 markers`);
+      this.measurementMarkers.forEach(marker => marker.remove());
+      this.measurementMarkers = [];
+    }
+  }
+  
+  // ✅ รอรับข้อมูลการวัดจาก ESP32 ผ่าน Firebase
+  async waitForESP32Measurement(pointNumber: number): Promise<any> {
+    const timeout = 300000; // 5 minutes timeout
+    const pollInterval = 2000; // ตรวจสอบทุก 2 วินาที
+    const startTime = Date.now();
+    
+    console.log(`⏳ Waiting for ESP32 measurement at point ${pointNumber}...`);
+    
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(async () => {
+        const elapsedTime = Date.now() - startTime;
+        
+        // Check timeout
+        if (elapsedTime > timeout) {
+          console.error(`❌ Timeout waiting for ESP32 measurement at point ${pointNumber}`);
+          clearInterval(checkInterval);
+          resolve(null);
+          return;
+        }
+        
+        try {
+          // ดึงข้อมูลจาก Firebase /measurements/{deviceId}
+          const token = await this.currentUser.getIdToken();
+          const response: any = await lastValueFrom(
+            this.http.get(`${this.apiUrl}/api/realtime/live-measurements/${this.deviceId}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            })
+          );
+          
+          console.log(`📊 Firebase data check for point ${pointNumber}:`, response);
+          
+          // ตรวจสอบว่า ESP32 วัดเสร็จแล้วหรือยัง (finished = true)
+          if (response && response.finished === true) {
+            console.log(`✅ ESP32 finished measuring point ${pointNumber}`);
+            clearInterval(checkInterval);
+            resolve(response);
+            return;
+          }
+          
+          // แสดงความคืบหน้า
+          const progress = response?.progress || 0;
+          console.log(`📈 Measurement progress for point ${pointNumber}: ${progress}%`);
+          
+        } catch (error: any) {
+          console.error(`❌ Error checking Firebase for point ${pointNumber}:`, error);
+          // ไม่ resolve เพื่อให้ลองใหม่ในรอบถัดไป
+        }
+      }, pollInterval);
+    });
+  }
+  
   // ✅ เริ่มต้นการเชื่อมต่อ Firebase
   initializeFirebaseConnection() {
     if (!this.currentUser) {
       console.error('❌ No current user for Firebase connection');
       return;
     }
+    
     // ✅ ปิดการเชื่อมต่อเดิมก่อน (ถ้ามี)
     if (this.liveDataSubscription) {
       try {
         off(this.liveDataSubscription);
       } catch (error) {
+        console.error('❌ Error unsubscribing from Firebase:', error);
       }
       this.liveDataSubscription = null;
     }
-    // ✅ เชื่อมต่อกับ Firebase Realtime Database - table live
-    const liveDataRef = ref(this.database, 'live');
+    
+    // ✅ เชื่อมต่อกับ Firebase Realtime Database - ใช้ device-specific path
+    if (this.deviceId) {
+      console.log('🔗 Connecting to Firebase for device:', this.deviceId);
+      
+      // ลองหลาย path ที่เป็นไปได้ รวมถึง measurement
+      const possiblePaths = [
+        `live/${this.deviceId}`,
+        `live/esp32-soil-${this.deviceId}`,
+        `live/esp32-soil-001`,
+        `devices/${this.deviceId}`,
+        `Devices/${this.deviceId}`,
+        `measurement/${this.deviceId}`,
+        `measurements/${this.deviceId}`,
+        `live`,
+        `devices`,
+        `Devices`,
+        `measurement`,
+        `measurements`
+      ];
+      
+      // เชื่อมต่อกับ path แรกที่ทำงาน
+      this.tryConnectToFirebasePaths(possiblePaths, 0);
+    } else {
+      console.log('⚠️ No deviceId available for Firebase connection');
+      // ลองเชื่อมต่อกับ path ทั่วไป
+      this.tryConnectToFirebasePaths(['live', 'devices', 'Devices', 'measurement', 'measurements'], 0);
+    }
+  }
+  
+  // ✅ ลองเชื่อมต่อกับ Firebase paths หลายตัว
+  private tryConnectToFirebasePaths(paths: string[], index: number) {
+    if (index >= paths.length) {
+      console.log('❌ All Firebase paths failed');
+      this.isLiveDataConnected = false;
+      return;
+    }
+    
+    const currentPath = paths[index];
+    console.log(`🔄 Trying Firebase path: ${currentPath}`);
+    
+    const liveDataRef = ref(this.database, currentPath);
     this.liveDataSubscription = onValue(liveDataRef, (snapshot) => {
       try {
         const data = snapshot.val();
+        console.log(`📊 Firebase data from ${currentPath}:`, data);
+        
         if (data) {
-          this.liveData = data;
-          this.isLiveDataConnected = true;
-          // ✅ อัปเดตค่าการวัดใน UI
-          this.updateMeasurementValues(data);
-        } else {
-          this.isLiveDataConnected = false;
+          // ถ้าเป็น object ที่มี deviceId หลายตัว ให้หา device ที่ตรงกัน
+          if (typeof data === 'object' && !data.deviceId) {
+            // หา device ที่ตรงกับ deviceId ปัจจุบัน
+            const deviceData = this.findDeviceDataInFirebase(data, this.deviceId!);
+            if (deviceData) {
+              this.liveData = deviceData;
+              this.isLiveDataConnected = true;
+              this.updateMeasurementValues(deviceData);
+              console.log('✅ Found device data in Firebase:', deviceData);
+              return;
+            }
+            
+            // ✅ ลองหาข้อมูล measurement ล่าสุด
+            const latestMeasurement = this.findLatestMeasurement(data, this.deviceId!);
+            if (latestMeasurement) {
+              this.liveData = latestMeasurement;
+              this.isLiveDataConnected = true;
+              this.updateMeasurementValues(latestMeasurement);
+              console.log('✅ Found latest measurement in Firebase:', latestMeasurement);
+              return;
+            }
+          } else if (data.deviceId === this.deviceId || !this.deviceId) {
+            // ข้อมูลตรงกับ device หรือไม่มี deviceId
+            this.liveData = data;
+            this.isLiveDataConnected = true;
+            this.updateMeasurementValues(data);
+            console.log('✅ Connected to Firebase successfully:', data);
+            return;
+          }
         }
+        
+        // ถ้าไม่เจอข้อมูล ลอง path ถัดไป
+        this.tryConnectToFirebasePaths(paths, index + 1);
+        
       } catch (error) {
-        console.error('❌ Error processing Firebase data:', error);
-        this.isLiveDataConnected = false;
+        console.error(`❌ Error processing Firebase data from ${currentPath}:`, error);
+        this.tryConnectToFirebasePaths(paths, index + 1);
       }
     }, (error) => {
-      console.error('❌ Firebase connection error:', error);
-      this.isLiveDataConnected = false;
+      console.error(`❌ Firebase connection error for ${currentPath}:`, error);
+      this.tryConnectToFirebasePaths(paths, index + 1);
     });
+  }
+  
+  // ✅ หาข้อมูล device ใน Firebase data
+  private findDeviceDataInFirebase(firebaseData: any, deviceId: string): any {
+    console.log('🔍 Searching for device data in Firebase:', firebaseData);
+    console.log('🔍 Looking for deviceId:', deviceId);
+    
+    // ลองหาในหลายรูปแบบ
+    const possibleKeys = [
+      deviceId,
+      `device_${deviceId}`,
+      `esp32_${deviceId}`,
+      `soil_${deviceId}`,
+      `esp32-soil-${deviceId}`,
+      `device_${deviceId}`,
+      `Device_${deviceId}`,
+      'esp32-soil-001'  // ✅ เพิ่ม key สำหรับ live data
+    ];
+    
+    for (const key of possibleKeys) {
+      if (firebaseData[key]) {
+        console.log(`✅ Found device data with key: ${key}`);
+        return firebaseData[key];
+      }
+    }
+    
+    // ลองหาใน array หรือ object ที่มี deviceId
+    for (const key in firebaseData) {
+      const item = firebaseData[key];
+      if (item && typeof item === 'object') {
+        // ตรวจสอบหลาย field ที่อาจเป็น deviceId
+        const deviceFields = ['deviceId', 'device_id', 'deviceid', 'id', 'device_name'];
+        
+        for (const field of deviceFields) {
+          if (item[field] === deviceId || item[field] === parseInt(deviceId)) {
+            console.log(`✅ Found device data in object with key: ${key}, field: ${field}`);
+            return item;
+          }
+        }
+        
+        // ตรวจสอบว่าเป็น device name ที่ตรงกันหรือไม่
+        if (item.device_name && item.device_name.includes(deviceId)) {
+          console.log(`✅ Found device data by name with key: ${key}`);
+          return item;
+        }
+        
+        // ✅ ตรวจสอบ esp32-soil-001 โดยตรง
+        if (item.deviceId === 'esp32-soil-001' || item.deviceName === 'esp32-soil-001') {
+          console.log(`✅ Found esp32-soil-001 data with key: ${key}`);
+          return item;
+        }
+      }
+    }
+    
+    console.log('❌ No device data found in Firebase');
+    return null;
+  }
+  
+  // ✅ หาข้อมูล measurement ล่าสุดใน Firebase
+  private findLatestMeasurement(firebaseData: any, deviceId: string): any {
+    console.log('🔍 Searching for latest measurement in Firebase:', firebaseData);
+    console.log('🔍 Looking for deviceId:', deviceId);
+    
+    let latestMeasurement = null;
+    let latestTimestamp = 0;
+    
+    // ลองหาในหลายรูปแบบ
+    for (const key in firebaseData) {
+      const item = firebaseData[key];
+      if (item && typeof item === 'object') {
+        // ตรวจสอบว่าเป็น measurement หรือไม่
+        if (item.deviceid === parseInt(deviceId) || item.deviceId === deviceId || item.device_id === deviceId) {
+          // ตรวจสอบ timestamp
+          const timestamp = item.timestamp || item.created_at || item.updated_at || 0;
+          if (timestamp > latestTimestamp) {
+            latestTimestamp = timestamp;
+            latestMeasurement = item;
+            console.log(`✅ Found measurement with timestamp: ${timestamp}`);
+          }
+        }
+        
+        // ลองหาใน nested object
+        if (item.measurements && Array.isArray(item.measurements)) {
+          for (const measurement of item.measurements) {
+            if (measurement.deviceid === parseInt(deviceId) || measurement.deviceId === deviceId) {
+              const timestamp = measurement.timestamp || measurement.created_at || measurement.updated_at || 0;
+              if (timestamp > latestTimestamp) {
+                latestTimestamp = timestamp;
+                latestMeasurement = measurement;
+                console.log(`✅ Found measurement in array with timestamp: ${timestamp}`);
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    if (latestMeasurement) {
+      console.log('✅ Found latest measurement:', latestMeasurement);
+    } else {
+      console.log('❌ No measurement found in Firebase');
+    }
+    
+    return latestMeasurement;
   }
   // ✅ อัปเดตค่าการวัดใน UI
   updateMeasurementValues(data: FirebaseLiveData) {
+    console.log('🔄 Updating measurement values:', data);
+    
     this.temperature = data.temperature || 0;
     this.moisture = data.moisture || 0;
     this.nitrogen = data.nitrogen || 0;
     this.phosphorus = data.phosphorus || 0;
     this.potassium = data.potassium || 0;
     this.ph = data.ph || 0;
+    
+    console.log('📊 Updated values:', {
+      temperature: this.temperature,
+      moisture: this.moisture,
+      nitrogen: this.nitrogen,
+      phosphorus: this.phosphorus,
+      potassium: this.potassium,
+      ph: this.ph
+    });
     
     // ✅ อัปเดตตำแหน่งอุปกรณ์บนแผนที่
     if (data.latitude && data.longitude) {
@@ -748,53 +1086,35 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       );
       this.measurements = response || [];
       this.measurementCount = this.measurements.length;
-      this.initializeMap();
+      await this.initializeMap();
     } catch (error) {
       console.error('Error loading measurements:', error);
       this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการโหลดข้อมูล');
     }
   }
   async saveMeasurement() {
+    if (this.isLoading) return;
+    
     // ตรวจสอบ device status
     if (!this.deviceId) {
       this.notificationService.showNotification('error', 'ไม่พบอุปกรณ์', 'กรุณาเลือกอุปกรณ์ก่อนบันทึกข้อมูล');
       return;
     }
-    if (this.deviceStatus === 'offline') {
-      this.notificationService.showNotification('error', 'อุปกรณ์ออฟไลน์', 'อุปกรณ์ที่เลือกอยู่ในสถานะออฟไลน์ กรุณาเลือกอุปกรณ์ที่ออนไลน์');
-      return;
-    }
+    
     // ตรวจสอบ live data
     if (!this.liveData) {
       this.notificationService.showNotification('error', 'ไม่พบข้อมูลเซ็นเซอร์', 'ไม่พบข้อมูลการวัดจากเซ็นเซอร์ กรุณาตรวจสอบการเชื่อมต่อ');
       return;
     }
-    // ตรวจสอบว่ามีจุดวัดหรือไม่
-    if (this.measurementPoints.length === 0) {
-      this.notificationService.showNotification('error', 'ไม่มีจุดวัด', 'กรุณาเลือกพื้นที่วัดก่อน');
-      return;
-    }
-    // ✅ สำหรับ test devices เท่านั้น ให้สร้างข้อมูลปลอม
-    const isTestDevice = this.deviceName && this.deviceName.toLowerCase().includes('test');
-    if (isTestDevice) {
-      this.generateFakeSensorData();
-    } else {
-      // ตรวจสอบข้อมูลเซ็นเซอร์สำหรับ production devices
-      if (this.liveData.temperature === undefined || 
-          this.liveData.moisture === undefined || 
-          this.liveData.nitrogen === undefined || 
-          this.liveData.phosphorus === undefined || 
-          this.liveData.potassium === undefined || 
-          this.liveData.ph === undefined) {
-        this.notificationService.showNotification('error', 'ข้อมูลเซ็นเซอร์ไม่ครบถ้วน', 'ข้อมูลจากเซ็นเซอร์ไม่ครบถ้วน กรุณารอให้เซ็นเซอร์ส่งข้อมูลครบก่อน');
-        return;
-      }
-    }
+    
     if (!this.currentUser) {
       console.error('❌ No current user found');
       this.notificationService.showNotification('error', 'ไม่พบข้อมูลผู้ใช้', 'ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่');
       return;
     }
+    
+    this.isLoading = true;
+    
     try {
       const token = await this.currentUser.getIdToken();
       if (!token) {
@@ -802,27 +1122,348 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
         this.notificationService.showNotification('error', 'ไม่สามารถรับ Token', 'ไม่สามารถรับ Token จาก Firebase กรุณาเข้าสู่ระบบใหม่');
         return;
       }
-      // ✅ วัดทีละจุดและบันทึกเข้าสู่ PostgreSQL
-      await this.measureAllPoints(token);
+      
+      // ✅ แสดงข้อความรอการวัด
+      this.notificationService.showNotification(
+        'info', 
+        'กำลังวัดค่า', 
+        'กำลังรอให้ค่าคงที่ 2-3 วินาที...'
+      );
+      
+      // ✅ รอให้ค่าคงที่ 2-3 วินาที
+      await this.waitForStableValues();
+      
+      // ✅ บันทึกค่าจาก Firebase live ลง PostgreSQL
+      await this.saveCurrentLiveDataToPostgreSQL(token);
+      
     } catch (error: any) {
       console.error('❌ Error saving measurement:', error);
-      // แสดง error details
+      console.error('❌ Error details:', {
+        status: error.status,
+        statusText: error.statusText,
+        message: error.message,
+        error: error.error
+      });
+      
       if (error.status === 400) {
         console.error('❌ Bad Request - Validation Error:', error.error);
         this.notificationService.showNotification('error', 'ข้อมูลไม่ถูกต้อง', `ข้อมูลไม่ถูกต้อง: ${error.error?.message || 'กรุณาตรวจสอบข้อมูลที่กรอก'}`);
       } else if (error.status === 401) {
         console.error('❌ Unauthorized - Token Error:', error.error);
         this.notificationService.showNotification('error', 'ไม่ได้รับอนุญาต', 'กรุณาเข้าสู่ระบบใหม่');
+      } else if (error.status === 404) {
+        console.error('❌ Not Found - API Endpoint Error:', error.error);
+        this.notificationService.showNotification('error', 'ไม่พบ API', 'ไม่พบ API endpoint กรุณาตรวจสอบการตั้งค่า');
       } else if (error.status === 500) {
         console.error('❌ Server Error:', error.error);
         this.notificationService.showNotification('error', 'ข้อผิดพลาดเซิร์ฟเวอร์', 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์ กรุณาลองใหม่อีกครั้ง');
       } else {
         console.error('❌ Unknown Error:', error);
-        this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่อีกครั้ง');
+        this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', `เกิดข้อผิดพลาดในการบันทึก: ${error.message || 'กรุณาลองใหม่อีกครั้ง'}`);
       }
+    } finally {
+      this.isLoading = false;
     }
   }
-  // ✅ วัดทีละจุดและบันทึกเข้าสู่ PostgreSQL
+  
+  // ✅ เลือกจุดในแผนที่แบบง่ายๆ
+  selectPoint(pointIndex: number) {
+    if (pointIndex < 0 || pointIndex >= this.measurementPoints.length) {
+      return;
+    }
+    
+    this.selectedPointIndex = pointIndex;
+    console.log(`📍 Selected point ${pointIndex + 1}:`, this.measurementPoints[pointIndex]);
+    
+    // ✅ อัปเดตสีของ marker ทั้งหมด
+    this.updateMarkerColors();
+  }
+  
+  // ✅ โหลดข้อมูลการวัดที่เสร็จแล้วจากฐานข้อมูล
+  private async loadCompletedMeasurements() {
+    if (!this.currentAreaId || !this.deviceId) {
+      console.log('⚠️ No areaId or deviceId available for loading measurements');
+      return;
+    }
+    
+    try {
+      const token = await this.auth.currentUser?.getIdToken();
+      if (!token) {
+        console.log('⚠️ No token available for loading measurements');
+        return;
+      }
+      
+      // ✅ ดึงข้อมูลการวัดจากฐานข้อมูล
+      const response = await lastValueFrom(
+        this.http.get<any[]>(`${this.apiUrl}/api/measurements?areaid=${this.currentAreaId}&deviceid=${this.deviceId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      );
+      
+      if (response && Array.isArray(response)) {
+        console.log('📊 Loaded measurements from database:', response.length);
+        
+        // ✅ ตรวจสอบว่าจุดไหนวัดแล้วโดยเปรียบเทียบพิกัด
+        const measuredIndices: number[] = [];
+        
+        for (let i = 0; i < this.measurementPoints.length; i++) {
+          const [pointLng, pointLat] = this.measurementPoints[i];
+          
+          // ✅ หาการวัดที่มีพิกัดใกล้เคียงกับจุดนี้
+          const matchingMeasurement = response.find(measurement => {
+            const measurementLat = parseFloat(measurement.lat);
+            const measurementLng = parseFloat(measurement.lng);
+            
+            // ✅ เปรียบเทียบพิกัด (ใช้ tolerance 0.0001)
+            const latDiff = Math.abs(pointLat - measurementLat);
+            const lngDiff = Math.abs(pointLng - measurementLng);
+            
+            return latDiff < 0.0001 && lngDiff < 0.0001;
+          });
+          
+          if (matchingMeasurement) {
+            measuredIndices.push(i);
+            console.log(`✅ Point ${i + 1} has been measured (${matchingMeasurement.lat}, ${matchingMeasurement.lng})`);
+          }
+        }
+        
+        // ✅ อัปเดต measuredPoints
+        this.measuredPoints = measuredIndices;
+        console.log('✅ Updated measuredPoints:', this.measuredPoints);
+      }
+    } catch (error) {
+      console.error('❌ Error loading completed measurements:', error);
+    }
+  }
+  
+  // ✅ อัปเดตสีของ marker ทั้งหมด
+  private updateMarkerColors() {
+    if (!this.map) return;
+    
+    console.log('🎨 Updating marker colors...');
+    console.log('📍 Selected point index:', this.selectedPointIndex);
+    console.log('✅ Measured points:', this.measuredPoints);
+    
+    // ✅ หา markers ทั้งหมดและอัปเดตสี
+    const markers = this.map.getContainer().querySelectorAll('.maplibregl-marker');
+    console.log('🔍 Found markers:', markers.length);
+    
+    markers.forEach((markerElement: any, index: number) => {
+      if (index < this.measurementPoints.length) {
+        const isMeasured = this.measuredPoints.includes(index);
+        const isSelected = this.selectedPointIndex === index;
+        
+        // ✅ เลือกสีตามสถานะ
+        let color = '#6c757d'; // เทา - ปกติ
+        if (isSelected) {
+          color = '#dc3545'; // แดง - เลือกอยู่
+        } else if (isMeasured) {
+          color = '#28a745'; // เขียว - วัดแล้ว
+        }
+        
+        console.log(`🎨 Marker ${index + 1}: selected=${isSelected}, measured=${isMeasured}, color=${color}`);
+        
+        // ✅ อัปเดตสีของ marker
+        const markerIcon = markerElement.querySelector('svg');
+        if (markerIcon) {
+          markerIcon.style.fill = color;
+          console.log(`✅ Updated marker ${index + 1} color to ${color}`);
+        } else {
+          console.log(`❌ No SVG found for marker ${index + 1}`);
+        }
+      }
+    });
+  }
+  
+  // ✅ วัดค่าจุดที่เลือก
+  async measureSelectedPoint() {
+    if (this.selectedPointIndex === null) {
+      this.notificationService.showNotification('warning', 'กรุณาเลือกจุด', 'กรุณาคลิกเลือกจุดในแผนที่ก่อน');
+      return;
+    }
+    
+    if (this.measuredPoints.includes(this.selectedPointIndex)) {
+      this.notificationService.showNotification('info', 'จุดนี้วัดแล้ว', 'จุดนี้ได้รับการวัดแล้ว');
+      return;
+    }
+    
+    try {
+      this.isLoading = true;
+      this.currentMeasuringPoint = this.selectedPointIndex;
+      
+      const token = await this.auth.currentUser?.getIdToken();
+      if (!token) {
+        throw new Error('No authentication token');
+      }
+      
+      console.log(`🎯 Measuring selected point ${this.selectedPointIndex + 1}`);
+      
+      // ✅ รอให้ค่าคงที่ 2-3 วินาที
+      await this.waitForStableValues();
+      
+      // ✅ บันทึกค่าจาก Firebase live ลง PostgreSQL
+      await this.saveCurrentLiveDataToPostgreSQL(token);
+      
+      // ✅ เพิ่มจุดนี้ในรายการที่วัดแล้ว
+      this.measuredPoints.push(this.selectedPointIndex);
+      
+      // ✅ อัปเดตสีของ marker ทั้งหมด
+      this.updateMarkerColors();
+      
+      // ✅ แสดงข้อความสำเร็จ
+      const [lng, lat] = this.measurementPoints[this.selectedPointIndex];
+      this.notificationService.showNotification(
+        'success',
+        'วัดจุดสำเร็จ',
+        `จุดที่ ${this.selectedPointIndex + 1} วัดเสร็จแล้ว\nพิกัด: ${lat.toFixed(6)}, ${lng.toFixed(6)}`
+      );
+      
+      // ✅ เลือกจุดถัดไป (ถ้ามี)
+      this.selectNextAvailablePoint();
+      
+    } catch (error: any) {
+      console.error('❌ Error measuring selected point:', error);
+      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการวัดจุด กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      this.isLoading = false;
+      this.currentMeasuringPoint = null;
+    }
+  }
+  
+  // ✅ เลือกจุดถัดไปที่ยังไม่ได้วัด
+  private selectNextAvailablePoint() {
+    for (let i = 0; i < this.measurementPoints.length; i++) {
+      if (!this.measuredPoints.includes(i)) {
+        this.selectPoint(i);
+        return;
+      }
+    }
+    
+    // ✅ ถ้าวัดครบทุกจุดแล้ว
+    if (this.measuredPoints.length === this.measurementPoints.length) {
+      this.notificationService.showNotification(
+        'success',
+        'วัดครบทุกจุดแล้ว',
+        `วัดครบทุกจุดแล้ว (${this.measurementPoints.length} จุด) - กำลังไปที่หน้า History...`
+      );
+      this.selectedPointIndex = null;
+      
+      // ✅ นำทางไปหน้า history หลังจาก 2 วินาที
+      setTimeout(() => {
+        this.router.navigate(['/users/history']);
+      }, 2000);
+    }
+  }
+  
+  
+  // ✅ รอให้ค่าคงที่ 2-3 วินาที
+  private async waitForStableValues(): Promise<void> {
+    return new Promise((resolve) => {
+      const startTime = Date.now();
+      const waitTime = 3000; // 3 วินาที
+      
+      this.isWaitingForStable = true;
+      this.countdownSeconds = 3;
+      
+      console.log('⏳ Waiting for stable values...');
+      
+      // ✅ แสดงข้อความนับถอยหลัง
+      const countdownInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, waitTime - elapsed);
+        const seconds = Math.ceil(remaining / 1000);
+        
+        this.countdownSeconds = seconds;
+        
+        if (seconds > 0) {
+          console.log(`⏳ Waiting... ${seconds} seconds remaining`);
+        }
+      }, 1000);
+      
+      // ✅ รอ 3 วินาที
+      setTimeout(() => {
+        clearInterval(countdownInterval);
+        this.isWaitingForStable = false;
+        this.countdownSeconds = 0;
+        console.log('✅ Values should be stable now');
+        resolve();
+      }, waitTime);
+    });
+  }
+  
+  // ✅ บันทึกค่าจาก Firebase live ลง PostgreSQL
+  private async saveCurrentLiveDataToPostgreSQL(token: string): Promise<void> {
+    // ✅ 1) guard ข้อมูลอ้างอิง
+    if (this.selectedPointIndex == null || this.selectedPointIndex < 0) {
+      throw new Error('No point selected for measurement');
+    }
+    if (!this.currentAreaId) {
+      throw new Error('No area ID available');
+    }
+    if (!this.measurementPoints || !this.measurementPoints[this.selectedPointIndex]) {
+      throw new Error('No coordinates for selected point');
+    }
+    if (!this.liveData) {
+      throw new Error('No live data available');
+    }
+
+    // ✅ 2) ดึงพิกัดจากจุดที่เลือก (GeoJSON-like: [lng, lat])
+    const [lngRaw, latRaw] = this.measurementPoints[this.selectedPointIndex];
+
+    // ✅ 3) จำกัดความละเอียด และแปลงเป็น string เพื่อเข้ากับคอลัมน์ TEXT ใน Postgres
+    const lat = this.limitPrecision(Number(latRaw), 8);
+    const lng = this.limitPrecision(Number(lngRaw), 8);
+    const latText = String(lat);
+    const lngText = String(lng);
+
+    // ✅ 4) สร้าง payload ครบถ้วน
+    const measurementData = {
+      deviceid: parseInt(this.deviceId || '0', 10),
+      areaid: parseInt(String(this.currentAreaId), 10),   // FK -> areas.areasid
+      point_id: this.selectedPointIndex + 1,              // 1-based index
+      lat: latText,                                       // TEXT
+      lng: lngText,                                       // TEXT
+      temperature: this.limitPrecision(this.liveData?.temperature ?? 0, 2),
+      moisture: this.limitPrecision(this.liveData?.moisture ?? 0, 2),
+      nitrogen:  this.limitPrecision(this.liveData?.nitrogen ?? 0, 2),
+      phosphorus:this.limitPrecision(this.liveData?.phosphorus ?? 0, 2),
+      potassium: this.limitPrecision(this.liveData?.potassium ?? 0, 2),
+      ph:        this.limitPrecision(this.liveData?.ph ?? 7.0, 2),
+      measured_at: new Date().toISOString(),              // ใช้ชื่อกลาง ๆ ให้ backend map เป็น measurement_date/time
+    };
+
+    console.log('📊 Measurement data to save:', measurementData);
+    console.log('🔗 API URL:', `${this.apiUrl}/api/firebase-measurements/save-current-live`);
+    console.log('🔑 Token:', token ? 'Present' : 'Missing');
+
+    // ✅ 5) ส่งเข้า API
+    const response = await lastValueFrom(
+      this.http.post(`${this.apiUrl}/api/firebase-measurements/save-current-live`, measurementData, {
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` 
+        }
+      })
+    );
+
+    console.log('✅ Live data saved to PostgreSQL:', response);
+
+    // ✅ 6) แจ้งเตือนแบบมีบริบทจุดวัด
+    this.notificationService.showNotification(
+      'success',
+      'บันทึกข้อมูลสำเร็จ',
+      `บันทึกค่าจาก ESP32 สำเร็จ!
+📍 จุดที่ ${this.selectedPointIndex + 1} (Area: ${this.currentAreaId})
+🌍 พิกัด: ${lat.toFixed(6)}, ${lng.toFixed(6)}
+🌡️ Temp: ${measurementData.temperature}°C | 💧 Moist: ${measurementData.moisture}%
+🧪 pH: ${measurementData.ph}
+📊 N:${measurementData.nitrogen} P:${measurementData.phosphorus} K:${measurementData.potassium}`
+    );
+
+    console.log('📊 Measurement data saved:', measurementData);
+  }
+  
+  // ✅ วัดทีละจุดและบันทึกเข้าสู่ PostgreSQL (รอค่าจาก Firebase/ESP32)
   async measureAllPoints(token: string) {
     let successCount = 0;
     let errorCount = 0;
@@ -847,41 +1488,60 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       
       // วัดทีละจุด
       for (let i = 0; i < this.measurementPoints.length; i++) {
-        const [lng, lat] = this.measurementPoints[i];
+        const [targetLng, targetLat] = this.measurementPoints[i];
         
-        // แสดงการแจ้งเตือนกำลังวัดจุดนี้
+        console.log(`📍 Target point ${i + 1}:`, { targetLat, targetLng });
+        
+        // ✅ รอค่าจาก Firebase/ESP32
         this.notificationService.showNotification(
           'info', 
-          '⏳ กำลังวัด...', 
-          `กำลังวัดจุดที่ ${i + 1}/${this.measurementPoints.length}\nพิกัด: ${lat.toFixed(8)}, ${lng.toFixed(8)}`
+          '⏳ รอข้อมูลจาก ESP32...', 
+          `กำลังรอข้อมูลการวัดจุดที่ ${i + 1}/${this.measurementPoints.length}\nกรุณารอ ESP32 ทำการวัด...`
         );
         
-        // ✅ ดึงพิกัดจริงจาก MapTiler โดยตรง
-        const realLng = parseFloat(lng.toFixed(8)); // precision 8 ตำแหน่งทศนิยม
-        const realLat = parseFloat(lat.toFixed(8)); // precision 8 ตำแหน่งทศนิยม
+        // รอให้ ESP32 วัดและส่งข้อมูลมา (ตรวจสอบว่า finished = true)
+        const measurementFromESP32 = await this.waitForESP32Measurement(i + 1);
         
-        console.log(`🗺️ MapTiler real coordinates for point ${i + 1}:`, {
-          original_lng: lng,
-          original_lat: lat,
-          real_lng: realLng,
-          real_lat: realLat,
-          precision: '8 decimal places',
-          accuracy: '~0.00111 mm'
+        if (!measurementFromESP32) {
+          console.error(`❌ Timeout waiting for ESP32 measurement at point ${i + 1}`);
+          errorCount++;
+          
+          this.notificationService.showNotification(
+            'error',
+            '⏱️ หมดเวลารอ',
+            `ไม่ได้รับข้อมูลจาก ESP32 สำหรับจุดที่ ${i + 1}\nกรุณาตรวจสอบการเชื่อมต่อ`
+          );
+          
+          continue; // ข้ามไปจุดถัดไป
+        }
+        
+        console.log(`✅ Received measurement from ESP32 for point ${i + 1}:`, measurementFromESP32);
+        
+        // ✅ ใช้พิกัด GPS จริงจาก ESP32 (ไม่ใช่จาก MapTiler)
+        const gpsLat = measurementFromESP32.lat || measurementFromESP32.latitude || targetLat;
+        const gpsLng = measurementFromESP32.lng || measurementFromESP32.longitude || targetLng;
+        
+        console.log(`🛰️ GPS from ESP32 for point ${i + 1}:`, {
+          gpsLat,
+          gpsLng,
+          targetLat,
+          targetLng,
+          source: 'ESP32 GPS Module'
         });
         
-        // สร้างข้อมูล measurement สำหรับจุดนี้ - ใช้พิกัดจริงจาก MapTiler
+        // สร้างข้อมูล measurement สำหรับจุดนี้ - ใช้ค่าจาก ESP32
         const measurementData = {
           deviceId: this.deviceId,
-          temperature: this.limitPrecision(this.liveData?.temperature || 0, 2),
-          moisture: this.limitPrecision(this.liveData?.moisture || 0, 2),
-          nitrogen: this.limitPrecision(this.liveData?.nitrogen || 0, 2),
-          phosphorus: this.limitPrecision(this.liveData?.phosphorus || 0, 2),
-          potassium: this.limitPrecision(this.liveData?.potassium || 0, 2), // ✅ ใช้ potassium
-          ph: this.limitPrecision(this.liveData?.ph || 7.0, 2),
-          lat: realLat, // ✅ พิกัดจริงจาก MapTiler (precision 8)
-          lng: realLng, // ✅ พิกัดจริงจาก MapTiler (precision 8)
-          measurementPoint: i + 1, // เพิ่ม measurementPoint
-          areaId: this.currentAreaId // ✅ ใช้ areaId แทน areasid
+          temperature: this.limitPrecision(measurementFromESP32.temperature || 0, 2),
+          moisture: this.limitPrecision(measurementFromESP32.moisture || 0, 2),
+          nitrogen: this.limitPrecision(measurementFromESP32.nitrogen || 0, 2),
+          phosphorus: this.limitPrecision(measurementFromESP32.phosphorus || 0, 2),
+          potassium: this.limitPrecision(measurementFromESP32.potassium || 0, 2),
+          ph: this.limitPrecision(measurementFromESP32.ph || 7.0, 2),
+          lat: this.limitPrecision(gpsLat, 8), // ✅ ใช้ GPS จาก ESP32 (precision 8)
+          lng: this.limitPrecision(gpsLng, 8), // ✅ ใช้ GPS จาก ESP32 (precision 8)
+          measurementPoint: i + 1,
+          areaId: this.currentAreaId
         };
         
         console.log(`📊 Measurement data for point ${i + 1}:`, measurementData);
@@ -913,6 +1573,9 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
           // อัปเดตจุดที่วัดแล้ว
           this.markPointAsMeasured(i);
           
+          // ✅ แสดงตำแหน่ง ESP32 บนแผนที่
+          this.addESP32MarkerToMap(gpsLat, gpsLng, i + 1, measurementFromESP32);
+          
         } catch (pointError: any) {
           console.error(`❌ Error measuring point ${i + 1}:`, pointError);
           errorCount++;
@@ -941,7 +1604,7 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
         
         // เด้งไปหน้า history หลังจาก 3 วินาที
         setTimeout(() => {
-          this.router.navigate(['/history']);
+          this.router.navigate(['/users/history']);
         }, 3000);
       } else {
         this.notificationService.showNotification('error', 'วัดไม่สำเร็จ', 'ไม่สามารถวัดจุดใดได้ กรุณาลองใหม่');
@@ -973,7 +1636,7 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     this.measurements.push(newMeasurement);
     this.measurementCount++;
     await this.updateAreaStatistics();
-    this.initializeMap();
+    await this.initializeMap();
     this.notificationService.showNotification('success', 'บันทึกสำเร็จ', 'บันทึกข้อมูลการวัดเรียบร้อยแล้ว');
   }
   // ✅ สร้าง area พร้อม measurements
@@ -1001,7 +1664,7 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     );
     // อัปเดต UI
     this.measurementCount += this.selectedPoints.length;
-    this.initializeMap();
+    await this.initializeMap();
     this.notificationService.showNotification(
       'success', 
       'สร้างพื้นที่สำเร็จ', 
@@ -1028,7 +1691,7 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       this.currentAreaId = newArea.id;
       this.currentArea = newArea;
       this.areaName = '';
-      this.initializeMap();
+      await this.initializeMap();
     } catch (error) {
       console.error('Error creating area:', error);
       this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการสร้างพื้นที่');
@@ -1102,23 +1765,23 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
 • ค่า pH: ${s.ph}`;
     this.notificationService.showNotification('info', 'สถิติพื้นที่', statsMessage);
   }
-  startNewArea() {
+  async startNewArea() {
     if (this.measurementCount > 0) {
       const confirmReset = window.confirm(
         `คุณมีข้อมูลการวัด ${this.measurementCount} จุดในพื้นที่ "${this.areaName}"\nต้องการเริ่มพื้นที่ใหม่หรือไม่?`
       );
       if (!confirmReset) return;
     }
-    this.reopenPopup();
+    await this.reopenPopup();
   }
-  private reopenPopup() {
+  private async reopenPopup() {
     this.currentAreaId = null;
     this.currentArea = null;
     this.measurements = [];
     this.measurementCount = 0;
     this.areaName = '';
     this.customLocationName = '';
-    this.initializeMap();
+    await this.initializeMap();
   }
   closePopup() { 
     this.showPopup = false; 
@@ -1221,15 +1884,33 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     // ✅ สร้างจุดที่ต้องวัดภายในพื้นที่
     this.generateMeasurementPoints();
+    console.log('🎯 After generateMeasurementPoints:', {
+      measurementPointsLength: this.measurementPoints.length,
+      showMeasurementPoints: this.showMeasurementPoints
+    });
+    
     // ✅ สร้างข้อมูลใน table areas ทันที
     await this.createAreaImmediately();
     this.showPopup = false;
     this.isSelectingArea = false;
     this.showMeasurementPoints = true;
+    
+    console.log('🎯 After setting showMeasurementPoints:', {
+      showMeasurementPoints: this.showMeasurementPoints,
+      measurementPointsLength: this.measurementPoints.length
+    });
+    
     // ✅ แสดงแผนที่หลักและจุดวัด
     this.showMainMap = true;
-    setTimeout(() => {
-      this.initializeMap();
+    setTimeout(async () => {
+      await this.initializeMap();
+      // ✅ โหลดข้อมูลการวัดที่เสร็จแล้ว
+      await this.loadCompletedMeasurements();
+      // ✅ อัปเดตสีของ markers
+      setTimeout(() => {
+        this.updateMarkerColors();
+      }, 500);
+      console.log('🎯 Measurement points already created in initializeMap');
     }, 100);
     // คำนวณพื้นที่
     const area = this.calculateSimpleArea(this.selectedPoints);
@@ -1243,48 +1924,129 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
       console.error('❌ No current user or device ID for area creation');
       return;
     }
+    
     try {
-      const token = await this.currentUser.getIdToken();
+      // ✅ Get fresh token from Firebase
+      const token = await this.currentUser.getIdToken(true); // force refresh
+      
+      console.log('🔑 Firebase token obtained:', {
+        tokenLength: token?.length || 0,
+        tokenStart: token?.substring(0, 20) + '...',
+        userId: this.currentUser.uid,
+        email: this.currentUser.email
+      });
+      
       // คำนวณพื้นที่
       const area = this.calculateSimpleArea(this.selectedPoints);
       const areaFormatted = this.formatAreaToThaiUnits(area);
-      const areaData = {
+      
+      console.log('📍 Creating area:', {
         area_name: `พื้นที่วัด ${new Date().toLocaleDateString('th-TH')} - ${areaFormatted}`,
-        deviceId: this.deviceId,
-        measurements: [] // ยังไม่มี measurements ตอนนี้
-      };
-      // แสดงขนาดพื้นที่ที่แม่นยำ
-      const response = await lastValueFrom(
-        this.http.post(`${this.apiUrl}/api/measurements/create-area`, areaData, {
-          headers: {
-            'Authorization': `Bearer ${token}`
+        description: `พื้นที่ ${areaFormatted} สร้างโดย ${this.userName} - Device: ${this.deviceId}`,
+        apiUrl: this.apiUrl
+      });
+      
+      // ✅ สร้าง area โดยไม่ต้องมี measurementId
+      console.log('🚀 Sending POST request to:', `${this.apiUrl}/api/areas`);
+      console.log('📦 Request payload:', {
+        area_name: `พื้นที่วัด ${new Date().toLocaleDateString('th-TH')} - ${areaFormatted}`,
+        description: `พื้นที่ ${areaFormatted} สร้างโดย ${this.userName} - Device: ${this.deviceId}`
+      });
+      console.log('🔐 Request headers:', {
+        'Authorization': `Bearer ${token.substring(0, 20)}...`,
+        'Content-Type': 'application/json'
+      });
+      
+      const response: any = await lastValueFrom(
+        this.http.post(`${this.apiUrl}/api/areas`, {
+          area_name: `พื้นที่วัด ${new Date().toLocaleDateString('th-TH')} - ${areaFormatted}`,
+          description: `พื้นที่ ${areaFormatted} สร้างโดย ${this.userName} - Device: ${this.deviceId}`
+        }, {
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
         })
       );
-      // เก็บ area ID สำหรับใช้ในการบันทึก measurements
-      if (response && (response as any).areaId) {
-        this.currentAreaId = (response as any).areaId;
-        console.log('✅ Area created with areaId:', this.currentAreaId);
-      } else if (response && (response as any).areasid) {
-        this.currentAreaId = (response as any).areasid;
-        console.log('✅ Area created with areasid:', this.currentAreaId);
+      
+      console.log('✅ API response received:', response);
+      
+      // เก็บ area ID
+      if (response && response.area && response.area.area_id) {
+        this.currentAreaId = response.area.area_id;
+        console.log('✅ Area created with ID:', this.currentAreaId);
+        
+        this.notificationService.showNotification(
+          'success', 
+          'สร้างพื้นที่สำเร็จ', 
+          `สร้างพื้นที่ "${response.area.area_name}" เรียบร้อยแล้ว\nArea ID: ${this.currentAreaId}\nพร้อมสำหรับการวัด ${this.measurementPoints.length} จุด`
+        );
       } else {
-        console.error('❌ No areaId or areasid in response:', response);
+        console.error('❌ No area_id in response:', response);
+        throw new Error('Invalid response from server');
       }
-      this.notificationService.showNotification(
-        'success', 
-        'สร้างพื้นที่สำเร็จ', 
-        `สร้างพื้นที่ "${areaData.area_name}" เรียบร้อยแล้ว\nArea ID: ${this.currentAreaId}\nพร้อมสำหรับการวัด ${this.measurementPoints.length} จุด`
-      );
+      
     } catch (error: any) {
-      console.error('❌ Error creating area immediately:', error);
-      this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', 'ไม่สามารถสร้างพื้นที่ได้ กรุณาลองใหม่');
+      console.error('❌ Error creating area:', {
+        status: error.status,
+        statusText: error.statusText,
+        message: error.message,
+        error: error.error,
+        url: error.url,
+        fullError: error
+      });
+      
+      // แสดง error message ที่เจาะจง
+      let errorMessage = 'ไม่สามารถสร้างพื้นที่ได้';
+      let errorDetails = '';
+      
+      if (error.status === 401) {
+        errorMessage = 'ไม่ได้รับอนุญาต - กรุณาเข้าสู่ระบบใหม่';
+        errorDetails = error.error?.message || 'Firebase token ไม่ถูกต้องหรือหมดอายุ';
+        console.error('🔐 Authentication Error:', {
+          message: error.error?.message,
+          hint: 'Token อาจหมดอายุหรือไม่ถูกต้อง - ลอง logout แล้ว login ใหม่'
+        });
+      } else if (error.status === 400) {
+        errorMessage = 'ข้อมูลไม่ถูกต้อง';
+        errorDetails = error.error?.message || 'กรุณาตรวจสอบข้อมูล';
+      } else if (error.status === 500) {
+        errorMessage = 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์';
+        errorDetails = 'กรุณาลองใหม่อีกครั้ง หรือติดต่อผู้ดูแลระบบ';
+        console.error('🔥 Server Error:', error.error);
+      } else if (error.status === 404) {
+        errorMessage = 'ไม่พบ endpoint';
+        errorDetails = `/api/areas ไม่มีอยู่ - กรุณาติดต่อผู้ดูแลระบบ`;
+      } else if (error.status === 0) {
+        errorMessage = 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์';
+        errorDetails = 'กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต';
+      } else if (error.message) {
+        errorDetails = error.message;
+      }
+      
+      console.error('💡 Error Details:', errorDetails);
+      
+      this.notificationService.showNotification(
+        'error', 
+        errorMessage, 
+        errorDetails
+      );
     }
   }
   // ✅ สร้างจุดที่ต้องวัดภายในพื้นที่
   generateMeasurementPoints() {
-    if (this.selectedPoints.length < 3) return;
+    console.log('🎯 generateMeasurementPoints called:', {
+      selectedPointsLength: this.selectedPoints.length,
+      selectedPoints: this.selectedPoints
+    });
+    
+    if (this.selectedPoints.length < 3) {
+      console.log('❌ Not enough points to generate measurement points');
+      return;
+    }
+    
     this.measurementPoints = [];
+    console.log('🔄 Starting to generate measurement points...');
     // ✅ คำนวณขอบเขตของ polygon
     const bounds = this.calculateBounds(this.selectedPoints);
     // ✅ คำนวณขนาดพื้นที่ (เมตร)
@@ -1334,6 +2096,12 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     } else {
       this.measurementPoints = points;
     }
+    
+    console.log('✅ Measurement points generated:', {
+      totalPoints: points.length,
+      finalPoints: this.measurementPoints.length,
+      measurementPoints: this.measurementPoints
+    });
   }
   // ✅ คำนวณขอบเขตของ polygon
   calculateBounds(points: [number, number][]) {
@@ -1580,8 +2348,8 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     this.showMainMap = !this.showMainMap;
     // ✅ อัปเดตแผนที่เมื่อแสดง
     if (this.showMainMap) {
-      setTimeout(() => {
-        this.initializeMap();
+      setTimeout(async () => {
+        await this.initializeMap();
       }, 100);
     }
   }
@@ -1592,20 +2360,97 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
   closeCardMenu() {
     this.showCardMenu = false;
   }
+  
+  // ✅ แปลง timestamp เป็นรูปแบบที่อ่านง่าย
+  formatTimestamp(timestamp: number): string {
+    if (!timestamp) return 'ไม่ระบุ';
+    
+    try {
+      // ถ้า timestamp เป็นวินาที (10 หลัก) ให้แปลงเป็นมิลลิวินาที
+      const date = timestamp.toString().length === 10 
+        ? new Date(timestamp * 1000) 
+        : new Date(timestamp);
+      
+      return date.toLocaleString('th-TH', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    } catch (error) {
+      console.error('❌ Error formatting timestamp:', error);
+      return 'ไม่ระบุ';
+    }
+  }
+  
+  // ✅ ดึงตำแหน่งตาม IP address
+  private async getUserLocationByIP(): Promise<[number, number] | null> {
+    try {
+      console.log('🌍 Getting user location by IP...');
+      
+      // ใช้ IP geolocation service
+      const response = await fetch('https://ipapi.co/json/');
+      const data = await response.json();
+      
+      if (data.latitude && data.longitude) {
+        console.log('📍 User location found:', {
+          country: data.country_name,
+          city: data.city,
+          coordinates: [data.longitude, data.latitude]
+        });
+        
+        return [data.longitude, data.latitude];
+      } else {
+        console.log('⚠️ No location data from IP service');
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Error getting location by IP:', error);
+      
+      // Fallback: ลองใช้ service อื่น
+      try {
+        console.log('🔄 Trying fallback IP service...');
+        const fallbackResponse = await fetch('https://ipinfo.io/json');
+        const fallbackData = await fallbackResponse.json();
+        
+        if (fallbackData.loc) {
+          const [lat, lng] = fallbackData.loc.split(',').map(Number);
+          console.log('📍 Fallback location found:', {
+            country: fallbackData.country,
+            city: fallbackData.city,
+            coordinates: [lng, lat]
+          });
+          
+          return [lng, lat];
+        }
+      } catch (fallbackError) {
+        console.error('❌ Fallback IP service also failed:', fallbackError);
+      }
+      
+      return null;
+    }
+  }
+  
   // ========= 🔻 เพิ่มเมธอดนี้เพื่อแก้ TS2339 และจัดการแผนที่ 🔻 =========
-  private initializeMap(): void {
+  private async initializeMap(): Promise<void> {
     if (!this.mapContainer?.nativeElement) return;
     // เคลียร์แผนที่เดิม (ถ้ามี)
     if (this.map) {
       this.map.remove();
       this.map = undefined;
     }
-    // สร้างแผนที่ใหม่ - คณะวิทยาการสารสนเทศ มหาวิทยาลัยมหาสารคาม
+    
+    // ✅ ดึงตำแหน่งตาม IP address
+    const userLocation = await this.getUserLocationByIP();
+    
+    // สร้างแผนที่ใหม่ - ตำแหน่งตาม IP หรือ fallback เป็นมหาวิทยาลัยมหาสารคาม
     this.map = new Map({
       container: this.mapContainer.nativeElement,
       style: `https://api.maptiler.com/maps/satellite/style.json?key=${environment.mapTilerApiKey}`, // ✅ เปลี่ยนเป็นดาวเทียม
-      center: [103.2501379, 16.2464504], // ✅ คณะวิทยาการสารสนเทศ มหาวิทยาลัยมหาสารคาม
-      zoom: 17, // ✅ ขยายให้เห็นรายละเอียดของคณะ
+      center: userLocation || [103.2501379, 16.2464504], // ✅ ตำแหน่งตาม IP หรือ fallback
+      zoom: userLocation ? 15 : 17, // ✅ zoom ตามตำแหน่ง
     });
     const bounds = new LngLatBounds();
     let hasPoint = false;
@@ -1619,30 +2464,81 @@ export class MeasureComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     // ✅ แสดงจุดที่ต้องวัด (จุดใหม่ที่คำนวณจากพื้นที่ที่เลือก)
     if (this.showMeasurementPoints && this.measurementPoints.length > 0) {
+      console.log('🎯 Showing measurement points:', this.measurementPoints.length);
+      console.log('✅ Measured points:', this.measuredPoints);
+      
+      // ✅ โหลดข้อมูลการวัดที่เสร็จแล้วจากฐานข้อมูล
+      await this.loadCompletedMeasurements();
+      
+      // ✅ ใช้วิธีเดิมที่ทำงานได้ - สร้าง Marker แต่ละจุด
       for (let i = 0; i < this.measurementPoints.length; i++) {
         const [lng, lat] = this.measurementPoints[i];
-        // ✅ สร้าง marker สำหรับจุดวัด
+        const isMeasured = this.measuredPoints.includes(i);
+        const isSelected = this.selectedPointIndex === i;
+        const isMeasuring = this.currentMeasuringPoint === i;
+        
+        // ✅ เลือกสีตามสถานะ
+        let color = '#6c757d'; // เทา - ปกติ
+        if (isSelected) {
+          color = '#dc3545'; // แดง - เลือกอยู่
+        } else if (isMeasured) {
+          color = '#28a745'; // เขียว - วัดแล้ว
+        }
+        
+        // ✅ สร้าง marker แบบง่ายๆ
         const marker = new Marker({ 
-          color: '#4ecdc4', // สีเขียวเข้ม
-          scale: 0.8
+          color: color
         }).setLngLat([lng, lat]).addTo(this.map!);
-        // ✅ เพิ่ม popup สำหรับแสดงหมายเลขจุด
-        marker.setPopup(new Popup({
-          offset: 25,
-          closeButton: false,
-          closeOnClick: false
-        }).setHTML(`
-          <div style="text-align: center; font-weight: bold; color: #2c3e50;">
-            จุดวัดที่ ${i + 1}
-            <br>
-            <small style="color: #7f8c8d;">${lat.toFixed(8)}, ${lng.toFixed(8)}</small>
-          </div>
-        `));
+        
+        // ✅ ตั้งค่า marker ให้คลิกได้
+        marker.getElement().style.cursor = 'pointer';
+        marker.getElement().style.pointerEvents = 'auto';
+        
+        // ✅ ตั้งค่า SVG ให้คลิกได้
+        const svg = marker.getElement().querySelector('svg');
+        if (svg) {
+          svg.style.pointerEvents = 'auto';
+          svg.style.cursor = 'pointer';
+        }
+        
+        // ✅ เพิ่ม click event สำหรับเลือกจุดแบบง่ายๆ
+        marker.getElement().addEventListener('click', (e) => {
+          e.stopPropagation(); // ป้องกันการ propagate
+          console.log(`📍 Point ${i + 1} clicked`);
+          this.selectedPointIndex = i;
+          console.log(`📍 Selected point ${i + 1}:`, this.measurementPoints[i]);
+          
+          // ✅ อัปเดตสีของ marker ทั้งหมด
+          setTimeout(() => {
+            this.updateMarkerColors();
+          }, 100);
+        });
+        
+        // ✅ เพิ่ม hover effect เพื่อให้รู้ว่าคลิกได้
+        marker.getElement().addEventListener('mouseenter', () => {
+          marker.getElement().style.cursor = 'pointer';
+          marker.getElement().style.opacity = '0.8';
+        });
+        
+        marker.getElement().addEventListener('mouseleave', () => {
+          marker.getElement().style.cursor = 'default';
+          marker.getElement().style.opacity = '1';
+        });
+        
         bounds.extend([lng, lat]);
         hasPoint = true;
       }
+      
+      console.log('✅ Measurement points markers created successfully');
+      
+      // ✅ อัปเดตสีของ markers หลังจากสร้างเสร็จ
+      setTimeout(() => {
+        this.updateMarkerColors();
+      }, 500);
     }
     this.map.once('load', () => {
+      console.log('🗺️ Map loaded successfully');
+      
       if (hasPoint) {
         this.map!.fitBounds(bounds, { padding: 40, maxZoom: 17, duration: 0 });
       }

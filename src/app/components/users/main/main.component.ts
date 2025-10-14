@@ -7,6 +7,8 @@ import { interval, Subscription, lastValueFrom } from 'rxjs'; // 👈 ใช้ 
 import { Constants } from '../../../config/constants';
 import { Auth, onAuthStateChanged } from '@angular/fire/auth';
 import { DeviceService, SelectedDeviceData } from '../../../service/device.service';
+import { Database, ref, onValue, get } from '@angular/fire/database'; // ✅ Firebase Database
+
 interface Device {
   deviceid: number;
   device_name: string;
@@ -14,8 +16,10 @@ interface Device {
   updated_at: string;
   userid: number;
   status: 'online' | 'offline';
-  device_type?: boolean; // ✅ เพิ่ม device_type property
-  [key: string]: any; // ✅ เพิ่ม index signature เพื่อรองรับ properties อื่นๆ
+  device_type?: boolean;
+  sensor_status?: 'online' | 'offline'; // ✅ เพิ่ม sensor_status จาก Firebase
+  firebase_synced?: boolean; // ✅ บอกว่า device นี้มีใน Firebase หรือไม่
+  [key: string]: any;
 }
 type LivePayload = {
   temperature?: number;
@@ -75,7 +79,8 @@ export class MainComponent implements OnInit, OnDestroy {
     private http: HttpClient,
     private constants: Constants,
     private auth: Auth,
-    private deviceService: DeviceService
+    private deviceService: DeviceService,
+    private database: Database // ✅ เพิ่ม Firebase Database
   ) {
     this.apiUrl = this.constants.API_ENDPOINT;
   }
@@ -158,6 +163,9 @@ export class MainComponent implements OnInit, OnDestroy {
       clearInterval(this.liveOfflineTimer); // 👈 ใช้ clearInterval
       this.liveOfflineTimer = null;
     }
+    // ✅ ยกเลิก Firebase subscriptions
+    this.firebaseSubscriptions.forEach(unsub => unsub());
+    this.firebaseSubscriptions = [];
   }
   async loadUserProfile() {
     try {
@@ -241,7 +249,11 @@ export class MainComponent implements OnInit, OnDestroy {
         ];
         return;
       }
-      // ✅ ดึงข้อมูล devices จาก PostgreSQL
+      
+      console.log('📦 Loading devices from PostgreSQL and Firebase...');
+      
+      // ✅ Step 1: ดึงข้อมูล devices จาก PostgreSQL
+      let postgresDevices: Device[] = [];
       try {
         const token = await currentUser.getIdToken(true);
         const response = await lastValueFrom(
@@ -251,20 +263,24 @@ export class MainComponent implements OnInit, OnDestroy {
             }
           })
         );
-        this.devices = Array.isArray(response) ? response : [];
-        // ✅ ใช้ device_type จาก database: false = test device (online), true = production device (offline)
-        this.devices = this.devices.map(device => {
-          const isTestDevice = device.device_type === false; // false = test device, true = production device
-          return {
-            ...device,
-            status: isTestDevice ? 'online' as 'online' | 'offline' : 'offline' as 'online' | 'offline'
-          };
-        });
+        postgresDevices = Array.isArray(response) ? response : [];
+        console.log('✅ PostgreSQL devices:', postgresDevices.length, 'devices');
       } catch (deviceError: any) {
         console.error('❌ Error loading devices from PostgreSQL:', deviceError);
-        // ✅ ใช้ข้อมูลจาก PostgreSQL เท่านั้น - ไม่มี fallback
-        this.devices = [];
+        postgresDevices = [];
       }
+      
+      // ✅ Step 2: ดึงข้อมูล devices จาก Firebase
+      const firebaseDevices = await this.getFirebaseDevices();
+      console.log('🔥 Firebase devices:', Object.keys(firebaseDevices).length, 'devices');
+      
+      // ✅ Step 3: เปรียบเทียบและรวมข้อมูล
+      this.devices = await this.mergeDevicesWithFirebase(postgresDevices, firebaseDevices);
+      console.log('📊 Merged devices:', this.devices.length, 'devices (matched only)');
+      
+      // ✅ Step 4: Subscribe to real-time updates for matched devices
+      this.subscribeToFirebaseUpdates();
+      
       if (this.devices.length > 0) {
         // ✅ ตรวจสอบ localStorage ก่อน
         const savedDeviceId = localStorage.getItem('selectedDeviceId');
@@ -285,16 +301,159 @@ export class MainComponent implements OnInit, OnDestroy {
         // fallback ถ้าไม่มีอุปกรณ์
         this.selectedDevice = null;
         this.selectedDeviceId = '';
+        console.log('⚠️ No matched devices found between PostgreSQL and Firebase');
         // ลบข้อมูลอุปกรณ์ออกจาก localStorage
         this.saveSelectedDeviceToStorage();
       }
     } catch (error: any) {
       console.error('❌ Error loading devices:', error);
-      // ✅ ใช้ข้อมูลจาก PostgreSQL เท่านั้น - ไม่มี fallback
       this.devices = [];
     } finally {
       this.isLoading = false;
     }
+  }
+  
+  // ✅ ดึงข้อมูล devices จาก Firebase
+  private async getFirebaseDevices(): Promise<Record<string, any>> {
+    try {
+      const devicesRef = ref(this.database, 'devices');
+      const snapshot = await get(devicesRef);
+      
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        console.log('🔥 Firebase devices data:', data);
+        return data;
+      } else {
+        console.log('⚠️ No devices found in Firebase');
+        return {};
+      }
+    } catch (error) {
+      console.error('❌ Error getting Firebase devices:', error);
+      return {};
+    }
+  }
+  
+  // ✅ เปรียบเทียบและรวมข้อมูลจาก PostgreSQL และ Firebase
+  private async mergeDevicesWithFirebase(
+    postgresDevices: Device[], 
+    firebaseDevices: Record<string, any>
+  ): Promise<Device[]> {
+    const mergedDevices: Device[] = [];
+    
+    for (const pgDevice of postgresDevices) {
+      const deviceName = pgDevice.device_name;
+      
+      // ✅ ตรวจสอบว่า device นี้มีใน Firebase หรือไม่
+      const firebaseDevice = firebaseDevices[deviceName];
+      
+      if (firebaseDevice) {
+        // ✅ เช็คว่า deviceId ตรงกันหรือไม่
+        const firebaseDeviceId = firebaseDevice.deviceId || firebaseDevice.deviceName;
+        
+        if (firebaseDeviceId === deviceName) {
+          console.log(`✅ Device matched: ${deviceName}`);
+          console.log(`   - PostgreSQL: deviceid=${pgDevice.deviceid}, name=${deviceName}`);
+          console.log(`   - Firebase: deviceId=${firebaseDeviceId}`);
+          console.log(`   - Sensor Status: ${this.extractSensorStatus(firebaseDevice)}`);
+          console.log(`   - Sensor Data:`, firebaseDevice.sensor || firebaseDevice.sensor_status || 'N/A');
+          
+          // ✅ รวมข้อมูล: ใช้ sensor_status จาก Firebase (รองรับ sensor.online)
+          const sensorStatus = this.extractSensorStatus(firebaseDevice);
+          
+          mergedDevices.push({
+            ...pgDevice,
+            sensor_status: sensorStatus,
+            status: sensorStatus === 'online' ? 'online' : 'offline', // ✅ อัพเดท status จาก sensor_status
+            firebase_synced: true,
+            firebase_data: firebaseDevice // เก็บข้อมูล Firebase ไว้ใช้งาน
+          });
+        } else {
+          console.log(`⚠️ Device name mismatch: ${deviceName}`);
+          console.log(`   - PostgreSQL: ${deviceName}`);
+          console.log(`   - Firebase: ${firebaseDeviceId}`);
+          // ไม่แสดงอุปกรณ์ที่ไม่ตรงกัน
+        }
+      } else {
+        console.log(`⚠️ Device not found in Firebase: ${deviceName}`);
+        // ไม่แสดงอุปกรณ์ที่ไม่มีใน Firebase
+      }
+    }
+    
+    return mergedDevices;
+  }
+  
+  // ✅ Extract sensor status from Firebase data (รองรับ sensor.online จาก ESP32)
+  private extractSensorStatus(firebaseData: any): 'online' | 'offline' {
+    // ✅ ตรวจสอบ sensor.online จาก ESP32 (ตามโค้ด ESP32 ที่ส่งมา)
+    if (firebaseData.sensor && typeof firebaseData.sensor === 'object') {
+      const sensorOnline = firebaseData.sensor.online;
+      if (typeof sensorOnline === 'boolean') {
+        return sensorOnline ? 'online' : 'offline';
+      }
+      if (typeof sensorOnline === 'string') {
+        return (sensorOnline === 'true' || sensorOnline === '1') ? 'online' : 'offline';
+      }
+      if (typeof sensorOnline === 'number') {
+        return sensorOnline === 1 ? 'online' : 'offline';
+      }
+    }
+    
+    // ✅ Fallback: ตรวจสอบ sensor_status (format เดิม)
+    if (firebaseData.sensor_status) {
+      return firebaseData.sensor_status === 'online' ? 'online' : 'offline';
+    }
+    
+    // ✅ Fallback: ตรวจสอบ status
+    if (firebaseData.status) {
+      return firebaseData.status === 'online' ? 'online' : 'offline';
+    }
+    
+    // ✅ Default: offline
+    return 'offline';
+  }
+  
+  // ✅ Subscribe to Firebase real-time updates
+  private firebaseSubscriptions: (() => void)[] = [];
+  
+  private subscribeToFirebaseUpdates() {
+    // ✅ ยกเลิก subscriptions เก่า
+    this.firebaseSubscriptions.forEach(unsub => unsub());
+    this.firebaseSubscriptions = [];
+    
+    // ✅ Subscribe to each device
+    this.devices.forEach(device => {
+      const deviceRef = ref(this.database, `devices/${device.device_name}`);
+      
+      const unsubscribe = onValue(deviceRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const firebaseData = snapshot.val();
+          
+          // ✅ อัพเดท sensor_status และ status (รองรับ sensor.online)
+          const deviceIndex = this.devices.findIndex(d => d.device_name === device.device_name);
+          if (deviceIndex !== -1) {
+            const sensorStatus = this.extractSensorStatus(firebaseData);
+            
+            this.devices[deviceIndex] = {
+              ...this.devices[deviceIndex],
+              sensor_status: sensorStatus,
+              status: sensorStatus === 'online' ? 'online' : 'offline',
+              firebase_data: firebaseData
+            };
+            
+            console.log(`🔄 Real-time update: ${device.device_name} → ${sensorStatus}`);
+            
+            // ✅ ถ้าเป็น device ที่กำลังเลือกอยู่ ให้อัพเดท selectedDevice ด้วย
+            if (this.selectedDevice && this.selectedDevice.device_name === device.device_name) {
+              this.selectedDevice = this.devices[deviceIndex];
+            }
+          }
+        }
+      });
+      
+      this.firebaseSubscriptions.push(unsubscribe);
+    });
+    
+    console.log(`📡 Subscribed to ${this.devices.length} devices for real-time updates`);
   }
   selectDevice(deviceId: string) {
     this.selectedDeviceId = deviceId;
@@ -358,7 +517,7 @@ export class MainComponent implements OnInit, OnDestroy {
   async requestDeviceClaim() {
     await this.claimDevice();
   }
-  // เพิ่ม method สำหรับเพิ่มอุปกรณ์ใหม่ (POST /api/devices)
+  // ✅ เพิ่มอุปกรณ์ใหม่พร้อม sync Firebase (POST /api/devices/add-device)
   async addNewDevice() {
     console.log('🚀 addNewDevice() called with deviceId:', this.claimDeviceId);
     if (!this.claimDeviceId.trim()) {
@@ -393,20 +552,31 @@ export class MainComponent implements OnInit, OnDestroy {
       const deviceName = this.claimDeviceId.trim();
       const isTestDevice = deviceName.toLowerCase().includes('test');
       
+      // ✅ ตรวจสอบชื่อ device ซ้ำก่อนเพิ่ม
+      const finalDeviceName = isTestDevice ? `esp32-soil-test-${Date.now()}` : deviceName;
+      
+      // เช็คชื่อซ้ำใน devices array ปัจจุบัน
+      const existingDevice = this.devices.find(d => d.device_name === finalDeviceName);
+      if (existingDevice) {
+        this.lastClaimType = 'err';
+        this.lastClaimMessage = `ชื่ออุปกรณ์ "${finalDeviceName}" มีอยู่แล้ว กรุณาใช้ชื่ออื่น`;
+        this.requestingClaim = false;
+        return;
+      }
+      
+      // ✅ Dual-sync endpoint: ส่งข้อมูลตรงกับ Backend schema ที่แก้ไขแล้ว
       const requestData = {
-        deviceId: isTestDevice ? `esp32-soil-test-${Date.now()}` : deviceName,
-        device_name: isTestDevice ? `esp32-soil-test-${Date.now()}` : deviceName,
-        status: isTestDevice ? 'online' : 'offline', // ✅ test device = online, อุปกรณ์ทั่วไป = offline
-        device_type: isTestDevice ? false : true, // ✅ false = test device, true = production device
-        description: isTestDevice ? 'อุปกรณ์ทดสอบ ESP32 Soil Sensor สำหรับทดสอบ API measurement' : 'อุปกรณ์ทั่วไป',
-        userid: this.userID ? parseInt(this.userID) : null // ✅ ส่ง userid ไปด้วย
+        deviceName: finalDeviceName,
+        deviceType: !isTestDevice  // ✅ true = production device, false = test device
       };
       
-      console.log('📤 Sending request to:', `${this.apiUrl}/api/devices`);
+      console.log('📤 Sending request to:', `${this.apiUrl}/api/devices/add-device`);
       console.log('📤 Request data:', requestData);
+      console.log('🔑 Token:', token ? '✅ Present' : '❌ Missing');
+      console.log('🔍 Token preview:', token ? token.substring(0, 20) + '...' : 'N/A');
       
       const response = await lastValueFrom(
-        this.http.post<ClaimResponse>(`${this.apiUrl}/api/devices`, requestData, {
+        this.http.post<any>(`${this.apiUrl}/api/devices/add-device`, requestData, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -414,52 +584,55 @@ export class MainComponent implements OnInit, OnDestroy {
         })
       );
       
-      // ตรวจสอบ response หลายแบบ
-      const isSuccess = response.success === true || 
-                       response.message?.includes('successfully') || 
-                       response.message?.includes('สำเร็จ') ||
-                       response.device;
-                       
-      if (isSuccess) {
-        console.log('✅ Device created in database:', response);
+      console.log('✅ Response received:', response);
+      
+      // ✅ ตรวจสอบ response จาก dual-sync endpoint (รองรับ format ใหม่)
+      if (response.device && (response.success === true || response.message?.includes('successfully'))) {
+        console.log('✅ Device added successfully to PostgreSQL and Firebase!');
+        console.log('📊 PostgreSQL data:', response.device);
+        console.log('🔥 Firebase sync status:', response.firebasePaths);
         
-        // ✅ เพิ่ม device เข้าไปใน devices array จาก response จริง
+        // ✅ เพิ่ม device เข้าไปใน devices array จาก response
         const newDevice: Device = {
-          deviceid: response.device?.deviceid || Math.floor(Math.random() * 1000),
-          device_name: response.device?.device_name || deviceName,
-          created_at: response.device?.created_at || new Date().toISOString(),
-          updated_at: response.device?.updated_at || new Date().toISOString(),
-          userid: this.userID ? parseInt(this.userID) : 0,
-          status: (response.device?.status || requestData.status) as 'online' | 'offline',
-          device_type: response.device?.device_type || requestData.device_type,
-          description: response.device?.description || requestData.description,
-          api_key: response.device?.api_key
+          deviceid: response.device.deviceid,
+          device_name: response.device.device_name,
+          created_at: response.device.created_at,
+          updated_at: response.device.updated_at,
+          userid: response.device.userid || (this.userID ? parseInt(this.userID) : 0),
+          status: response.device.status as 'online' | 'offline',
+          device_type: response.device.device_type,
+          description: response.device.description
         };
         
         // เพิ่ม device ใหม่เข้าไปใน devices array
         this.devices.push(newDevice);
         
         // อัปเดต selectedDeviceId เป็น device ใหม่
-        this.selectedDeviceId = newDevice.device_name;
+        this.selectedDeviceId = newDevice.deviceid.toString();
         this.selectedDevice = newDevice;
         
-        console.log('✅ Device added to devices array:', newDevice);
+        console.log('✅ Device added to UI:', newDevice);
         console.log('📋 Total devices:', this.devices.length);
         
-        // แสดง notification popup เมื่อเพิ่มอุปกรณ์สำเร็จ
-        const deviceType = isTestDevice ? 'ESP32-soil-test' : 'ทั่วไป';
+        // แสดง notification popup พร้อมข้อมูล Firebase sync
+        const firebaseSynced = response.firebasePaths ? '✅ Sync ไปยัง Firebase สำเร็จ' : '⚠️ Firebase sync ไม่สำเร็จ';
+        const deviceType = isTestDevice ? 'ทดสอบ' : 'ทั่วไป';
+        
         this.showNotificationPopup(
           'success',
           'เพิ่มอุปกรณ์สำเร็จ!',
-          `อุปกรณ์${deviceType}: ${isTestDevice ? `esp32-soil-test-${Date.now()}` : deviceName}\n\n${isTestDevice ? 'อุปกรณ์ทดสอบพร้อมใช้งานสำหรับทดสอบ API measurement' : 'อุปกรณ์พร้อมใช้งาน'}\n\nกดตกลงเพื่อรีเฟรซหน้า`,
+          `อุปกรณ์${deviceType}: ${newDevice.device_name}\n\n✅ บันทึกลง PostgreSQL\n${firebaseSynced}\n\nอุปกรณ์พร้อมใช้งาน!\n\nกดตกลงเพื่อโหลดข้อมูลใหม่`,
           true,
           'ตกลง',
-          () => {
-            window.location.reload();
+          async () => {
+            // ✅ Fetch ข้อมูลใหม่แทนการรีเฟรชหน้า
+            console.log('🔄 Fetching updated device list...');
+            await this.loadDevices();
+            console.log('✅ Device list updated successfully');
           }
         );
       } else {
-        console.log('❌ Response indicates failure:', response.message);
+        console.log('❌ Response indicates failure:', response);
         this.lastClaimType = 'err';
         this.lastClaimMessage = response.message || 'เพิ่มอุปกรณ์ไม่สำเร็จ';
       }
@@ -471,12 +644,18 @@ export class MainComponent implements OnInit, OnDestroy {
       this.lastClaimType = 'err';
       
       // ให้ข้อความ error ที่ชัดเจนขึ้น
+      const deviceNameForError = this.claimDeviceId.trim();
       if (err.status === 400) {
-        this.lastClaimMessage = 'ข้อมูลไม่ถูกต้อง หรือ Device ID ซ้ำ';
+        // ตรวจสอบว่าเป็น error เรื่องชื่อซ้ำหรือไม่
+        if (err.error && err.error.message && err.error.message.includes('duplicate')) {
+          this.lastClaimMessage = `ชื่ออุปกรณ์ "${deviceNameForError}" มีอยู่แล้ว กรุณาใช้ชื่ออื่น`;
+        } else {
+          this.lastClaimMessage = 'ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบข้อมูลที่กรอก';
+        }
       } else if (err.status === 401) {
         this.lastClaimMessage = 'ไม่มีสิทธิ์ กรุณาเข้าสู่ระบบใหม่';
       } else if (err.status === 409) {
-        this.lastClaimMessage = 'Device ID นี้มีอยู่แล้ว';
+        this.lastClaimMessage = `ชื่ออุปกรณ์ "${deviceNameForError}" มีอยู่แล้ว กรุณาใช้ชื่ออื่น`;
       } else if (err.status === 500) {
         this.lastClaimMessage = 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง';
       } else if (err.status === 404) {

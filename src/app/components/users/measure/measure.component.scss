@@ -307,6 +307,20 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
   }
 }
 
+// ✅ Marker Click Styles
+.maplibregl-marker {
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  
+  &:hover {
+    opacity: 0.8;
+  }
+  
+  svg {
+    pointer-events: auto;
+  }
+}
+
 // Info Sections
 .user-info,
 .device-info {
@@ -337,6 +351,35 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
     .value {
       color: #666;
       font-size: 15px;
+      
+      // ✅ Status indicators
+      &.status-online {
+        color: #4CAF50;
+        font-weight: 600;
+        
+        i {
+          margin-right: 6px;
+        }
+      }
+      
+      &.status-offline {
+        color: #F44336;
+        font-weight: 600;
+        
+        i {
+          margin-right: 6px;
+        }
+      }
+      
+      &.status-idle {
+        color: #FF9800;
+        font-weight: 600;
+      }
+      
+      &.status-active {
+        color: #2196F3;
+        font-weight: 600;
+      }
     }
   }
 
@@ -435,6 +478,240 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
     cursor: not-allowed;
     transform: none;
     opacity: 0.7;
+  }
+
+  // ✅ Countdown animation
+  &.waiting {
+    background: linear-gradient(135deg, #FF9800, #F57C00);
+    animation: pulse-countdown 1s infinite;
+  }
+
+  i {
+    font-size: 18px;
+  }
+}
+
+@keyframes pulse-countdown {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+// ✅ ส่วนการเลือกจุดและการวัด
+.point-selection-section {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 16px;
+    
+    i {
+      color: #007bff;
+    }
+  }
+
+  .selected-point-info {
+    margin-bottom: 16px;
+    
+    .point-card {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      border: 2px solid #007bff;
+      box-shadow: 0 2px 4px rgba(0, 123, 255, 0.1);
+      
+      &.selected {
+        border-color: #007bff;
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+      }
+      
+      .point-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        color: #007bff;
+        margin-bottom: 8px;
+        
+        i {
+          font-size: 16px;
+        }
+      }
+      
+      .point-coordinates {
+        font-size: 14px;
+        color: #6c757d;
+        margin-bottom: 8px;
+      }
+      
+      .point-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        color: #28a745;
+        font-weight: 500;
+        
+        i {
+          font-size: 16px;
+        }
+      }
+    }
+  }
+
+  .measurement-stats {
+    display: flex;
+    justify-content: space-around;
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid #dee2e6;
+    
+    .stat-item {
+      text-align: center;
+      
+      .stat-label {
+        display: block;
+        font-size: 12px;
+        color: #6c757d;
+        margin-bottom: 4px;
+      }
+      
+      .stat-value {
+        display: block;
+        font-size: 20px;
+        font-weight: 700;
+        color: #495057;
+        
+        &.completed {
+          color: #28a745;
+        }
+        
+        &.remaining {
+          color: #ffc107;
+        }
+      }
+    }
+  }
+
+  .measure-selected-btn {
+    width: 100%;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    
+    &:hover:not(:disabled) {
+      background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    }
+    
+    &:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    &.waiting {
+      background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+      animation: pulse-countdown 1s infinite;
+    }
+    
+    &.disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+    
+    i {
+      font-size: 16px;
+    }
+  }
+
+  .instructions {
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid #dee2e6;
+    
+    .instruction-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #495057;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+      
+      i {
+        color: #007bff;
+        width: 16px;
+        text-align: center;
+      }
+    }
+  }
+}
+
+// ✅ Responsive design
+@media (max-width: 768px) {
+  .point-selection-section {
+    padding: 16px;
+    margin: 16px 0;
+    
+    .measurement-stats {
+      flex-direction: column;
+      gap: 12px;
+      
+      .stat-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        
+        .stat-label {
+          margin-bottom: 0;
+        }
+        
+        .stat-value {
+          font-size: 18px;
+        }
+      }
+    }
+    
+    .measure-selected-btn {
+      padding: 14px 16px;
+      font-size: 15px;
+    }
   }
 }
 
@@ -1048,6 +1325,171 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
   }
 }
 
+// ✅ Animation สำหรับ ESP32 marker
+@keyframes marker-bounce {
+  0% {
+    transform: translateY(-100px) scale(0);
+    opacity: 0;
+  }
+  
+  50% {
+    transform: translateY(0) scale(1.2);
+    opacity: 1;
+  }
+  
+  70% {
+    transform: translateY(-10px) scale(0.9);
+  }
+  
+  85% {
+    transform: translateY(0) scale(1.05);
+  }
+  
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes marker-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+// ✅ ESP32 Marker Styles
+.esp32-marker {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: scale(1.2);
+    
+    .marker-icon {
+      filter: drop-shadow(0 4px 12px rgba(76, 175, 80, 0.5));
+    }
+  }
+  
+  .marker-icon {
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+    
+    svg {
+      overflow: visible;
+      
+      circle {
+        transition: all 0.3s ease;
+      }
+      
+      text {
+        font-family: 'Inter', sans-serif;
+        font-weight: bold;
+      }
+    }
+  }
+  
+  // Animation เมื่อ marker ถูกเพิ่ม
+  &.active {
+    animation: marker-pulse 2s ease-in-out infinite;
+  }
+}
+
+// ✅ ESP32 Marker Popup Styles
+.esp32-marker-popup {
+  font-family: 'Inter', sans-serif;
+  min-width: 280px;
+  
+  .popup-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #2E7D32;
+    margin: 0 0 8px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #4CAF50;
+  }
+  
+  .popup-subtitle {
+    font-size: 13px;
+    color: #757575;
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  
+  .popup-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .popup-section {
+    background: #F8F9FA;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border-left: 3px solid #4CAF50;
+    
+    .popup-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #424242;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .popup-value {
+      font-size: 14px;
+      color: #212121;
+      line-height: 1.6;
+      
+      strong {
+        color: #2E7D32;
+        font-weight: 600;
+      }
+    }
+  }
+  
+  .popup-footer {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #E0E0E0;
+    text-align: center;
+    
+    small {
+      color: #9E9E9E;
+      font-size: 11px;
+    }
+  }
+}
+
+// ✅ MapLibre GL popup override
+.maplibregl-popup-content {
+  padding: 16px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+  max-width: 320px !important;
+}
+
+.maplibregl-popup-close-button {
+  font-size: 20px !important;
+  padding: 8px !important;
+  color: #757575 !important;
+  
+  &:hover {
+    background: #F5F5F5 !important;
+    color: #E53935 !important;
+  }
+}
+
+.maplibregl-popup-tip {
+  border-top-color: #FFFFFF !important;
+}
+
 // Tablet Responsive Design
 @media (min-width: 769px) and (max-width: 1023px) {
   .popup-overlay {
@@ -1460,4 +1902,187 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
 
 .sensor-box:nth-child(6) {
   animation-delay: 0.6s;
+}
+
+// ✅ Sensor Grid - แสดงค่าการวัดทั้งหมด 6 ค่าตาม ESP32
+.sensor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin: 20px 0;
+  padding: 0 20px;
+
+  .sensor-card {
+    background: $card-bg;
+    border-radius: $border-radius-md;
+    padding: 24px 20px;
+    text-align: center;
+    box-shadow: $shadow-light;
+    transition: $transition;
+    border: 1px solid rgba(46, 125, 50, 0.1);
+    position: relative;
+    overflow: hidden;
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: $shadow-hover;
+    }
+
+    .sensor-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      position: relative;
+
+      // Temperature Icon
+      .temperature-icon {
+        font-size: 24px;
+        color: #E53935;
+        background: linear-gradient(135deg, #FF5722, #E53935);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      // Moisture Icon
+      .moisture-icon {
+        font-size: 24px;
+        color: #2196F3;
+        background: linear-gradient(135deg, #03A9F4, #2196F3);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      // Nitrogen Icon
+      .nitrogen-icon {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #E91E63, #C2185B);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: bold;
+      }
+
+      // Phosphorus Icon
+      .phosphorus-icon {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #9C27B0, #7B1FA2);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: bold;
+      }
+
+      // Potassium Icon
+      .potassium-icon {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #4CAF50, #2E7D32);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: bold;
+      }
+
+      // pH Icon
+      .ph-icon {
+        font-size: 24px;
+        color: #FF9800;
+        background: linear-gradient(135deg, #FF9800, #F57C00);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+    }
+
+    .sensor-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #4CAF50;
+      display: block;
+      margin-bottom: 8px;
+      line-height: 1;
+    }
+
+    .sensor-unit {
+      font-size: 14px;
+      color: $text-muted;
+      font-weight: 500;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .sensor-label {
+      font-size: 12px;
+      color: $text-secondary;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin: 0;
+      line-height: 1.2;
+    }
+  }
+
+  // Responsive Design
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    padding: 0 16px;
+
+    .sensor-card {
+      padding: 20px 16px;
+
+      .sensor-icon {
+        width: 40px;
+        height: 40px;
+        margin-bottom: 12px;
+
+        .nitrogen-icon,
+        .phosphorus-icon,
+        .potassium-icon {
+          width: 32px;
+          height: 32px;
+          font-size: 14px;
+        }
+      }
+
+      .sensor-value {
+        font-size: 28px;
+      }
+
+      .sensor-unit {
+        font-size: 12px;
+      }
+
+      .sensor-label {
+        font-size: 10px;
+      }
+    }
+  }
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+    gap: 12px;
+
+    .sensor-card {
+      padding: 16px;
+    }
+  }
 }

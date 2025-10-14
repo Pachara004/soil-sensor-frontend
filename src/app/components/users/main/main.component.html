@@ -41,6 +41,8 @@
         <option value="" disabled>-- เลือกอุปกรณ์ --</option>
         <option *ngFor="let device of devices" [value]="device.deviceid">
           {{ device.device_name || device.deviceid }}
+          <span *ngIf="device.sensor_status === 'online'">🟢</span>
+          <span *ngIf="device.sensor_status !== 'online'">🔴</span>
         </option>
       </select>
 
@@ -57,17 +59,52 @@
       <div class="device-name" *ngIf="devices.length === 0">
         ไม่พบอุปกรณ์
       </div>
-
-      <!-- สถานะ Online/Offline -->
-      <div class="status-indicator" [ngClass]="{
-          online: selectedDevice?.status === 'online',
-          offline: selectedDevice?.status !== 'online' || devices.length === 0
-        }">
-        <div class="status-dot"></div>
-        <span class="status-text">
-          {{ devices.length === 0 ? 'Offline' : (selectedDevice?.status === 'online' ? 'Online' : 'Offline') }}
+    </div>
+    
+    <!-- ✅ แสดงสถานะ Sensor จาก Firebase -->
+    <div class="device-status-card" *ngIf="selectedDevice && selectedDevice.firebase_synced">
+      <div class="status-header">
+        <i class="fas fa-satellite-dish"></i>
+        <h4>สถานะเซ็นเซอร์</h4>
+        <span class="badge" [class.online]="selectedDevice.sensor_status === 'online'"
+                           [class.offline]="selectedDevice.sensor_status !== 'online'">
+          {{ selectedDevice.sensor_status === 'online' ? '🟢 ออนไลน์' : '🔴 ออฟไลน์' }}
         </span>
       </div>
+      
+      <div class="status-details">
+        <div class="status-item">
+          <span class="label">อุปกรณ์:</span>
+          <span class="value">{{ selectedDevice.device_name }}</span>
+        </div>
+        <div class="status-item">
+          <span class="label">สถานะเซ็นเซอร์:</span>
+          <span class="value" [class.text-success]="selectedDevice.sensor_status === 'online'"
+                             [class.text-danger]="selectedDevice.sensor_status !== 'online'">
+            {{ selectedDevice.sensor_status === 'online' ? 'ออนไลน์' : 'ออฟไลน์' }}
+          </span>
+        </div>
+        <div class="status-item" *ngIf="selectedDevice.firebase_data?.temperature">
+          <span class="label">อุณหภูมิล่าสุด:</span>
+          <span class="value">{{ selectedDevice.firebase_data.temperature }}°C</span>
+        </div>
+        <div class="status-item" *ngIf="selectedDevice.firebase_data?.moisture">
+          <span class="label">ความชื้นล่าสุด:</span>
+          <span class="value">{{ selectedDevice.firebase_data.moisture }}%</span>
+        </div>
+      </div>
+      
+      <div class="sync-info">
+        <i class="fas fa-check-circle"></i>
+        <small>ข้อมูลจาก Firebase Realtime Database</small>
+      </div>
+    </div>
+    
+    <!-- ⚠️ แสดงเมื่ออุปกรณ์ไม่มีใน Firebase -->
+    <div class="device-warning" *ngIf="selectedDevice && !selectedDevice.firebase_synced">
+      <i class="fas fa-exclamation-triangle"></i>
+      <p>อุปกรณ์นี้ยังไม่มีข้อมูลใน Firebase</p>
+      <small>กรุณาตรวจสอบการเชื่อมต่อของอุปกรณ์</small>
     </div>
   </div>
 

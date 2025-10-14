@@ -55,9 +55,12 @@
             <div class="area-info-item">
               <i class="fas fa-map-marker-alt"></i>
               <span class="info-label">จุดวัด:</span>
-              <span class="info-value">{{ area.totalMeasurements }} จุด</span>
-              <span class="info-detail" *ngIf="area.totalMeasurements > 0">(Measurement ID: {{
+              <span class="info-value">{{ area.measurements?.length || 0 }} จุด</span>
+              <span class="info-detail" *ngIf="(area.measurements?.length || 0) > 0">(Measurement ID: {{
                 getMeasurementIdRange(area) }})</span>
+              <span class="info-detail" *ngIf="(area.measurements?.length || 0) === 0" style="color: #ff9800;">
+                (ไม่มีข้อมูลการวัด)
+              </span>
             </div>
             <div class="area-info-item">
               <i class="fas fa-calendar-alt"></i>
@@ -112,7 +115,7 @@
           <h3>{{ selectedArea.areaName }}</h3>
           <div class="area-info">
             <span class="area-date">{{ selectedArea.lastMeasurementDate | date:'dd/MM/yyyy' }}</span>
-            <span class="area-points">{{ selectedArea.totalMeasurements }} จุดวัด</span>
+            <span class="area-points">{{ selectedArea.measurements?.length || 0 }} จุดวัด</span>
           </div>
         </div>
       </div>
@@ -435,15 +438,30 @@
 
       <div class="measurements-list">
         <h4>รายการจุดวัด (Measurement ID)</h4>
-        <div *ngFor="let measurement of selectedArea.measurements" class="measurement-item">
+        <div *ngIf="!selectedArea.measurements || selectedArea.measurements.length === 0" class="no-measurements">
+          <div class="no-measurements-content">
+            <i class="fas fa-info-circle"></i>
+            <h5>ไม่มีข้อมูลการวัด</h5>
+            <p>ยังไม่มีการวัดค่าในพื้นที่นี้</p>
+            <p>กรุณาไปที่หน้าวัดค่าเพื่อเพิ่มข้อมูลการวัด</p>
+          </div>
+        </div>
+        <div *ngFor="let measurement of selectedArea.measurements; let i = index" class="measurement-item">
           <div class="measurement-info">
-            <div class="measurement-point">Measurement ID: {{ measurement['measurementid'] || measurement['id'] ||
-              'ไม่ระบุ'
-              }}</div>
+            <div class="measurement-point">Measurement ID: {{ measurement['measurementid'] || measurement['id'] || measurement['measurement_id'] || (i + 1) }}</div>
             <div class="measurement-location">พิกัด: {{ measurement.lat || 'ไม่ระบุ' }}, {{ measurement.lng || 'ไม่ระบุ' }}</div>
-            <div class="measurement-date">{{ measurement.measurement_date || measurement.date || 'ไม่ระบุวันที่' }}
-            </div>
+            <div class="measurement-date">{{ measurement.measurement_date || measurement.date || 'ไม่ระบุวันที่' }}</div>
             <div class="measurement-areasid">Areas ID: {{ measurement['areasid'] || 'ไม่ระบุ' }}</div>
+            <div class="measurement-point-id">Point ID: {{ measurement['point_id'] || 'ไม่ระบุ' }}</div>
+            <div class="measurement-device-id">Device ID: {{ measurement['deviceid'] || 'ไม่ระบุ' }}</div>
+            <div class="measurement-values">
+              <span class="measurement-value">อุณหภูมิ: {{ formatNumber(measurement.temperature) }}°C</span>
+              <span class="measurement-value">ความชื้น: {{ formatNumber(measurement.moisture) }}%</span>
+              <span class="measurement-value">pH: {{ formatNumber(measurement.ph, 1) }}</span>
+              <span class="measurement-value">N: {{ formatNumber(measurement.nitrogen) }}</span>
+              <span class="measurement-value">P: {{ formatNumber(measurement.phosphorus) }}</span>
+              <span class="measurement-value">K: {{ formatNumber(measurement.potassium) }}</span>
+            </div>
           </div>
           <button class="view-detail-btn" (click)="viewMeasurementDetail(measurement)">ดูรายละเอียด</button>
         </div>
@@ -865,6 +883,38 @@
 
     .instruction-icon {
       order: 3;
+    }
+  }
+
+  /* No Measurements State */
+  .no-measurements {
+    text-align: center;
+    padding: 40px 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    border: 2px dashed #e0e0e0;
+    margin: 20px 0;
+  }
+
+  .no-measurements-content {
+    i {
+      font-size: 48px;
+      color: #ff9800;
+      margin-bottom: 16px;
+    }
+
+    h5 {
+      color: #333;
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    p {
+      color: #666;
+      font-size: 14px;
+      margin: 4px 0;
+      line-height: 1.5;
     }
   }
 </style>
