@@ -1,0 +1,47 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "measurements",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "deviceid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "measurement_date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "measurements",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "areasid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "measurement_date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "devices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
