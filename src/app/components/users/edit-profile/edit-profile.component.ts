@@ -6,6 +6,7 @@ import { Location } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Constants } from '../../../config/constants';
 import { Auth, onAuthStateChanged } from '@angular/fire/auth';
+import { Database, ref, update, get } from '@angular/fire/database'; // ✅ เพิ่ม Firebase Database
 import { lastValueFrom } from 'rxjs';
 import { NotificationService } from '../../../service/notification.service';
 interface UserData {
@@ -44,6 +45,7 @@ export class EditProfileComponent implements OnInit {
     private http: HttpClient,
     private constants: Constants,
     private auth: Auth,
+    private database: Database, // ✅ เพิ่ม Firebase Database
     private notificationService: NotificationService
   ) {
     this.apiUrl = this.constants.API_ENDPOINT;
@@ -143,7 +145,11 @@ export class EditProfileComponent implements OnInit {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       );
-      this.notificationService.showNotification('success', 'บันทึกข้อมูลสำเร็จ!', 'ข้อมูลของคุณได้รับการอัปเดตแล้ว', true, 'กลับ', () => {
+      
+      // ✅ อัปเดต Firebase Realtime Database ด้วย
+      await this.updateFirebaseUsername(userid, this.username);
+      
+      this.notificationService.showNotification('success', 'บันทึกข้อมูลสำเร็จ!', 'ข้อมูลของคุณได้รับการอัปเดตแล้วทั้งใน PostgreSQL และ Firebase', true, 'กลับ', () => {
         this.location.back();
       });
     } catch (error: any) {
@@ -216,6 +222,46 @@ export class EditProfileComponent implements OnInit {
       // ถ้าครบ 10 หลัก ไม่แสดง error
       this.phoneNumberError = false;
       this.phoneNumberErrorMessage = '';
+    }
+  }
+
+  // ✅ อัปเดต username ใน Firebase Realtime Database
+  private async updateFirebaseUsername(userid: number, newUsername: string) {
+    try {
+      console.log(`🔄 Updating Firebase username for userid: ${userid} to: ${newUsername}`);
+      
+      // ✅ อัปเดต username ใน devices ที่ user เป็นเจ้าของ
+      const devicesRef = ref(this.database, 'devices');
+      const devicesSnapshot = await get(devicesRef);
+      
+      if (devicesSnapshot.exists()) {
+        const devices = devicesSnapshot.val();
+        const updates: { [key: string]: any } = {};
+        
+        // ✅ หา devices ที่ user เป็นเจ้าของ
+        Object.keys(devices).forEach(deviceKey => {
+          const device = devices[deviceKey];
+          if (device.userId === userid || device.userid === userid) {
+            updates[`devices/${deviceKey}/userName`] = newUsername;
+            console.log(`📝 Updating device ${deviceKey} userName to: ${newUsername}`);
+          }
+        });
+        
+        // ✅ อัปเดต Firebase
+        if (Object.keys(updates).length > 0) {
+          await update(ref(this.database), updates);
+          console.log(`✅ Firebase username updated for ${Object.keys(updates).length} devices`);
+        } else {
+          console.log('ℹ️ No devices found for this user to update');
+        }
+      } else {
+        console.log('ℹ️ No devices found in Firebase');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error updating Firebase username:', error);
+      // ✅ ไม่ throw error เพื่อไม่ให้กระทบการอัปเดต PostgreSQL
+      // แค่ log error และให้ PostgreSQL อัปเดตสำเร็จ
     }
   }
 

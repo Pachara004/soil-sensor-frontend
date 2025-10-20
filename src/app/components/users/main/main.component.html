@@ -201,4 +201,49 @@
       </div>
     </div>
   </div>
+
+  <!-- ✅ Persistent Notification Modal -->
+  <div class="persistent-notification-overlay" *ngIf="showPersistentNotification" (click)="dismissPersistentNotification()">
+    <div class="persistent-notification-modal" (click)="$event.stopPropagation()">
+      <div class="notification-header">
+        <div class="notification-icon">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="notification-title">
+          {{ currentPersistentNotification?.title || 'แจ้งเตือนจากแอดมิน' }}
+        </div>
+        <button class="close-btn" (click)="dismissPersistentNotification()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="notification-content">
+        <div class="notification-message">
+          {{ currentPersistentNotification?.message || 'แอดมินได้แก้ไขข้อมูลของคุณแล้ว กรุณาตรวจสอบข้อมูลใหม่' }}
+        </div>
+        
+        <div class="notification-details" *ngIf="currentPersistentNotification">
+          <div class="detail-item">
+            <i class="fas fa-user-shield"></i>
+            <span>จาก: {{ currentPersistentNotification.adminName || 'Admin' }}</span>
+          </div>
+          <div class="detail-item">
+            <i class="fas fa-clock"></i>
+            <span>เวลา: {{ formatNotificationTime(currentPersistentNotification.timestamp) }}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="notification-actions">
+        <button class="acknowledge-btn" (click)="acknowledgeNotification(currentPersistentNotification?.id)">
+          <i class="fas fa-check"></i>
+          รับทราบ
+        </button>
+        <button class="dismiss-btn" (click)="dismissPersistentNotification()">
+          <i class="fas fa-times"></i>
+          ปิดชั่วคราว
+        </button>
+      </div>
+    </div>
+  </div>
 </div>

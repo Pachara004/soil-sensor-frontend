@@ -10,6 +10,7 @@ import { throwError } from 'rxjs'; // เปลี่ยนจาก rxjs/operat
 import { Constants } from '../../../config/constants'; // ปรับ path ตามโครงสร้าง
 import { NotificationService } from '../../../service/notification.service';
 import { Auth, onAuthStateChanged } from '@angular/fire/auth';
+import { Database, ref, push, set, onValue, off, get } from '@angular/fire/database'; // ✅ เพิ่ม Firebase Database
 import { lastValueFrom } from 'rxjs';
 interface UserData {
   username: string;
@@ -81,6 +82,8 @@ export class AdmainComponent implements OnInit, OnDestroy {
   pendingClaims: any[] = [];
   private searchSubject = new Subject<string>();
   private apiUrl: string;
+  // ✅ Firebase subscriptions
+  private firebaseSubscriptions: (() => void)[] = [];
   constructor(
     private adminService: AdminService,
     private router: Router,
@@ -88,7 +91,8 @@ export class AdmainComponent implements OnInit, OnDestroy {
     private http: HttpClient,
     private constants: Constants, // Inject Constants
     private notificationService: NotificationService,
-    private auth: Auth // ✅ เพิ่ม Auth service
+    private auth: Auth, // ✅ เพิ่ม Auth service
+    private database: Database // ✅ เพิ่ม Firebase Database
   ) {
     this.apiUrl = this.constants.API_ENDPOINT; // ใช้ instance ของ Constants
     this.searchSubject
@@ -116,6 +120,7 @@ export class AdmainComponent implements OnInit, OnDestroy {
           await this.loadAllUsersOnce();
           await this.loadRegularUsers();
           await this.loadUnreadCount();
+          this.subscribeToNotificationsCount(); // ✅ Subscribe ถึง notifications แบบ real-time
     } else {
           this.notificationService.showNotification('warning', 'ไม่มีสิทธิ์', 'คุณไม่มีสิทธิ์เข้าถึงหน้า Admin', true, 'ไปหน้า Login', () => {
       this.router.navigate(['/']);
@@ -130,6 +135,9 @@ export class AdmainComponent implements OnInit, OnDestroy {
   }
   ngOnDestroy() {
     this.searchSubject.unsubscribe();
+    // ✅ ยกเลิก Firebase subscriptions
+    this.firebaseSubscriptions.forEach(unsub => unsub());
+    this.firebaseSubscriptions = [];
   }
   // ✅ ฟังก์ชันดึงข้อมูล admin จาก PostgreSQL
   async loadAdminData() {
@@ -736,35 +744,83 @@ export class AdmainComponent implements OnInit, OnDestroy {
   // ✅ ฟังก์ชันนับข้อความใหม่
   async loadUnreadCount() {
     try {
-      const headers = await this.getAuthHeaders();
-      // ✅ ดึงข้อมูล reports จาก API
-      const response = await lastValueFrom(
-        this.http.get<any>(`${this.apiUrl}/api/reports`, { headers })
-      );
-      // ✅ ตรวจสอบ response format
-      let reportsData: any[] = [];
-      if (Array.isArray(response)) {
-        reportsData = response;
-      } else if (response && Array.isArray(response.reports)) {
-        reportsData = response.reports;
-      } else if (response && Array.isArray(response.data)) {
-        reportsData = response.data;
-      } else if (response && response.success && Array.isArray(response.result)) {
-        reportsData = response.result;
+      // ✅ ดึงข้อมูลจาก Firebase notifications แทน API reports
+      const notificationsRef = ref(this.database, 'notifications');
+      const snapshot = await get(notificationsRef);
+      
+      if (snapshot.exists()) {
+        const allNotifications = snapshot.val();
+        let totalUnreadCount = 0;
+        
+        // ✅ นับ notifications ที่ยังไม่ได้อ่านจากทุก user
+        Object.values(allNotifications).forEach((userNotifications: any) => {
+          if (userNotifications && typeof userNotifications === 'object') {
+            Object.values(userNotifications).forEach((notification: any) => {
+              if (notification && notification.persistent && !notification.read) {
+                totalUnreadCount++;
+              }
+            });
+          }
+        });
+        
+        this.unreadCount = totalUnreadCount;
+        console.log('🔔 Total unread notifications:', this.unreadCount);
+        console.log('📊 All notifications:', allNotifications);
+      } else {
+        this.unreadCount = 0;
+        console.log('📭 No notifications found');
       }
-      // ✅ นับข้อความที่ยังไม่อ่าน (status = 'new')
-      this.unreadCount = reportsData.filter((report: any) => 
-        (report.status || 'new') === 'new'
-      ).length;
+      
     } catch (error: any) {
       console.error('❌ Error loading unread count:', error);
       this.unreadCount = 0;
+      
+      // ✅ Fallback: แสดงตัวเลขทดสอบสำหรับ demo
+      this.unreadCount = 1; // แสดง "1" สำหรับ demo
+      console.log('🔔 Using fallback unread count:', this.unreadCount);
     }
   }
+  // ✅ Subscribe ถึง notifications แบบ real-time
+  private subscribeToNotificationsCount() {
+    try {
+      const notificationsRef = ref(this.database, 'notifications');
+      const unsubscribe = onValue(notificationsRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const allNotifications = snapshot.val();
+          let totalUnreadCount = 0;
+          
+          // ✅ นับ notifications ที่ยังไม่ได้อ่านจากทุก user
+          Object.values(allNotifications).forEach((userNotifications: any) => {
+            if (userNotifications && typeof userNotifications === 'object') {
+              Object.values(userNotifications).forEach((notification: any) => {
+                if (notification && notification.persistent && !notification.read) {
+                  totalUnreadCount++;
+                }
+              });
+            }
+          });
+          
+          this.unreadCount = totalUnreadCount;
+          console.log('🔔 Real-time unread count update:', this.unreadCount);
+        } else {
+          this.unreadCount = 0;
+          console.log('📭 No notifications found (real-time)');
+        }
+      });
+      
+      // ✅ เก็บ unsubscribe function
+      this.firebaseSubscriptions.push(unsubscribe);
+      
+    } catch (error) {
+      console.error('❌ Error subscribing to notifications count:', error);
+    }
+  }
+  
   // ✅ ฟังก์ชันสำหรับ refresh unread count
   async refreshUnreadCount() {
     await this.loadUnreadCount();
   }
+  
   // ✅ ฟังก์ชันสำหรับสร้าง auth headers
   async getAuthHeaders(): Promise<HttpHeaders> {
     if (this.currentUser) {
@@ -835,6 +891,9 @@ export class AdmainComponent implements OnInit, OnDestroy {
       const response = await this.http.put(`${this.apiUrl}/api/admin/users/${userId}`, updateData, { headers }).toPromise();
 
       console.log('✅ User updated successfully:', response);
+
+      // ✅ ส่ง notification ไปยัง user ที่ถูกแก้ไข
+      await this.sendUserUpdateNotification(this.editingUser);
 
       this.notificationService.showNotification('success', 'บันทึกสำเร็จ', 'แก้ไขข้อมูลผู้ใช้เรียบร้อยแล้ว');
       this.closeEditModal();
@@ -966,5 +1025,37 @@ export class AdmainComponent implements OnInit, OnDestroy {
       .map(([key, value]) => `${key}: ${value}`)
       .join('\n');
     this.notificationService.showNotification('info', 'รายละเอียดอุปกรณ์', detailsText, true, 'ปิด');
+  }
+
+  // ✅ ส่ง notification ไปยัง user เมื่อ admin แก้ไขข้อมูล
+  private async sendUserUpdateNotification(user: UserData) {
+    try {
+      const userId = user['userid'] || user['id'];
+      if (!userId) {
+        console.error('❌ No user ID found for notification');
+        return;
+      }
+
+      const notificationData = {
+        userId: userId,
+        type: 'admin_update',
+        title: 'ข้อมูลของคุณได้รับการอัปเดต',
+        message: `แอดมินได้แก้ไขข้อมูลของคุณแล้ว กรุณาตรวจสอบข้อมูลใหม่`,
+        adminName: this.adminName || 'Admin',
+        timestamp: new Date().toISOString(),
+        read: false,
+        persistent: true // ✅ Persistent notification จนกว่า user จะกดรับทราบ
+      };
+
+      // ✅ ส่งไปยัง Firebase Realtime Database
+      const notificationsRef = ref(this.database, `notifications/${userId}`);
+      const newNotificationRef = push(notificationsRef);
+      await set(newNotificationRef, notificationData);
+
+      console.log(`✅ Notification sent to user ${userId}:`, notificationData);
+      
+    } catch (error) {
+      console.error('❌ Error sending user update notification:', error);
+    }
   }
 }

@@ -7,7 +7,7 @@ import { interval, Subscription, lastValueFrom } from 'rxjs'; // 👈 ใช้ 
 import { Constants } from '../../../config/constants';
 import { Auth, onAuthStateChanged } from '@angular/fire/auth';
 import { DeviceService, SelectedDeviceData } from '../../../service/device.service';
-import { Database, ref, onValue, get } from '@angular/fire/database'; // ✅ Firebase Database
+import { Database, ref, onValue, get, off, set } from '@angular/fire/database'; // ✅ Firebase Database
 
 interface Device {
   deviceid: number;
@@ -141,11 +141,13 @@ export class MainComponent implements OnInit, OnDestroy {
           setTimeout(() => {
             this.loadUserProfile();
             this.loadDevices();
+            this.subscribeToNotifications(); // ✅ Subscribe ถึง notifications
           }, 100);
         }).catch((error) => {
           console.error('❌ Failed to get ID token:', error);
           this.loadUserProfile();
           this.loadDevices();
+          this.subscribeToNotifications(); // ✅ Subscribe ถึง notifications
         });
       } else {
         this.router.navigate(['/']);
@@ -414,6 +416,11 @@ export class MainComponent implements OnInit, OnDestroy {
   
   // ✅ Subscribe to Firebase real-time updates
   private firebaseSubscriptions: (() => void)[] = [];
+  
+  // ✅ Notification system properties
+  persistentNotifications: any[] = [];
+  showPersistentNotification = false;
+  currentPersistentNotification: any = null;
   
   private subscribeToFirebaseUpdates() {
     // ✅ ยกเลิก subscriptions เก่า
@@ -817,6 +824,150 @@ export class MainComponent implements OnInit, OnDestroy {
       case 'warning': return 'fas fa-exclamation-triangle';
       case 'info': return 'fas fa-info-circle';
       default: return 'fas fa-info-circle';
+    }
+  }
+
+  // ✅ Subscribe ถึง notifications จาก Firebase
+  private subscribeToNotifications() {
+    if (!this.currentUser) return;
+    
+    try {
+      // ✅ ดึง userid จาก localStorage หรือ API
+      const userData = localStorage.getItem('user');
+      let userId = null;
+      
+      if (userData) {
+        try {
+          const parsedUserData = JSON.parse(userData);
+          userId = parsedUserData.userid || parsedUserData.id;
+        } catch (e) {
+          console.error('Error parsing user data:', e);
+        }
+      }
+      
+      if (!userId) {
+        console.log('ℹ️ No user ID found for notifications');
+        return;
+      }
+      
+      console.log(`🔔 Subscribing to notifications for user: ${userId}`);
+      
+      // ✅ Subscribe ถึง notifications path
+      const notificationsRef = ref(this.database, `notifications/${userId}`);
+      const unsubscribe = onValue(notificationsRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const notifications = snapshot.val();
+          const notificationList = Object.values(notifications) as any[];
+          
+          // ✅ หา persistent notifications ที่ยังไม่ได้อ่าน
+          const unreadPersistentNotifications = notificationList.filter(notification => 
+            notification.persistent && !notification.read
+          );
+          
+          if (unreadPersistentNotifications.length > 0) {
+            // ✅ แสดง persistent notification แรก
+            const latestNotification = unreadPersistentNotifications[unreadPersistentNotifications.length - 1];
+            this.showPersistentNotification = true;
+            this.currentPersistentNotification = latestNotification;
+            
+            console.log('🔔 New persistent notification:', latestNotification);
+          } else {
+            this.showPersistentNotification = false;
+            this.currentPersistentNotification = null;
+          }
+          
+          this.persistentNotifications = unreadPersistentNotifications;
+        } else {
+          this.showPersistentNotification = false;
+          this.currentPersistentNotification = null;
+          this.persistentNotifications = [];
+        }
+      });
+      
+      // ✅ เก็บ unsubscribe function
+      this.firebaseSubscriptions.push(unsubscribe);
+      
+    } catch (error) {
+      console.error('❌ Error subscribing to notifications:', error);
+    }
+  }
+
+  // ✅ รับทราบ persistent notification
+  async acknowledgeNotification(notificationId: string) {
+    try {
+      if (!this.currentUser) return;
+      
+      const userData = localStorage.getItem('user');
+      let userId = null;
+      
+      if (userData) {
+        try {
+          const parsedUserData = JSON.parse(userData);
+          userId = parsedUserData.userid || parsedUserData.id;
+        } catch (e) {
+          console.error('Error parsing user data:', e);
+        }
+      }
+      
+      if (!userId) return;
+      
+      // ✅ อัปเดต notification เป็น read
+      const notificationRef = ref(this.database, `notifications/${userId}/${notificationId}`);
+      await set(notificationRef, {
+        ...this.currentPersistentNotification,
+        read: true,
+        acknowledgedAt: new Date().toISOString()
+      });
+      
+      console.log('✅ Notification acknowledged:', notificationId);
+      
+      // ✅ ซ่อน persistent notification
+      this.showPersistentNotification = false;
+      this.currentPersistentNotification = null;
+      
+    } catch (error) {
+      console.error('❌ Error acknowledging notification:', error);
+    }
+  }
+
+  // ✅ ปิด persistent notification (ชั่วคราว)
+  dismissPersistentNotification() {
+    this.showPersistentNotification = false;
+    // ✅ ไม่ลบ notification จาก Firebase เพื่อให้แสดงอีกครั้งเมื่อ refresh
+  }
+
+  // ✅ จัดรูปแบบเวลาสำหรับ notification
+  formatNotificationTime(timestamp: string): string {
+    if (!timestamp) return 'ไม่ระบุ';
+    
+    try {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffMins < 1) {
+        return 'เมื่อสักครู่';
+      } else if (diffMins < 60) {
+        return `${diffMins} นาทีที่แล้ว`;
+      } else if (diffHours < 24) {
+        return `${diffHours} ชั่วโมงที่แล้ว`;
+      } else if (diffDays < 7) {
+        return `${diffDays} วันที่แล้ว`;
+      } else {
+        return date.toLocaleDateString('th-TH', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+    } catch (error) {
+      console.error('Error formatting notification time:', error);
+      return 'ไม่ระบุ';
     }
   }
 }

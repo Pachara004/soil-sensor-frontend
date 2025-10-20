@@ -214,10 +214,29 @@ export class RegisterComponent {
           email: this.email,
         })
       ) as any;
-      this.otpReferenceNumber = response?.referenceNumber || response?.ref || 'N/A';
-      this.showNotificationPopup('success', 'ส่ง OTP สำเร็จ', `OTP ถูกส่งไปยังอีเมลของคุณแล้ว\nเลขอ้างอิง: ${this.otpReferenceNumber}`);
-      this.step = 2;
-      this.startCountdown();
+      
+      // ตรวจสอบ response และจัดการ nextStep
+      if (response?.success || response?.message) {
+        this.otpReferenceNumber = response?.referenceNumber || response?.ref || response?.ref || 'N/A';
+        
+        // แสดงข้อความสำเร็จ
+        const successMessage = response?.message || 'OTP ถูกส่งไปยังอีเมลของคุณแล้ว';
+        this.showNotificationPopup('success', 'ส่ง OTP สำเร็จ', `${successMessage}\nเลขอ้างอิง: ${this.otpReferenceNumber}`);
+        
+        // เด้งไป step ถัดไป (ตรวจสอบ nextStep หรือใช้ค่า default)
+        if (response?.nextStep === 'verify-otp' || response?.success) {
+          this.step = 2;
+          this.startCountdown(response?.expiresIn);
+          console.log('✅ OTP sent successfully, moving to step 2');
+        }
+      } else {
+        // ถ้าไม่มี success flag ให้ถือว่าสำเร็จและเด้งไป step 2
+        this.otpReferenceNumber = response?.referenceNumber || response?.ref || 'N/A';
+        this.showNotificationPopup('success', 'ส่ง OTP สำเร็จ', `OTP ถูกส่งไปยังอีเมลของคุณแล้ว\nเลขอ้างอิง: ${this.otpReferenceNumber}`);
+        this.step = 2;
+        this.startCountdown(response?.expiresIn);
+        console.log('✅ OTP sent (legacy response), moving to step 2');
+      }
     } catch (error: any) {
       console.error('Error sending OTP:', error);
       if (error?.status === 404) {
@@ -234,12 +253,16 @@ export class RegisterComponent {
   async resendOtp() {
     await this.sendOtp();
   }
-  private startCountdown() {
-    this.countdown = 60;
+  private startCountdown(expiresIn?: number) {
+    // ใช้ expiresIn จาก API หรือใช้ค่า default 60 วินาที
+    this.countdown = expiresIn || 60;
+    console.log(`⏰ Starting countdown: ${this.countdown} seconds`);
+    
     const timer = setInterval(() => {
       this.countdown--;
       if (this.countdown <= 0) {
         clearInterval(timer);
+        console.log('⏰ OTP countdown finished');
       }
     }, 1000);
   }

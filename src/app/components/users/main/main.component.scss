@@ -1010,10 +1010,222 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
         .notification-actions {
           flex-direction: column;
 
-          button {
-            width: 100%;
-            min-width: auto;
+        }
+      }
+    }
+  }
+}
+
+// ✅ Persistent Notification Styles
+.persistent-notification-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease-out;
+
+  .persistent-notification-modal {
+    background: $card-bg;
+    border-radius: $border-radius-lg;
+    box-shadow: $shadow-hover;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    animation: slideInUp 0.3s ease-out;
+
+    .notification-header {
+      background: $warning-gradient;
+      color: white;
+      padding: 20px 25px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+
+      .notification-icon {
+        font-size: 24px;
+        opacity: 0.9;
+      }
+
+      .notification-title {
+        flex: 1;
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .close-btn {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 20px;
+        cursor: pointer;
+        padding: 5px;
+        border-radius: 50%;
+        transition: $transition;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+      }
+    }
+
+    .notification-content {
+      padding: 25px;
+
+      .notification-message {
+        font-size: 16px;
+        line-height: 1.6;
+        color: $text-primary;
+        margin-bottom: 20px;
+      }
+
+      .notification-details {
+        background: $field-bg;
+        border-radius: $border-radius-sm;
+        padding: 15px;
+        border-left: 4px solid $warning-color;
+
+        .detail-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 8px;
+          font-size: 14px;
+          color: $text-secondary;
+
+          &:last-child {
+            margin-bottom: 0;
           }
+
+          i {
+            color: $warning-color;
+            width: 16px;
+          }
+        }
+      }
+    }
+
+    .notification-actions {
+      padding: 0 25px 25px;
+      display: flex;
+      gap: 15px;
+
+      .acknowledge-btn {
+        flex: 1;
+        background: $success-gradient;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: $border-radius-sm;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: $transition;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: $shadow-green;
+        }
+
+        &:active {
+          transform: translateY(0);
+        }
+      }
+
+      .dismiss-btn {
+        flex: 1;
+        background: $field-bg;
+        color: $text-secondary;
+        border: 2px solid $text-muted;
+        padding: 12px 20px;
+        border-radius: $border-radius-sm;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: $transition;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+
+        &:hover {
+          background: $text-muted;
+          color: white;
+          transform: translateY(-2px);
+        }
+
+        &:active {
+          transform: translateY(0);
+        }
+      }
+    }
+  }
+}
+
+// ✅ Animations
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ✅ Responsive Design
+@media (max-width: 768px) {
+  .persistent-notification-overlay {
+    padding: 20px;
+
+    .persistent-notification-modal {
+      width: 100%;
+      max-height: 90vh;
+
+      .notification-header {
+        padding: 15px 20px;
+
+        .notification-title {
+          font-size: 16px;
+        }
+      }
+
+      .notification-content {
+        padding: 20px;
+
+        .notification-message {
+          font-size: 15px;
+        }
+      }
+
+      .notification-actions {
+        padding: 0 20px 20px;
+        flex-direction: column;
+
+        .acknowledge-btn,
+        .dismiss-btn {
+          width: 100%;
         }
       }
     }
