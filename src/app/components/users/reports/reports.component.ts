@@ -99,26 +99,32 @@ export class ReportsComponent {
       this.notificationService.showNotification('error', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกข้อมูลให้ครบถ้วน');
       return;
     }
+  
     // ตรวจสอบ authentication
     if (!this.currentUser) {
       this.notificationService.showNotification('error', 'ไม่พบข้อมูลผู้ใช้', 'กรุณาเข้าสู่ระบบใหม่');
       return;
     }
+  
     this.isUploading = true;
+  
     try {
       // ดึง Firebase ID token
       const token = await this.currentUser.getIdToken();
       if (!token) {
         throw new Error('ไม่สามารถรับ Firebase token ได้');
       }
-      // 1. สร้าง report ก่อน
+  
+      // 1. สร้าง report ก่อน - แก้ไขตรงนี้
       const reportData = {
-        subject: this.subject,
-        message: this.message,
-        timestamp: new Date().toISOString(),
-        userId: this.currentUser?.uid || null,
-        userEmail: this.currentUser?.email || null
+        title: this.subject,        // ✅ เปลี่ยนจาก subject เป็น title
+        message: this.message,      // ✅ ใช้ message ตามที่ API ต้องการ
+        type: 'general',            // ✅ เพิ่ม type (ถ้าต้องการให้ user เลือกได้ก็เพิ่ม dropdown)
+        priority: 'normal'          // ✅ เพิ่ม priority (ถ้าต้องการให้ user เลือกได้ก็เพิ่ม dropdown)
       };
+  
+      console.log('📤 Sending report data:', reportData); // เพิ่ม log เพื่อ debug
+  
       const reportResponse = await this.http
         .post<any>(`${this.apiUrl}/api/reports`, reportData, {
           headers: {
@@ -127,15 +133,21 @@ export class ReportsComponent {
           }
         })
         .toPromise();
-      const reportId = reportResponse.report?.reportid || reportResponse.reportid;
+  
+      const reportId = reportResponse.report?.id || reportResponse.report?.reportid;
       if (!reportId) {
         throw new Error('ไม่สามารถรับ Report ID ได้');
       }
+  
+      console.log('✅ Report created with ID:', reportId);
+  
       // 2. อัปโหลดรูปภาพไปยัง Firebase Storage (ถ้ามี)
       if (this.selectedImages.length > 0) {
         this.notificationService.showNotification('info', 'กำลังอัปโหลดรูปภาพ...', 'กรุณารอสักครู่');
+        
         const imageUrls = await this.uploadImagesToFirebase();
         console.log('📸 Uploaded images:', imageUrls);
+  
         // 3. บันทึก URL ของภาพใน table image
         for (const imageUrl of imageUrls) {
           try {
@@ -143,7 +155,9 @@ export class ReportsComponent {
               reportid: reportId,
               imageUrl: imageUrl
             };
+            
             console.log('💾 Saving image to database:', imageData);
+            
             await this.http
               .post(`${this.apiUrl}/api/images`, imageData, {
                 headers: {
@@ -152,28 +166,43 @@ export class ReportsComponent {
                 }
               })
               .toPromise();
+              
           } catch (imageError) {
             console.error('❌ Error saving image to database:', imageError);
             // ไม่ throw error เพื่อไม่ให้กระทบการสร้าง report
           }
         }
       }
-      this.notificationService.showNotification('success', 'ส่งเรื่องสำเร็จ!', 'ทีมงานจะติดต่อกลับโดยเร็ว', true, 'กลับ', () => {
-        this.location.back();
-      });
+  
+      this.notificationService.showNotification(
+        'success', 
+        'ส่งเรื่องสำเร็จ!', 
+        'ทีมงานจะติดต่อกลับโดยเร็ว', 
+        true, 
+        'กลับ', 
+        () => {
+          this.location.back();
+        }
+      );
+  
       // ล้างฟอร์ม
       this.subject = '';
       this.message = '';
       this.selectedImages = [];
+      
     } catch (error: any) {
       console.error('❌ Error sending report:', error);
+      
       let errorMessage = 'เกิดข้อผิดพลาดในการส่งรายงาน';
+      
       if (error.error?.message) {
         errorMessage = error.error.message;
       } else if (error.message) {
         errorMessage = error.message;
       }
+      
       this.notificationService.showNotification('error', 'เกิดข้อผิดพลาด', errorMessage);
+      
     } finally {
       this.isUploading = false;
     }

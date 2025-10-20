@@ -74,6 +74,7 @@ export class MainComponent implements OnInit, OnDestroy {
   // ✅ Device validation properties
   deviceValidationError: boolean = false;
   deviceValidationMessage: string = '';
+  hasViewedReports: any;
   constructor(
     private router: Router,
     private http: HttpClient,
@@ -988,8 +989,12 @@ export class MainComponent implements OnInit, OnDestroy {
   async fetchUserReports() {
     try {
       const currentUser = this.auth.currentUser;
-      if (!currentUser) return;
-      const token = await currentUser.getIdToken(true);
+      let token: string | null = null;
+      if (currentUser) {
+        try {
+          token = await currentUser.getIdToken(true);
+        } catch {}
+      }
 
       const candidates = [
         `${this.apiUrl}/api/user/reports`,
@@ -999,10 +1004,25 @@ export class MainComponent implements OnInit, OnDestroy {
       ];
 
       let reports: any[] | null = null;
+      // เตรียม headers/params สำหรับ dev fallback (กรณีไม่มี token)
+      // ส่งทั้ง header x-user-email และ query userEmail เพื่อให้ backend รับได้หลายแบบ
+      const devEmail = this.userEmail || undefined;
+      const devUserId = this.userID ? parseInt(this.userID, 10) : undefined;
+      const baseHeaders: any = {};
+      if (token) {
+        baseHeaders['Authorization'] = `Bearer ${token}`;
+      } else {
+        if (devEmail) baseHeaders['x-user-email'] = devEmail;
+        if (devUserId) baseHeaders['x-user-id'] = String(devUserId);
+      }
+
       for (const url of candidates) {
         try {
-          const resp = await lastValueFrom(this.http.get<any>(url, {
-            headers: { 'Authorization': `Bearer ${token}` }
+          const withQuery = !token && devEmail && url.indexOf('?') === -1
+            ? `${url}?userEmail=${encodeURIComponent(devEmail)}`
+            : url;
+          const resp = await lastValueFrom(this.http.get<any>(withQuery, {
+            headers: baseHeaders
           }));
           if (Array.isArray(resp)) {
             reports = resp;
@@ -1015,6 +1035,9 @@ export class MainComponent implements OnInit, OnDestroy {
         } catch (inner) {
           continue;
         }
+      }
+      if (!this.hasViewedReports) {
+        this.userReportsUnreadCount = this.userReports.length;
       }
 
       if (!reports) {
@@ -1062,7 +1085,8 @@ export class MainComponent implements OnInit, OnDestroy {
             created_at: r.created_at || r.timestamp || new Date().toISOString()
           }));
 
-          this.userReportsUnreadCount = this.userReports.filter(r => (r.status || 'open') === 'open').length;
+          // แสดง badge = จำนวนรายการทั้งหมด (ทุกสถานะ)
+          this.userReportsUnreadCount = this.userReports.length;
           return;
         } catch (fbErr) {
           console.error('❌ Firebase fallback for user reports failed:', fbErr);
@@ -1087,7 +1111,8 @@ export class MainComponent implements OnInit, OnDestroy {
         created_at: r.created_at || r.timestamp || new Date().toISOString()
       }));
 
-      this.userReportsUnreadCount = this.userReports.filter(r => (r.status || 'open') === 'open').length;
+      // แสดง badge = จำนวนรายการทั้งหมด (ทุกสถานะ)
+      this.userReportsUnreadCount = this.userReports.length;
     } catch (err) {
       console.error('❌ Error fetching user reports:', err);
     }
@@ -1102,6 +1127,13 @@ export class MainComponent implements OnInit, OnDestroy {
 
   toggleReportsPanel() {
     this.showReportsPanel = !this.showReportsPanel;
+    // ✅ เมื่อเปิด panel ให้ซ่อน badge และเซ็ต flag ว่าเคยดูแล้ว
+    if (this.showReportsPanel) {
+      this.userReportsUnreadCount = 0;
+      this.hasViewedReports = true;
+      // ✅ บันทึกสถานะใน localStorage
+      localStorage.setItem('hasViewedReports', 'true');
+    }
   }
 
   getThaiStatus(status: string): string {
