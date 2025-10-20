@@ -25,6 +25,13 @@
         <span class="value">{{ currentTime }}</span>
       </div>
     </div>
+    <!-- 🔔 Bell button with badge -->
+    <div class="user-actions">
+      <button class="bell-btn" (click)="toggleReportsPanel()" aria-label="การแจ้งเตือน">
+        <i class="fas fa-bell"></i>
+        <span class="badge" *ngIf="userReportsUnreadCount > 0">{{ userReportsUnreadCount > 99 ? '99+' : userReportsUnreadCount }}</span>
+      </button>
+    </div>
   </div>
 
   <!-- Device Section -->
@@ -243,6 +250,31 @@
           <i class="fas fa-times"></i>
           ปิดชั่วคราว
         </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 🔔 Reports Panel -->
+<div class="reports-panel" *ngIf="showReportsPanel">
+  <div class="panel-header">
+    <i class="fas fa-inbox"></i>
+    <h4>ข้อความที่คุณส่งถึงแอดมิน</h4>
+    <button class="close" (click)="toggleReportsPanel()"><i class="fas fa-times"></i></button>
+  </div>
+
+  <div class="panel-body">
+    <div *ngIf="userReports.length === 0" class="empty">
+      ยังไม่มีข้อความที่ส่งถึงแอดมิน
+    </div>
+    <div class="report-item" *ngFor="let r of userReports">
+      <div class="left">
+        <div class="title">{{ r.title }}</div>
+        <div class="msg">{{ r.message || '-' }}</div>
+        <div class="time"><i class="fas fa-clock"></i> {{ formatNotificationTime(r.created_at) }}</div>
+      </div>
+      <div class="right">
+        <span class="status" [ngClass]="r.status">{{ getThaiStatus(r.status) }}</span>
       </div>
     </div>
   </div>

@@ -105,12 +105,16 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
   margin-bottom: 30px;
   box-shadow: $shadow-light;
   border: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 
   .user-details {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 20px;
     align-items: center;
+    flex: 1;
   }
 
   .user-item {
@@ -133,6 +137,36 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
 
     .value {
       color: $text-muted;
+    }
+  }
+
+  // 🔔 Bell button
+  .user-actions {
+    margin-top: 0;
+    display: flex;
+    justify-content: flex-end;
+
+    .bell-btn {
+      position: relative;
+      background: #fff;
+      border: 2px solid #e0e0e0;
+      border-radius: 30px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: $transition;
+      box-shadow: $shadow-light;
+
+      i { color: $accent-color; font-size: 18px; }
+
+      &:hover { box-shadow: $shadow-hover; transform: translateY(-2px); }
+
+      .badge {
+        position: absolute; top: -8px; right: -8px;
+        background: #E53935; color: #fff; border-radius: 16px;
+        padding: 2px 6px; font-size: 12px; font-weight: 700;
+        min-width: 22px; text-align: center; border: 2px solid #fff;
+        box-shadow: 0 3px 10px rgba(229, 57, 53, 0.5);
+      }
     }
   }
 }
@@ -1171,6 +1205,31 @@ $shadow-blue: 0 4px 12px rgba(2, 119, 189, 0.2);
       }
     }
   }
+}
+
+// 🔔 Reports panel styles
+.reports-panel {
+  position: fixed; right: 24px; top: 90px; width: 380px; max-height: 70vh;
+  background: $card-bg; border-radius: $border-radius-lg; box-shadow: $shadow-hover;
+  border: 1px solid rgba(0,0,0,0.08); overflow: hidden; z-index: 9500;
+  animation: slideInPopup 0.3s ease-out;
+
+  .panel-header { display:flex; align-items:center; gap:10px; padding:14px 16px; background: $secondary-gradient; color:#fff; }
+  .panel-header i{ font-size:18px }
+  .panel-header h4{ flex:1; margin:0; font-size:16px }
+  .panel-header .close{ background:none; border:none; color:#fff; cursor:pointer }
+
+  .panel-body{ max-height:60vh; overflow:auto; padding:10px 14px }
+  .empty{ padding:16px; color:$text-muted; text-align:center }
+
+  .report-item{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:12px; border-radius:12px; border:1px solid #eee; margin-bottom:10px; background:#fff }
+  .report-item .title{ font-weight:700; color:$text-primary; margin-bottom:6px }
+  .report-item .msg{ color:$text-secondary; font-size:13px; margin-bottom:6px }
+  .report-item .time{ color:$text-muted; font-size:12px }
+  .report-item .status{ padding:6px 10px; border-radius:12px; font-size:12px; font-weight:700 }
+  .report-item .status.open{ background: rgba(251, 140, 0, .12); color: $warning-color }
+  .report-item .status.read{ background: rgba(2, 119, 189, .12); color: $accent-color }
+  .report-item .status.resolved{ background: rgba(76, 175, 80, .12); color: $primary-color }
 }
 
 // ✅ Animations

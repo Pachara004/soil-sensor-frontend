@@ -84,6 +84,9 @@ export class AdmainComponent implements OnInit, OnDestroy {
   private apiUrl: string;
   // ✅ Firebase subscriptions
   private firebaseSubscriptions: (() => void)[] = [];
+  // ✅ Unread badge stability guards
+  private lastStableUnreadCount = 0;
+  private consecutiveZeroReads = 0;
   constructor(
     private adminService: AdminService,
     private router: Router,
@@ -739,77 +742,158 @@ export class AdmainComponent implements OnInit, OnDestroy {
   }
   // ✅ ฟังก์ชันสำหรับ refresh เมื่อกลับมาจากหน้า mail
   async onActivate() {
+    console.log('🔄 Refreshing unread count after returning from mail page');
     await this.refreshUnreadCount();
   }
-  // ✅ ฟังก์ชันนับข้อความใหม่
+  // ✅ ฟังก์ชันนับข้อความใหม่ (ใช้ PostgreSQL เท่านั้น)
   async loadUnreadCount() {
     try {
-      // ✅ ดึงข้อมูลจาก Firebase notifications แทน API reports
-      const notificationsRef = ref(this.database, 'notifications');
-      const snapshot = await get(notificationsRef);
+      console.log('🔍 Attempting to load PostgreSQL reports...');
+      const headers = await this.getAuthHeaders();
+      console.log('🔑 Headers:', headers);
       
-      if (snapshot.exists()) {
-        const allNotifications = snapshot.val();
-        let totalUnreadCount = 0;
-        
-        // ✅ นับ notifications ที่ยังไม่ได้อ่านจากทุก user
-        Object.values(allNotifications).forEach((userNotifications: any) => {
-          if (userNotifications && typeof userNotifications === 'object') {
-            Object.values(userNotifications).forEach((notification: any) => {
-              if (notification && notification.persistent && !notification.read) {
-                totalUnreadCount++;
-              }
-            });
-          }
-        });
-        
-        this.unreadCount = totalUnreadCount;
-        console.log('🔔 Total unread notifications:', this.unreadCount);
-        console.log('📊 All notifications:', allNotifications);
-      } else {
-        this.unreadCount = 0;
-        console.log('📭 No notifications found');
+      // ✅ ดึงข้อมูลจาก PostgreSQL reports table เท่านั้น
+      const response = await lastValueFrom(
+        this.http.get<any>(`${this.apiUrl}/api/reports`, { headers })
+      );
+      
+      console.log('📊 Raw API response:', response);
+      
+      let reportsData: any[] = [];
+      if (Array.isArray(response)) {
+        reportsData = response;
+      } else if (response && Array.isArray(response.reports)) {
+        reportsData = response.reports;
+      } else if (response && Array.isArray(response.data)) {
+        reportsData = response.data;
+      } else if (response && response.success && Array.isArray(response.result)) {
+        reportsData = response.result;
       }
+      
+      // ✅ นับข้อความที่ยังไม่อ่าน (status = 'open' เท่านั้น)
+      console.log('📊 Reports data details:', reportsData.map((report: any) => ({
+        id: report.id,
+        title: report.title,
+        status: report.status,
+        created_at: report.created_at
+      })));
+      
+      const newCount = reportsData.filter((report: any) => 
+        (report.status || 'open') === 'open'
+      ).length;
+      
+      // ✅ Update with debounce to avoid flicker
+      if (newCount === 0) {
+        this.consecutiveZeroReads++;
+        if (this.consecutiveZeroReads >= 2) {
+          this.unreadCount = 0;
+          this.lastStableUnreadCount = 0;
+        }
+      } else {
+        this.consecutiveZeroReads = 0;
+        if (newCount !== this.lastStableUnreadCount) {
+          this.unreadCount = newCount;
+          this.lastStableUnreadCount = newCount;
+        }
+      }
+      console.log('📊 PostgreSQL unread reports (status = open only):', newCount);
+      console.log('📊 All reports data:', reportsData);
+      console.log('🔔 Total unread count (PostgreSQL only):', this.unreadCount);
+      
+      // ✅ Debug: แสดงรายละเอียดของแต่ละ report
+      reportsData.forEach((report: any, index: number) => {
+        console.log(`📋 Report ${index + 1}:`, {
+          id: report.id,
+          title: report.title,
+          status: report.status,
+          message: report.message?.substring(0, 50) + '...',
+          created_at: report.created_at
+        });
+      });
       
     } catch (error: any) {
       console.error('❌ Error loading unread count:', error);
-      this.unreadCount = 0;
-      
-      // ✅ Fallback: แสดงตัวเลขทดสอบสำหรับ demo
-      this.unreadCount = 1; // แสดง "1" สำหรับ demo
-      console.log('🔔 Using fallback unread count:', this.unreadCount);
+      // ❌ อย่าล้างค่าให้เป็น 0 เพื่อให้ badge คงอยู่ระหว่าง error
     }
   }
-  // ✅ Subscribe ถึง notifications แบบ real-time
+  // ✅ Subscribe ถึง PostgreSQL reports แบบ real-time (polling)
   private subscribeToNotificationsCount() {
     try {
-      const notificationsRef = ref(this.database, 'notifications');
-      const unsubscribe = onValue(notificationsRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const allNotifications = snapshot.val();
-          let totalUnreadCount = 0;
+      // ✅ Poll PostgreSQL ทุก 10 วินาที
+      const pollPostgreSQLReports = async () => {
+        try {
+          const headers = await this.getAuthHeaders();
+          const response = await lastValueFrom(
+            this.http.get<any>(`${this.apiUrl}/api/reports`, { headers })
+          );
           
-          // ✅ นับ notifications ที่ยังไม่ได้อ่านจากทุก user
-          Object.values(allNotifications).forEach((userNotifications: any) => {
-            if (userNotifications && typeof userNotifications === 'object') {
-              Object.values(userNotifications).forEach((notification: any) => {
-                if (notification && notification.persistent && !notification.read) {
-                  totalUnreadCount++;
-                }
-              });
+          let reportsData: any[] = [];
+          if (Array.isArray(response)) {
+            reportsData = response;
+          } else if (response && Array.isArray(response.reports)) {
+            reportsData = response.reports;
+          } else if (response && Array.isArray(response.data)) {
+            reportsData = response.data;
+          } else if (response && response.success && Array.isArray(response.result)) {
+            reportsData = response.result;
+          }
+          
+          // ✅ นับข้อความที่ยังไม่อ่าน (status = 'open' เท่านั้น)
+          console.log('📊 Real-time reports data details:', reportsData.map((report: any) => ({
+            id: report.id,
+            title: report.title,
+            status: report.status,
+            created_at: report.created_at
+          })));
+          
+          const newCount = reportsData.filter((report: any) => 
+            (report.status || 'open') === 'open'
+          ).length;
+          
+          // ✅ Debounced/stable update to avoid flicker
+          if (newCount === 0) {
+            this.consecutiveZeroReads++;
+            if (this.consecutiveZeroReads >= 2) {
+              this.unreadCount = 0;
+              this.lastStableUnreadCount = 0;
             }
+          } else {
+            this.consecutiveZeroReads = 0;
+            if (newCount !== this.lastStableUnreadCount) {
+              this.unreadCount = newCount;
+              this.lastStableUnreadCount = newCount;
+            }
+          }
+          console.log('📊 Real-time PostgreSQL unread reports (status = open only):', newCount);
+          console.log('🔔 Real-time unread count (PostgreSQL only):', this.unreadCount);
+          
+          // ✅ Debug: แสดงรายละเอียดของแต่ละ report (real-time)
+          reportsData.forEach((report: any, index: number) => {
+            console.log(`📋 Real-time Report ${index + 1}:`, {
+              id: report.id,
+              title: report.title,
+              status: report.status,
+              message: report.message?.substring(0, 50) + '...',
+              created_at: report.created_at
+            });
           });
           
-          this.unreadCount = totalUnreadCount;
-          console.log('🔔 Real-time unread count update:', this.unreadCount);
-        } else {
-          this.unreadCount = 0;
-          console.log('📭 No notifications found (real-time)');
+        } catch (error) {
+          console.error('❌ Error polling PostgreSQL reports:', error);
+          // ❌ อย่าล้างค่าให้เป็น 0 เพื่อให้ badge คงอยู่ระหว่าง error
         }
-      });
+      };
       
-      // ✅ เก็บ unsubscribe function
-      this.firebaseSubscriptions.push(unsubscribe);
+      // ✅ เรียกใช้ทันทีครั้งแรก
+      pollPostgreSQLReports();
+      
+      // ✅ Poll PostgreSQL ทุก 10 วินาที
+      const postgresPollingInterval = setInterval(async () => {
+        await pollPostgreSQLReports();
+      }, 10000); // 10 วินาที
+      
+      // ✅ เก็บ polling interval สำหรับ cleanup
+      this.firebaseSubscriptions.push(() => clearInterval(postgresPollingInterval));
       
     } catch (error) {
       console.error('❌ Error subscribing to notifications count:', error);
@@ -818,6 +902,7 @@ export class AdmainComponent implements OnInit, OnDestroy {
   
   // ✅ ฟังก์ชันสำหรับ refresh unread count
   async refreshUnreadCount() {
+    console.log('🔄 Manual refresh of unread count');
     await this.loadUnreadCount();
   }
   

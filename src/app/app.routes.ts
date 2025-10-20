@@ -175,13 +175,6 @@ export const routes: Routes = [
       ),
   },
   {
-    path: 'adregister',
-    loadComponent: () =>
-      import('./components/adregister/adregister.component').then(
-        (m) => m.AdregisterComponent
-      ),
-  },
-  {
     path: "gps",
     loadComponent: () =>
       import("./components/gps-display.component").then(

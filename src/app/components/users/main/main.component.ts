@@ -142,12 +142,16 @@ export class MainComponent implements OnInit, OnDestroy {
             this.loadUserProfile();
             this.loadDevices();
             this.subscribeToNotifications(); // ✅ Subscribe ถึง notifications
+            this.fetchUserReports();
+            this.startReportsPolling();
           }, 100);
         }).catch((error) => {
           console.error('❌ Failed to get ID token:', error);
           this.loadUserProfile();
           this.loadDevices();
           this.subscribeToNotifications(); // ✅ Subscribe ถึง notifications
+          this.fetchUserReports();
+          this.startReportsPolling();
         });
       } else {
         this.router.navigate(['/']);
@@ -164,6 +168,10 @@ export class MainComponent implements OnInit, OnDestroy {
     if (this.liveOfflineTimer) {
       clearInterval(this.liveOfflineTimer); // 👈 ใช้ clearInterval
       this.liveOfflineTimer = null;
+    }
+    if (this.reportsPollingTimer) {
+      clearInterval(this.reportsPollingTimer);
+      this.reportsPollingTimer = null;
     }
     // ✅ ยกเลิก Firebase subscriptions
     this.firebaseSubscriptions.forEach(unsub => unsub());
@@ -421,6 +429,11 @@ export class MainComponent implements OnInit, OnDestroy {
   persistentNotifications: any[] = [];
   showPersistentNotification = false;
   currentPersistentNotification: any = null;
+  // ✅ User reports (sent to admin)
+  userReports: any[] = [];
+  showReportsPanel = false;
+  userReportsUnreadCount = 0; // นับเฉพาะสถานะ open
+  private reportsPollingTimer: any = null;
   
   private subscribeToFirebaseUpdates() {
     // ✅ ยกเลิก subscriptions เก่า
@@ -969,5 +982,133 @@ export class MainComponent implements OnInit, OnDestroy {
       console.error('Error formatting notification time:', error);
       return 'ไม่ระบุ';
     }
+  }
+
+  // ==================== USER REPORTS (POSTGRESQL) ====================
+  async fetchUserReports() {
+    try {
+      const currentUser = this.auth.currentUser;
+      if (!currentUser) return;
+      const token = await currentUser.getIdToken(true);
+
+      const candidates = [
+        `${this.apiUrl}/api/user/reports`,
+        `${this.apiUrl}/api/reports/user`,
+        `${this.apiUrl}/api/reports?mine=true`,
+        `${this.apiUrl}/api/reports`
+      ];
+
+      let reports: any[] | null = null;
+      for (const url of candidates) {
+        try {
+          const resp = await lastValueFrom(this.http.get<any>(url, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }));
+          if (Array.isArray(resp)) {
+            reports = resp;
+          } else if (resp && Array.isArray(resp.reports)) {
+            reports = resp.reports;
+          } else if (resp && Array.isArray(resp.data)) {
+            reports = resp.data;
+          }
+          if (reports) break;
+        } catch (inner) {
+          continue;
+        }
+      }
+
+      if (!reports) {
+        // 🔄 Fallback: ลองดึงจาก Firebase Realtime Database
+        try {
+          const userIdNum = this.userID ? parseInt(this.userID, 10) : undefined;
+          if (!userIdNum) {
+            this.userReports = [];
+            this.userReportsUnreadCount = 0;
+            return;
+          }
+
+          const firebasePaths = [
+            `user_reports/${userIdNum}`,
+            `reports_by_user/${userIdNum}`,
+            `reports/${userIdNum}`
+          ];
+
+          let fbReports: any[] | null = null;
+          for (const p of firebasePaths) {
+            const snap = await get(ref(this.database, p));
+            if (snap.exists()) {
+              const val = snap.val();
+              const arr = Array.isArray(val) ? val : Object.values(val);
+              if (arr && arr.length) {
+                fbReports = arr as any[];
+                break;
+              }
+            }
+          }
+
+          if (!fbReports) {
+            this.userReports = [];
+            this.userReportsUnreadCount = 0;
+            return;
+          }
+
+          fbReports.sort((a: any, b: any) => new Date(b.created_at || b.timestamp || b.time).getTime() - new Date(a.created_at || a.timestamp || a.time).getTime());
+
+          this.userReports = fbReports.map((r: any) => ({
+            id: r.id || r.reportId,
+            title: r.title || 'ข้อความถึงแอดมิน',
+            message: r.message || r.content || '',
+            status: (r.status || 'open'),
+            created_at: r.created_at || r.timestamp || new Date().toISOString()
+          }));
+
+          this.userReportsUnreadCount = this.userReports.filter(r => (r.status || 'open') === 'open').length;
+          return;
+        } catch (fbErr) {
+          console.error('❌ Firebase fallback for user reports failed:', fbErr);
+          this.userReports = [];
+          this.userReportsUnreadCount = 0;
+          return;
+        }
+      }
+
+      const userIdNum = this.userID ? parseInt(this.userID, 10) : undefined;
+      if (userIdNum) {
+        reports = reports.filter(r => (r.user_id || r.userid || r.userId) === userIdNum);
+      }
+
+      reports.sort((a, b) => new Date(b.created_at || b.timestamp || b.time).getTime() - new Date(a.created_at || a.timestamp || a.time).getTime());
+
+      this.userReports = reports.map(r => ({
+        id: r.id,
+        title: r.title || 'ข้อความถึงแอดมิน',
+        message: r.message || '',
+        status: (r.status || 'open'),
+        created_at: r.created_at || r.timestamp || new Date().toISOString()
+      }));
+
+      this.userReportsUnreadCount = this.userReports.filter(r => (r.status || 'open') === 'open').length;
+    } catch (err) {
+      console.error('❌ Error fetching user reports:', err);
+    }
+  }
+
+  private startReportsPolling() {
+    if (this.reportsPollingTimer) clearInterval(this.reportsPollingTimer);
+    this.reportsPollingTimer = setInterval(() => {
+      this.fetchUserReports();
+    }, 15000);
+  }
+
+  toggleReportsPanel() {
+    this.showReportsPanel = !this.showReportsPanel;
+  }
+
+  getThaiStatus(status: string): string {
+    const s = (status || '').toLowerCase();
+    if (s === 'open' || s === 'new') return 'ใหม่';
+    if (s === 'read') return 'อ่านแล้ว';
+    if (s === 'resolved') return 'แก้ไขแล้ว';
+    return status || 'ไม่ทราบสถานะ';
   }
 }
