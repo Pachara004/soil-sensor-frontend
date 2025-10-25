@@ -131,6 +131,8 @@ export class MainComponent implements OnInit, OnDestroy {
     this.clockSubscription = interval(1000).subscribe(() => {
       this.currentTime = new Date().toLocaleTimeString('th-TH');
     });
+    // ✅ โหลดสถานะการดูรายงานจาก localStorage
+    this.hasViewedReports = localStorage.getItem('hasViewedReports') === 'true';
     // ตรวจสอบ Firebase auth state ก่อนโหลด devices
     onAuthStateChanged(this.auth, (user) => {
       if (user) {
@@ -1036,8 +1038,23 @@ export class MainComponent implements OnInit, OnDestroy {
           continue;
         }
       }
+      // ✅ ตรวจสอบว่ามีรายงานใหม่หรือไม่ (เปรียบเทียบกับ localStorage)
+      const lastReportCount = parseInt(localStorage.getItem('lastReportCount') || '0', 10);
+      const currentReportCount = this.userReports.length;
+      
+      if (currentReportCount > lastReportCount) {
+        // ✅ มีรายงานใหม่ - รีเซ็ตสถานะการดู
+        this.hasViewedReports = false;
+        localStorage.removeItem('hasViewedReports');
+        localStorage.setItem('lastReportCount', currentReportCount.toString());
+      }
+      
+      // ✅ แสดง badge ตามจำนวนรายการทั้งหมด (ทุกสถานะ) ถ้ายังไม่เคยดู
       if (!this.hasViewedReports) {
         this.userReportsUnreadCount = this.userReports.length;
+      } else {
+        // ✅ ถ้าเคยดูแล้ว ให้ซ่อน badge
+        this.userReportsUnreadCount = 0;
       }
 
       if (!reports) {
@@ -1085,8 +1102,22 @@ export class MainComponent implements OnInit, OnDestroy {
             created_at: r.created_at || r.timestamp || new Date().toISOString()
           }));
 
-          // แสดง badge = จำนวนรายการทั้งหมด (ทุกสถานะ)
-          this.userReportsUnreadCount = this.userReports.length;
+          // ✅ ตรวจสอบว่ามีรายงานใหม่หรือไม่
+          const lastReportCount2 = parseInt(localStorage.getItem('lastReportCount') || '0', 10);
+          const currentReportCount2 = this.userReports.length;
+          
+          if (currentReportCount2 > lastReportCount2) {
+            this.hasViewedReports = false;
+            localStorage.removeItem('hasViewedReports');
+            localStorage.setItem('lastReportCount', currentReportCount2.toString());
+          }
+          
+          // ✅ แสดง badge ตามจำนวนรายการทั้งหมด (ทุกสถานะ) ถ้ายังไม่เคยดู
+          if (!this.hasViewedReports) {
+            this.userReportsUnreadCount = this.userReports.length;
+          } else {
+            this.userReportsUnreadCount = 0;
+          }
           return;
         } catch (fbErr) {
           console.error('❌ Firebase fallback for user reports failed:', fbErr);
@@ -1111,8 +1142,22 @@ export class MainComponent implements OnInit, OnDestroy {
         created_at: r.created_at || r.timestamp || new Date().toISOString()
       }));
 
-      // แสดง badge = จำนวนรายการทั้งหมด (ทุกสถานะ)
-      this.userReportsUnreadCount = this.userReports.length;
+      // ✅ ตรวจสอบว่ามีรายงานใหม่หรือไม่
+      const lastReportCount1 = parseInt(localStorage.getItem('lastReportCount') || '0', 10);
+      const currentReportCount1 = this.userReports.length;
+      
+      if (currentReportCount1 > lastReportCount1) {
+        this.hasViewedReports = false;
+        localStorage.removeItem('hasViewedReports');
+        localStorage.setItem('lastReportCount', currentReportCount1.toString());
+      }
+      
+      // ✅ แสดง badge ตามจำนวนรายการทั้งหมด (ทุกสถานะ) ถ้ายังไม่เคยดู
+      if (!this.hasViewedReports) {
+        this.userReportsUnreadCount = this.userReports.length;
+      } else {
+        this.userReportsUnreadCount = 0;
+      }
     } catch (err) {
       console.error('❌ Error fetching user reports:', err);
     }
@@ -1134,6 +1179,14 @@ export class MainComponent implements OnInit, OnDestroy {
       // ✅ บันทึกสถานะใน localStorage
       localStorage.setItem('hasViewedReports', 'true');
     }
+  }
+
+  // ✅ ฟังก์ชันสำหรับรีเซ็ตสถานะการดูรายงาน (เมื่อมีรายงานใหม่)
+  resetReportsViewStatus() {
+    this.hasViewedReports = false;
+    localStorage.removeItem('hasViewedReports');
+    // ✅ อัปเดต badge ใหม่
+    this.userReportsUnreadCount = this.userReports.length;
   }
 
   getThaiStatus(status: string): string {
