@@ -1,7 +1,7 @@
 export const environment = {
   production: true,
-  apiBaseUrl: 'http://localhost:3000',
-  // apiBaseUrl: 'https://soil-sensor-backend.onrender.com',
+  // apiBaseUrl: 'http://localhost:3000',
+  apiBaseUrl: 'https://soil-sensor-backend.onrender.com',
   mapTilerApiKey: 'gMPRNdZ7nFG7TFsWmEQr',
   firebase: {
     apiKey: 'AIzaSyCcRt14sMrziPLXMkOm3BCAMAWRCKkHWpI',
