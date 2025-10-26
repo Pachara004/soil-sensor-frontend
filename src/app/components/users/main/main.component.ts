@@ -265,6 +265,22 @@ export class MainComponent implements OnInit, OnDestroy {
       
       console.log('📦 Loading devices from PostgreSQL and Firebase...');
       
+      // ✅ ดึง userid ของผู้ใช้ปัจจุบัน
+      const currentUserId = this.userID ? parseInt(this.userID) : null;
+      
+      if (!currentUserId) {
+        console.warn('⚠️ User ID not loaded yet, retrying...');
+        // ลองโหลด user profile อีกครั้ง
+        await this.loadUserProfile();
+        const retryUserId = this.userID ? parseInt(this.userID) : null;
+        if (!retryUserId) {
+          console.error('❌ Failed to get user ID after retry');
+          this.devices = [];
+          return;
+        }
+        console.log('✅ User ID loaded after retry:', retryUserId);
+      }
+      
       // ✅ Step 1: ดึงข้อมูล devices จาก PostgreSQL
       let postgresDevices: Device[] = [];
       try {
@@ -277,12 +293,29 @@ export class MainComponent implements OnInit, OnDestroy {
           })
         );
         postgresDevices = Array.isArray(response) ? response : [];
-        console.log('✅ PostgreSQL devices:', postgresDevices.length, 'devices');
+        console.log('✅ PostgreSQL devices (before filter):', postgresDevices.length, 'devices');
+        
+        // ✅ กรอง devices ที่เป็นของ user คนนี้เท่านั้น
+        if (currentUserId) {
+          postgresDevices = postgresDevices.filter(device => {
+            const deviceUserId = device.userid || device['user_id'];
+            
+            // ✅ แปลงเป็น number ทั้ง 2 ฝ่ายก่อนเปรียบเทียบ
+            const deviceUserIdNum = typeof deviceUserId === 'string' ? parseInt(deviceUserId, 10) : deviceUserId;
+            const currentUserIdNum = typeof currentUserId === 'string' ? parseInt(currentUserId, 10) : currentUserId;
+            
+            const matches = deviceUserIdNum === currentUserIdNum;
+            console.log(`   Device: ${device.device_name} (userid: ${deviceUserIdNum}) vs CurrentUser: ${currentUserIdNum} → ${matches ? '✅ Match' : '❌ Not match'}`);
+            return matches;
+          });
+          console.log('✅ PostgreSQL devices (after filter):', postgresDevices.length, 'devices for user', currentUserId);
+        } else {
+          console.warn('⚠️ No current user ID found, showing all devices');
+        }
       } catch (deviceError: any) {
         console.error('❌ Error loading devices from PostgreSQL:', deviceError);
         postgresDevices = [];
       }
-      
       // ✅ Step 2: ดึงข้อมูล devices จาก Firebase
       const firebaseDevices = await this.getFirebaseDevices();
       console.log('🔥 Firebase devices:', Object.keys(firebaseDevices).length, 'devices');
