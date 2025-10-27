@@ -140,6 +140,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'admain',
+    loadComponent: () =>
+      import('./components/admin/admain/admain.component').then(
+        (m) => m.AdmainComponent
+      ),
+  },
+  {
     path: "gps",
     loadComponent: () =>
       import("./components/gps-display.component").then(

@@ -107,7 +107,7 @@ export class AdmainComponent implements OnInit, OnDestroy {
     this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(async (event) => {
-        if (event instanceof NavigationEnd && event.url === '/admain') {
+        if (event instanceof NavigationEnd && (event.url === '/admain' || event.url === '/adminmain')) {
           await this.refreshUnreadCount();
         }
       });
@@ -118,15 +118,18 @@ export class AdmainComponent implements OnInit, OnDestroy {
         // ✅ ดึงข้อมูล admin จาก PostgreSQL
         await this.loadAdminData();
         // ✅ ตรวจสอบว่าเป็น admin หรือไม่
+        console.log('🔍 Admin check - adminName:', this.adminName);
         if (this.adminName) {
+          console.log('✅ Admin access granted, loading data...');
           await this.loadDevices();
           await this.loadAllUsersOnce();
           await this.loadRegularUsers();
           await this.loadUnreadCount();
           this.subscribeToNotificationsCount(); // ✅ Subscribe ถึง notifications แบบ real-time
-    } else {
+        } else {
+          console.log('❌ Admin access denied, redirecting to login');
           this.notificationService.showNotification('warning', 'ไม่มีสิทธิ์', 'คุณไม่มีสิทธิ์เข้าถึงหน้า Admin', true, 'ไปหน้า Login', () => {
-      this.router.navigate(['/']);
+            this.router.navigate(['/']);
           });
         }
         } else {
@@ -167,27 +170,40 @@ export class AdmainComponent implements OnInit, OnDestroy {
             userData = userResponse.user;
           }
           // ✅ ตรวจสอบว่าเป็น admin หรือไม่
+          console.log(`🔍 Checking admin role in ${endpoint}:`, userData);
           if (userData && (userData.role === 'admin' || userData.type === 'admin')) {
             this.adminName = userData.user_name || userData.username || userData.name || 'Admin';
             this.adminEmail = userData.user_email || userData.email || this.currentUser.email;
+            console.log(`✅ Admin role confirmed: ${this.adminName}`);
             adminDataFound = true;
             break; // หยุดเมื่อเจอ endpoint ที่ทำงานได้
+          } else {
+            console.log(`❌ Not admin role: role=${userData?.role}, type=${userData?.type}`);
           }
         } catch (userError: any) {
           continue; // ลอง endpoint ถัดไป
         }
       }
       if (!adminDataFound) {
+        console.log('⚠️ No admin data found from backend, trying localStorage...');
         // ✅ ลองใช้ข้อมูลจาก localStorage เป็น fallback
         const adminData = localStorage.getItem('admin');
         if (adminData) {
           try {
             const parsedData = JSON.parse(adminData);
-            this.adminName = parsedData.name || parsedData.username || 'Admin';
-            this.adminEmail = parsedData.email || this.currentUser.email;
+            console.log('🔍 localStorage admin data:', parsedData);
+            if (parsedData.role === 'admin') {
+              this.adminName = parsedData.name || parsedData.username || 'Admin';
+              this.adminEmail = parsedData.email || this.currentUser.email;
+              console.log('✅ Using localStorage admin data:', this.adminName);
+            } else {
+              console.log('❌ localStorage data is not admin role:', parsedData.role);
+            }
           } catch (e) {
             console.error('JSON parse error:', e);
           }
+        } else {
+          console.log('❌ No admin data in localStorage');
         }
       }
     } catch (error) {

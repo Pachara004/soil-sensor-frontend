@@ -54,6 +54,7 @@ export class LoginComponent {
 
       // ✅ ตรวจสอบ role ของผู้ใช้จาก backend
       const userRole = await this.getUserRoleFromBackend(user.uid);
+      console.log('🔍 User role from backend:', userRole);
 
       // ✅ เก็บข้อมูลผู้ใช้ใน localStorage
       localStorage.setItem('user', JSON.stringify({ 
@@ -64,6 +65,7 @@ export class LoginComponent {
 
       // ✅ Redirect ตาม role
       if (userRole === 'admin') {
+        console.log('🔍 Redirecting to admin page');
         localStorage.setItem('admin', JSON.stringify({ 
           email: user.email, 
           uid: user.uid,
@@ -71,6 +73,7 @@ export class LoginComponent {
         }));
         this.router.navigate(['/adminmain']);
       } else {
+        console.log('🔍 Redirecting to user page');
         this.router.navigate(['/main']);
       }
     } catch (err: any) {
@@ -164,6 +167,8 @@ export class LoginComponent {
         
         // ✅ ตรวจสอบ role จาก response
         const userRole = result.user?.role || result.role || 'user';
+        console.log('🔍 Google login - User role:', userRole);
+        console.log('🔍 Google login - Result:', result);
         
         // ✅ เก็บข้อมูลผู้ใช้ใน localStorage
         localStorage.setItem('user', JSON.stringify({ 
@@ -174,6 +179,7 @@ export class LoginComponent {
         
         // ✅ Redirect ตาม role
         if (userRole === 'admin') {
+          console.log('🔍 Google login - Redirecting to admin page');
           localStorage.setItem('admin', JSON.stringify({ 
             email: result.user?.user_email || result.user?.email,
             uid: result.user?.firebase_uid || result.user?.uid,
@@ -182,6 +188,7 @@ export class LoginComponent {
           this.notificationService.showNotification('success', 'เข้าสู่ระบบสำเร็จ', 'ยินดีต้อนรับ Admin!');
           this.router.navigate(['/adminmain']);
         } else {
+          console.log('🔍 Google login - Redirecting to user page');
           this.notificationService.showNotification('success', 'เข้าสู่ระบบสำเร็จ', 'ยินดีต้อนรับ!');
           this.router.navigate(['/main']);
         }
@@ -268,36 +275,60 @@ export class LoginComponent {
   // ✅ ฟังก์ชันดึง role ของผู้ใช้จาก backend
   private async getUserRoleFromBackend(firebaseUid: string): Promise<string> {
     try {
+      console.log('🔍 Getting user role for UID:', firebaseUid);
+      
       // ✅ ใช้ endpoint ที่มีอยู่แล้ว
       const endpoints = [
         '/api/auth/me',
         '/api/user/profile',
-        '/api/users/profile'
+        '/api/users/profile',
+        '/api/user/me',
+        '/api/profile'
       ];
       
       for (const endpoint of endpoints) {
         try {
+          console.log(`🔍 Trying endpoint: ${endpoint}`);
+          
           const response = await firstValueFrom(
-            this.http.get(`${this.constants.API_ENDPOINT}${endpoint}`)
+            this.http.get(`${this.constants.API_ENDPOINT}${endpoint}`, {
+              headers: {
+                'Authorization': `Bearer ${await this.auth.currentUser?.getIdToken()}`
+              }
+            })
           ) as any;
+          
+          console.log(`✅ Response from ${endpoint}:`, response);
           
           // ตรวจสอบ response และคืนค่า role
           if (response && response.role) {
+            console.log(`✅ Found role: ${response.role}`);
             return response.role;
           } else if (response && response.user && response.user.role) {
+            console.log(`✅ Found role in user object: ${response.user.role}`);
             return response.user.role;
           } else if (response && response.data && response.data.role) {
+            console.log(`✅ Found role in data object: ${response.data.role}`);
             return response.data.role;
+          } else if (response && response.type) {
+            console.log(`✅ Found type: ${response.type}`);
+            return response.type;
+          } else if (response && response.user && response.user.type) {
+            console.log(`✅ Found type in user object: ${response.user.type}`);
+            return response.user.type;
           }
-        } catch (endpointError) {
+        } catch (endpointError: any) {
+          console.log(`❌ Endpoint ${endpoint} failed:`, endpointError.message);
           // ลอง endpoint ถัดไป
           continue;
         }
       }
       
       // ถ้าไม่พบ role ใน endpoint ใดเลย
+      console.log('⚠️ No role found in any endpoint, defaulting to user');
       return 'user';
     } catch (error: any) {
+      console.error('❌ Error getting user role:', error);
       // ถ้าไม่สามารถดึง role ได้ ให้ default เป็น user
       return 'user';
     }
